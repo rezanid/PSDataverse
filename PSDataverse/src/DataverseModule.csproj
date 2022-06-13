@@ -5,7 +5,7 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <RestoreSources>$(RestoreSources);../nuget-repository;</RestoreSources>
+    <RestoreSources>$(RestoreSources);../nuget-repository;https://pkgs.dev.azure.com/kbcprojects/_packaging/KbcPackages/nuget/v3/index.json;</RestoreSources>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />

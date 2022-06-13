@@ -1,4 +1,4 @@
-$module = "MigrationModule"
+$module = "DataverseModule"
 Push-Location $PSScriptRoot
 
 dotnet build $PSScriptRoot\src -o $PSScriptRoot\output\$module\bin

@@ -1,5 +1,5 @@
-﻿using MigrationModule.Dataverse;
-using MigrationModule.Dataverse.Model;
+﻿using DataverseModule.Dataverse;
+using DataverseModule.Dataverse.Model;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;

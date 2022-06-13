@@ -29,10 +29,13 @@ namespace DataverseModule
         [Parameter(Position = 1, Mandatory = false)]
         public int BatchCapacity { get; set; } = 0;
 
-        [Parameter(Position=2, Mandatory = false)]
+        [Parameter(Position = 2, Mandatory = false)]
+        public int MaxDop { get; set; } = 0;
+
+        [Parameter(Position=3, Mandatory = false)]
         public int Retry { get; set; }
 
-        [Parameter(Position = 3, Mandatory = false)]
+        [Parameter(Position = 4, Mandatory = false)]
         public bool OutputTable { get; set; }
 
         private bool isValidationFailed;
@@ -44,9 +47,11 @@ namespace DataverseModule
         private int operationCounter = 0;
         private int batchCounter = 0;
         private ConcurrentBag<Operation<JObject>> operations;// List<Operation<JObject>> operations;
-        private ConcurrentBag<Task<(TimeSpan, BatchResponse)>> batches;
+        //private ConcurrentBag<Task<(TimeSpan, BatchResponse)>> batches;
+        private ConcurrentBag<BatchPointer<JObject>> batchPointers;
         private Stopwatch stopwatch;
         private SemaphoreSlim throttler;
+        private static readonly string[] validMethodsWithoutPayload = {"GET","DELETE"};
 
         protected override void BeginProcessing()
         {
@@ -66,20 +71,16 @@ namespace DataverseModule
             if (BatchCapacity > 0)
             {
                 operations = new(new List<Operation<JObject>>(BatchCapacity));
-                batches = new();
-                throttler = new SemaphoreSlim(20);
+                // batches = new();
+                batchPointers = new();
+                throttler = new SemaphoreSlim(MaxDop <= 0 ? 20 : MaxDop);
             }
             operationCounter = 0;
         }
 
         protected override void ProcessRecord()
         {
-            //TODO: Implement exception handling and logging.
-            //TODO: Implement retry logic
-            //TODO: Implement IoC
             base.ProcessRecord();
-
-            //var operationProcessor = (OperationProcessor)GetVariableValue(Globals.VariableNameOperationProcessor);
 
             if (isValidationFailed) { return; }
             if (!VerifyConnection()) { return; }
@@ -101,7 +102,7 @@ namespace DataverseModule
             {
                 throw new InvalidOperationException("Operation parameter is not provided or it has no 'Method'.");
             }
-            if (!"GET".Equals(op.Method, StringComparison.OrdinalIgnoreCase) && op.Value == null)
+            if (!validMethodsWithoutPayload.Contains(op.Method, StringComparer.OrdinalIgnoreCase) && op.Value == null)
             {
                 throw new InvalidOperationException($"Operation does not have a 'Value' but it has a {op.Method} method. All operations with non-GET method should have a value.");
             }
@@ -174,11 +175,13 @@ namespace DataverseModule
             {
                 SendBatch();
             }
-            if (batches?.Any() ?? false)
+            // if (batches?.Any() ?? false)
+            if (batchPointers?.Any() ?? false)
             {
                 try
                 {
-                    Task.WaitAll(batches.ToArray());
+                    // Task.WaitAll(batches.ToArray());
+                    Task.WaitAll(batchPointers.Select(b => b.Task).ToArray());
                 }
                 catch (AggregateException ex)
                 {
@@ -189,30 +192,41 @@ namespace DataverseModule
                     //}
                 }
             }
-            if (batches == null) { 
+            // if (batches == null) { 
+            if (batchPointers == null) { 
                 stopwatch.Stop();
                 WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", new string[] { "Dataverse" });
                 return; 
             }
-            foreach (var item in batches)
+            // foreach (var item in batches)
+            foreach (var item in batchPointers)
             {
                 // item.Key   : Task<TimeSpan, BatchResult>
                 // item.Value : Batch
 
-                if (item.IsFaulted)
+                // if (item.IsFaulted)
+                if (item.Task.IsFaulted)
                 {
-                    WriteError(new ErrorRecord(item.Exception.InnerException, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
+                    var exception = new BatchException<JObject>("Batch has been faild due to an error", item.Task.Exception.InnerException)
+                    {
+                        Batch = item.Batch
+                    };
+                    // WriteError(new ErrorRecord(item.Exception.InnerException, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
+                    WriteError(new ErrorRecord(exception, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
                 }
-                else if (item.IsCanceled)
+                else if (item.Task.IsCanceled)
                 {
-                    var exception = new BatchException<JObject>("Batch has been canceled");
+                    var exception = new BatchException<JObject>("Batch has been canceled") 
+                    {
+                        Batch = item.Batch
+                    };
                     WriteError(new ErrorRecord(exception, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
                 }
                 else
                 {
                     if (!OutputTable)
                     {
-                        WriteObject(item.Result.Item2);
+                        WriteObject(item.Task.Result.Response);
                     }
                     else
                     {
@@ -220,9 +234,12 @@ namespace DataverseModule
                         tbl.Columns.Add("Id", typeof(string));
                         tbl.Columns.Add("Response", typeof(string));
                         tbl.Columns.Add("Succeeded", typeof(bool));
-                        foreach (var response in item.Result.Item2.Operations)
+                        foreach (var response in item.Task.Result.Response.Operations)
                         {
-                            tbl.Rows.Add(response.ContentId, response.Headers?["OData-EntityId"], true);
+                            tbl.Rows.Add(
+                                response.ContentId,
+                                response.Headers != null && response.Headers.TryGetValue("OData-EntityId", out var id) ? id : null, 
+                                true);
                         }
                         WriteObject(tbl);
                     }
@@ -236,15 +253,25 @@ namespace DataverseModule
 
         private void SendBatch()
         {
-            batches.Add(SendBatchAsync());
+            // batches.Add(SendBatchAsync());
+            batchPointers.Add(MakeAndSendBatch());
+        }
+
+        private BatchPointer<JObject> MakeAndSendBatch() 
+        {
+            var batch = new Batch<JObject>(operations);
+            operations.Clear();
+            var task = SendBatchAsync(batch);
+            return new BatchPointer<JObject>(batch, task);
         }
 
         // private async Task<(TimeSpan, Batch<JObject>)> SendBatchAsync()
-        private async Task<(TimeSpan, BatchResponse)> SendBatchAsync()
+        // private async Task<(TimeSpan, BatchResponse)> SendBatchAsync()
+        private async Task<BatchResult> SendBatchAsync(Batch<JObject> batch)
         {
             var batchStopWatch = Stopwatch.StartNew();
-            var batch = new Batch<JObject>(operations);
-            operations.Clear();
+            // var batch = new Batch<JObject>(operations);
+            // operations.Clear();
 
             WriteInformation($"Batch-{batch.Id}[total:{batch.ChangeSet.Operations.Count()}, starting: {batch.ChangeSet.Operations.First().ContentId}] being sent...", new string[] { "dataverse" });
             BatchResponse response = null;
@@ -262,7 +289,39 @@ namespace DataverseModule
             
             Interlocked.Increment(ref batchCounter);
             batchStopWatch.Stop();
-            return (batchStopWatch.Elapsed, response);
+            //return (batchStopWatch.Elapsed, response);
+            return new BatchResult(batchStopWatch.Elapsed, response); 
+        }
+
+        private void CleanupTasks() 
+        {
+            foreach (var pointer in batchPointers.Where(p => p.Task.Status == TaskStatus.RanToCompletion))
+            {
+                
+            }
+        }
+    }
+
+    public class BatchPointer<T>
+    {
+        public Batch<T> Batch { get; set; }
+        public Task<BatchResult> Task { get; set; }
+
+        public BatchPointer(Batch<T> batch, Task<BatchResult> task)
+        {
+            Batch = batch;
+            Task = task;
+        }
+    }
+
+    public class BatchResult
+    {
+        public TimeSpan Elapsed { get; set; }
+        public BatchResponse Response { get; set; }
+        public BatchResult(TimeSpan elapsed, BatchResponse response)
+        {
+            Elapsed = elapsed;
+            Response = response;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using DataversModule.Dataverse.Model;
+﻿using DataverseModule.Dataverse.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;

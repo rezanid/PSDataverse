@@ -42,7 +42,7 @@ namespace DataverseModule
                     return certificates[0];
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 //logSink.Log(string.Format("Failed to find certificate with thumbprint: {0}.", (object)certificateThumbprint), TraceEventType.Error, ex);
                 return null;

@@ -103,7 +103,7 @@ namespace DataverseModule.Dataverse.Execute
             }
             var responseContent = await response.Content.ReadAsStringAsync();
             response.Content.Dispose();
-            if (response.Content.Headers.ContentType.MediaType == "application/json")
+            if (!string.IsNullOrEmpty(responseContent) && response.Content.Headers.ContentType?.MediaType == "application/json")
             {
                 var responseJson = JObject.Parse(responseContent);
                 var errorJson = responseJson.SelectToken("error");
