@@ -20,6 +20,7 @@ namespace DataverseModule.Dataverse.Execute
         readonly ILogger Log;
         readonly HttpClient HttpClient;
         readonly IAsyncPolicy<HttpResponseMessage> Retry;
+        readonly bool doThrowOperationException = false;
         public string AuthenticationToken
         {
             set
@@ -81,7 +82,7 @@ namespace DataverseModule.Dataverse.Execute
 
             // Catch throtelling exceptions
             WebApiFault details = null;
-            if (!response.IsSuccessStatusCode && response.Content.Headers.ContentType.MediaType == MediaTypeNames.Application.Json)
+            if (!response.IsSuccessStatusCode && response.Content.Headers.ContentType?.MediaType == MediaTypeNames.Application.Json)
             {
                 details = JsonConvert.DeserializeObject<WebApiFault>(responseContent);
             }
@@ -102,9 +103,17 @@ namespace DataverseModule.Dataverse.Execute
                 throw new ThrottlingExceededException(details);
             }
 
-            if (!string.Equals("multipart/mixed", response.Content.Headers.ContentType.MediaType, StringComparison.OrdinalIgnoreCase))
+            if (response.Content.Headers.ContentType != null && !string.Equals("multipart/mixed", response.Content.Headers.ContentType.MediaType, StringComparison.OrdinalIgnoreCase))
             {
                 throw new ParseException($"Unsupported response media type received from Dataverse. Expected: multipart/mixed, Actual: " + response.Content.Headers.ContentType.MediaType);
+            }
+
+            if (!response.IsSuccessStatusCode && response.Content.Headers.ContentLength == 0)
+            {
+                throw new BatchException<JObject>($"{(int)response.StatusCode} {response.ReasonPhrase}")
+                {
+                    Batch = batch
+                };
             }
 
             BatchResponse batchResponse = null;
@@ -130,7 +139,15 @@ namespace DataverseModule.Dataverse.Execute
                 o => o.ContentId == failedOperationResponse.ContentId);
             Log.LogWarning($"Failed operation: {failedOperation}.");
             failedOperation.RunCount++;
-            throw CreateOperationException(batch.Id, failedOperation, failedOperationResponse);
+
+            if (doThrowOperationException)
+            {
+                throw CreateOperationException(batch.Id, failedOperation, failedOperationResponse);
+            }
+            else
+            {
+                return batchResponse;
+            }
         }
 
         private async Task<HttpResponseMessage> SendBatchAsync(Batch<JObject> batch)

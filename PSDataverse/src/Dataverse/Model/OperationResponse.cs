@@ -18,6 +18,7 @@ namespace DataverseModule.Dataverse.Model
         public OperationError? Error { get; set; }
         public Dictionary<string, string>? Headers { get; set; }
 
+        #region ctors
         public OperationResponse() { }
 
         public OperationResponse(HttpStatusCode statusCode, string? contentId)
@@ -61,6 +62,7 @@ namespace DataverseModule.Dataverse.Model
         {
             Content = content;
         }
+        #endregion
 
         public static OperationResponse? From(HttpResponseMessage message) 
         {
