@@ -27,18 +27,18 @@ namespace DataverseModule.Dataverse.Execute
         }
 
         public static async Task<HttpResponseMessage> SendAsync(
-            this HttpClient client, HttpMethod method, string requestUri, Batch<JObject> batch)
+            this HttpClient client, HttpMethod method, string requestUri, Batch<JObject> batch, CancellationToken cancellationToken)
         {
             var request = new HttpRequestMessage(method, requestUri)
             {
                 Content = new StringContent(batch.ToString())
             };
             request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/mixed;boundary=batch_" + batch.Id);
-            return await client.SendAsync(request, CancellationToken.None);
+            return await client.SendAsync(request, cancellationToken);
         }
 
         public static async Task<HttpResponseMessage> SendAsync(
-            this HttpClient client, Operation<JObject> operation)
+            this HttpClient client, Operation<JObject> operation, CancellationToken cancellationToken)
         {
             var request = new HttpRequestMessage(new HttpMethod(operation.Method), operation.Uri);
             if (operation?.Value != null)
@@ -48,12 +48,22 @@ namespace DataverseModule.Dataverse.Execute
             }
             if (operation.Headers != null)
             {
-                foreach (var header in operation.Headers)
+                if (request.Content is null)
                 {
-                    request.Content.Headers.Add(header.Key, header.Value);
+                    foreach (var header in operation.Headers)
+                    {
+                        request.Headers.Add(header.Key, header.Value);
+                    }
+                }
+                else
+                {
+                    foreach (var header in operation.Headers)
+                    {
+                        request.Content.Headers.Add(header.Key, header.Value);
+                    }
                 }
             }
-            return await client.SendAsync(request, CancellationToken.None);
+            return await client.SendAsync(request, cancellationToken);
         }
     }
 }

@@ -12,6 +12,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace DataverseModule.Dataverse.Execute
 {
@@ -65,18 +66,18 @@ namespace DataverseModule.Dataverse.Execute
             yield return await ExecuteBatchAsync(batch);
         }
 
-        // public async Task<HttpResponseMessage> ExecuteBatchAsync(Batch<JObject> batch)
-        public async Task<BatchResponse> ExecuteBatchAsync(Batch<JObject> batch)
+        public Task<BatchResponse> ExecuteBatchAsync(Batch<JObject> batch) => ExecuteBatchAsync(batch, CancellationToken.None);
+        public async Task<BatchResponse> ExecuteBatchAsync(Batch<JObject> batch, CancellationToken cancellationToken)
         {
             // Make the request
-            var response = await SendBatchAsync(batch);
+            var response = await SendBatchAsync(batch, cancellationToken);
             Log.LogDebug($"Dynamics 365: {(int)response.StatusCode} {response.ReasonPhrase}");
 
             // Extract the response content
             string responseContent = null;
             if (response.Content != null)
             {
-                responseContent = response.Content.ReadAsStringAsync().Result;
+                responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 response.Content.Dispose();
             }
 
@@ -150,14 +151,16 @@ namespace DataverseModule.Dataverse.Execute
             }
         }
 
-        private async Task<HttpResponseMessage> SendBatchAsync(Batch<JObject> batch)
+        private Task<HttpResponseMessage> SendBatchAsync(Batch<JObject> batch) => SendBatchAsync(batch, CancellationToken.None);
+
+        private async Task<HttpResponseMessage> SendBatchAsync(Batch<JObject> batch, CancellationToken cancellationToken)
         {
             HttpResponseMessage response = null;
             if (batch is null) { throw new ArgumentNullException(nameof(batch)); }
             if (batch.Id == null) { throw new ArgumentException("Batch.Id cannot be null."); }
 
             Log.LogDebug($"Executing batch {batch.Id}...");
-            response = await Retry.ExecuteAsync(() => HttpClient.SendAsync(HttpMethod.Post, "$batch", batch));
+            response = await Retry.ExecuteAsync(() => HttpClient.SendAsync(HttpMethod.Post, "$batch", batch, cancellationToken));
             if (response.IsSuccessStatusCode)
             {
                 Log.LogDebug($"Batch {batch.Id} succeeded.");

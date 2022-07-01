@@ -1,42 +1,50 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using DataverseModule.Dataverse;
+﻿using DataverseModule.Dataverse;
 using DataverseModule.Dataverse.Execute;
 using DataverseModule.Dataverse.Model;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Management.Automation;
-using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace DataverseModule
 {
-    [Cmdlet(VerbsCommunications.Send, "DataverseOperation")]
-    public class SendDataverseOperationCmdlet : PSCmdlet
+    [Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Json")]
+    public class SendDataverseOperationCmdlet : PSCmdlet, IDisposable
     {
-        [Parameter(Position=0, Mandatory = true, ParameterSetName = "Object")]
-        public Operation<JObject> Operation { get; set; }
+        [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Operation", ValueFromPipeline = true)]
+        public Operation<JObject> InputOperation { get; set; }
 
         [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Json", ValueFromPipeline = true)]
-        public string OperationJson { get; set; }
+        public string InputJson { get; set; }
+
+        [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Object", ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
+        public PSObject InputObject { get; set; }
 
         [Parameter(Position = 1, Mandatory = false)]
-        public int BatchCapacity { get; set; } = 0;
+        [Alias("BatchCapacity")]
+        [ValidateRange(0, 1000)]
+        public int BatchSize { get; set; } = 0;
 
         [Parameter(Position = 2, Mandatory = false)]
+        [Alias("ThrottleLimit")]
+        [ValidateRange(0, int.MaxValue)]
         public int MaxDop { get; set; } = 0;
 
-        [Parameter(Position=3, Mandatory = false)]
+        [Parameter(Position = 3, Mandatory = false)]
+        [ValidateRange(0, 50)]
         public int Retry { get; set; }
 
         [Parameter(Position = 4, Mandatory = false)]
-        public bool OutputTable { get; set; }
+        public SwitchParameter OutputTable { get; set; }
 
         private bool isValidationFailed;
         private string accessToken;
@@ -47,31 +55,30 @@ namespace DataverseModule
         private int operationCounter = 0;
         private int batchCounter = 0;
         private ConcurrentBag<Operation<JObject>> operations;
-        private ConcurrentBag<BatchPointer<JObject>> batchPointers;
         private List<Task<Batch<JObject>>> tasks;
         private Stopwatch stopwatch;
         private SemaphoreSlim taskThrottler;
-        private static readonly string[] validMethodsWithoutPayload = {"GET","DELETE"};
+        private readonly CancellationTokenSource _cancellationSource = new();
+        private static readonly string[] validMethodsWithoutPayload = { "GET", "DELETE" };
 
         protected override void BeginProcessing()
         {
             base.BeginProcessing();
-            
+
             stopwatch = Stopwatch.StartNew();
 
-            if (!VerifyConnection()) 
+            if (!VerifyConnection())
             {
                 isValidationFailed = true;
-                return; 
+                return;
             }
 
             var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
             operationProcessor = serviceProvider.GetService<OperationProcessor>();
             batchProcessor = serviceProvider.GetService<BatchProcessor>();
-            if (BatchCapacity > 0)
+            if (BatchSize > 0)
             {
-                operations = new(new List<Operation<JObject>>(BatchCapacity));
-                batchPointers = new();
+                operations = new(new List<Operation<JObject>>(BatchSize));
                 tasks = new();
                 taskThrottler = new SemaphoreSlim(MaxDop <= 0 ? 20 : MaxDop);
             }
@@ -85,31 +92,22 @@ namespace DataverseModule
             if (isValidationFailed) { return; }
             if (!VerifyConnection()) { return; }
 
-            var op = Operation;
-            if (op == null && string.IsNullOrEmpty(OperationJson))
+            if (!TryGetInputOperation(out var op))
             {
-                var errMessage = "No operation has been given. Please provide an operation using either of -Operation or -OperationJson arguments.";
+                var errMessage = "No operation has been given. Please provide an operation using either of -InputOperation or -InputJson or -InputObject arguments.";
                 WriteError(new ErrorRecord(new Exception(errMessage), Globals.ErrorIdMissingOperation, ErrorCategory.ConnectionError, null));
-                WriteObject(errMessage);
                 return;
             }
-            if (op == null)
-            {
-                WriteDebug("JSON: " + OperationJson);
-                op = JsonConvert.DeserializeObject<Operation<JObject>>(OperationJson);
-            }
-            if (op == null || string.IsNullOrEmpty(op.Method)) 
-            {
-                throw new InvalidOperationException("Operation parameter is not provided or it has no 'Method'.");
-            }
-            if (!validMethodsWithoutPayload.Contains(op.Method, StringComparer.OrdinalIgnoreCase) && op.Value == null)
-            {
-                throw new InvalidOperationException($"Operation does not have a 'Value' but it has a {op.Method} method. All operations with non-GET method should have a value.");
-            }
+
+            if (op.Value is null && op.Method is null) { op.Method = "GET"; }
+            else if (op.Method is null) { op.Method = "POST"; }
+            else { /* no other possibility */ }
+
+            ValidateOperation(op);
 
             Interlocked.Increment(ref operationCounter);
 
-            if (BatchCapacity <= 0)
+            if (BatchSize <= 0)
             {
                 operationProcessor.AuthenticationToken = accessToken;
                 try
@@ -150,7 +148,7 @@ namespace DataverseModule
             {
                 MakeAndSendBatchThenOutput(waitForAll: true);
             }
-            if (BatchCapacity == 0)
+            if (BatchSize == 0)
             {
                 stopwatch.Stop();
                 WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", new string[] { "Dataverse" });
@@ -162,82 +160,56 @@ namespace DataverseModule
             WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", new string[] { "Dataverse" });
         }
 
-        //TODO:Temporary
-        protected void OldEndProcessing()
-        {
-            base.EndProcessing();
+        /// <summary>
+        /// Process the Ctrl+C signal.
+        /// </summary>
+        protected override void StopProcessing() => _cancellationSource.Cancel();
 
-            if (operations?.Any() ?? false)
+        private bool TryGetInputOperation(out Operation<JObject> operation)
+        {
+            if (InputOperation is not null)
             {
-                SendBatch();
+                operation = InputOperation;
+                return true;
             }
-            if (batchPointers?.Any() ?? false)
+            if (InputJson is not null)
             {
-                try
+                operation = JsonConvert.DeserializeObject<Operation<JObject>>(InputJson);
+                return true;
+            }
+            if (InputObject is not null)
+            {
+                if (InputObject.BaseObject is IDictionary dictionary)
                 {
-                    Task.WaitAll(batchPointers.Select(b => b.Task).ToArray());
+                    operation = new Operation<JObject>
+                    {
+                        ContentId = InputObject.TryGetPropertyValue("ContentId"),
+                        Method = InputObject.TryGetPropertyValue("Method"),
+                        Uri = InputObject.TryGetPropertyValue("Uri"),
+                        Headers = dictionary.Contains("Headers") ? 
+                            (dictionary["Headers"] as IDictionary).Cast<DictionaryEntry>().ToDictionary(e => e.Key.ToString(), e => e.Value.ToString()) 
+                            : null,
+                        Value = dictionary.Contains("Value") ? JObject.FromObject(dictionary["Value"]) : null
+                    };
+                    return true;
                 }
-                catch (AggregateException ex)
-                {
-                    WriteWarning($"Batches were executed with failures. Error count: {ex.InnerExceptions.Count}.");
-                }
             }
-            if (batchPointers == null) { 
-                stopwatch.Stop();
-                WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", new string[] { "Dataverse" });
-                return; 
-            }
-            foreach (var item in batchPointers)
-            {
-                OutputBatchPointer(item);
-            }
-            stopwatch.Stop();
-            taskThrottler.Release();
-            taskThrottler.Dispose();
-            WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", new string[] { "Dataverse" });
+            operation = null;
+            return false;
         }
 
-        private void OutputBatchPointer(BatchPointer<JObject> batchPointer)
+       
+
+        private static void ValidateOperation(Operation<JObject> operation)
         {
-            if (batchPointer.Task.IsFaulted)
+            if (operation is null)
             {
-                var exception = new BatchException<JObject>("Batch has been faild due to an error", batchPointer.Task.Exception.InnerException)
-                {
-                    Batch = batchPointer.Batch
-                };
-                WriteError(new ErrorRecord(exception, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
+                throw new InvalidOperationException("Operation parameter is not provided.");
             }
-            else if (batchPointer.Task.IsCanceled)
+            if (!validMethodsWithoutPayload.Contains(operation.Method, StringComparer.OrdinalIgnoreCase) && operation.Value == null)
             {
-                var exception = new BatchException<JObject>("Batch has been canceled")
-                {
-                    Batch = batchPointer.Batch
-                };
-                WriteError(new ErrorRecord(exception, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
-            }
-            else
-            {
-                if (!OutputTable)
-                {
-                    WriteObject(batchPointer.Task.Result.Response);
-                }
-                else
-                {
-                    var tbl = new System.Data.DataTable();
-                    tbl.Columns.Add("Id", typeof(string));
-                    tbl.Columns.Add("BatchId", typeof(Guid));
-                    tbl.Columns.Add("Response", typeof(string));
-                    tbl.Columns.Add("Succeeded", typeof(bool));
-                    foreach (var response in batchPointer.Task.Result.Response.Operations)
-                    {
-                        tbl.Rows.Add(
-                            response.ContentId,
-                            batchPointer.Batch.Id,
-                            response.Headers != null && response.Headers.TryGetValue("OData-EntityId", out var id) ? id : null,
-                            true);
-                    }
-                    WriteObject(tbl);
-                }
+                throw new InvalidOperationException(
+                    $"Operation does not have a 'Value' but it has a {operation.Method} method. All operations with non-GET method should have a value.");
             }
         }
 
@@ -258,7 +230,8 @@ namespace DataverseModule
                 WriteError(new ErrorRecord(new Exception(errMessage), Globals.ErrorIdConnectionExpired, ErrorCategory.ConnectionError, null));
                 return false;
             }
-            if (dataverseCnnStr != null && authExpiresOn <= DateTimeOffset.Now) {
+            if (dataverseCnnStr != null && authExpiresOn <= DateTimeOffset.Now)
+            {
                 var certificate = AuthenticationHelper.FindCertificate(dataverseCnnStr.CertificationThumbprint, StoreName.My);
                 var authResult = AuthenticationHelper.Authenticate(dataverseCnnStr.Authority, dataverseCnnStr.ClientId, dataverseCnnStr.Resource, certificate);
                 SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
@@ -267,40 +240,7 @@ namespace DataverseModule
             return true;
         }
 
-        private bool IsNewBatchNeeded() => BatchCapacity > 0 && operationCounter == 0 || operationCounter % BatchCapacity == 0;
-
-        private void SendBatch() => batchPointers.Add(MakeAndSendBatch());
-
-        private BatchPointer<JObject> MakeAndSendBatch() 
-        {
-            var batch = new Batch<JObject>(operations);
-            operations.Clear();
-            var task = SendBatchAsync(batch);
-            return new BatchPointer<JObject>(batch, task);
-        }
-
-        private async Task<BatchResult> SendBatchAsync(Batch<JObject> batch)
-        {
-            var batchStopWatch = Stopwatch.StartNew();
-
-            WriteInformation($"Batch-{batch.Id}[total:{batch.ChangeSet.Operations.Count()}, starting: {batch.ChangeSet.Operations.First().ContentId}] being sent...", new string[] { "dataverse" });
-            BatchResponse response = null;
-            try 
-            {
-                await taskThrottler.WaitAsync();
-                response = await batchProcessor.ExecuteBatchAsync(batch);
-            }
-            finally
-            {
-                taskThrottler.Release();
-            }
-
-            WriteInformation($"Batch-{batch.Id} completed.", new string[] { "dataverse" });
-            
-            Interlocked.Increment(ref batchCounter);
-            batchStopWatch.Stop();
-            return new BatchResult(batchStopWatch.Elapsed, response); 
-        }
+        private bool IsNewBatchNeeded() => BatchSize > 0 && operationCounter == 0 || operationCounter % BatchSize == 0;
 
         private void MakeAndSendBatchThenOutput(bool waitForAll)
         {
@@ -308,7 +248,7 @@ namespace DataverseModule
             {
                 var batch = new Batch<JObject>(operations);
                 operations.Clear();
-                var task = SendBatchThenOutputAsync(batch);
+                var task = SendBatchAsync(batch);
                 tasks.Add(task);
             }
             if (waitForAll)
@@ -333,9 +273,9 @@ namespace DataverseModule
             }
             else
             {
-                while (tasks.Count >= MaxDop) 
+                while (tasks.Count != 0 && tasks.Count >= MaxDop)
                 {
-                    Thread.Sleep(200); 
+                    Thread.Sleep(100);
                     var completedTasks = tasks.Where(t => t.IsCompleted).ToArray();
                     foreach (var completedTask in completedTasks)
                     {
@@ -356,30 +296,6 @@ namespace DataverseModule
             }
         }
 
-        private void WriteOutput(BatchResponse batchResponse)
-        {
-            if (!OutputTable)
-            {
-                WriteObject(batchResponse);
-            }
-            else
-            {
-                var tbl = new System.Data.DataTable();
-                tbl.Columns.Add("Id", typeof(string));
-                tbl.Columns.Add("BatchId", typeof(Guid));
-                tbl.Columns.Add("Response", typeof(string));
-                tbl.Columns.Add("Succeeded", typeof(bool));
-                foreach (var response in batchResponse.Operations)
-                {
-                    tbl.Rows.Add(
-                        response.ContentId,
-                        batchResponse.Id,
-                        response.Headers != null && response.Headers.TryGetValue("OData-EntityId", out var id) ? id : null,
-                        true);
-                }
-                WriteObject(tbl);
-            }
-        }
         private void WriteOutput(Batch<JObject> batch)
         {
             if (!OutputTable)
@@ -420,19 +336,26 @@ namespace DataverseModule
             }
         }
 
-        private async Task<Batch<JObject>> SendBatchThenOutputAsync(Batch<JObject> batch)
+        private async Task<Batch<JObject>> SendBatchAsync(Batch<JObject> batch)
         {
             WriteInformation($"Batch-{batch.Id}[total:{batch.ChangeSet.Operations.Count()}, starting: {batch.ChangeSet.Operations.First().ContentId}] being sent...", new string[] { "dataverse" });
             BatchResponse response = null;
             try
             {
                 await taskThrottler.WaitAsync();
-                response = await batchProcessor.ExecuteBatchAsync(batch);
-                WriteInformation($"Batch-{batch.Id} completed.", new string[] { "dataverse" });
+                response = await batchProcessor.ExecuteBatchAsync(batch, _cancellationSource.Token);
+                if (response is not null)
+                {
+                    WriteInformation($"Batch-{batch.Id} completed.", new string[] { "dataverse" });
+                }
+                else
+                {
+                    WriteWarning($"Batch-{batch.Id} has been cancelled.");
+                }
             }
             catch (Exception ex)
-            { 
-                throw new BatchException<JObject>("Batch has been faild due to an error", ex) { Batch = batch };
+            {
+                throw new BatchException<JObject>($"Batch has been faild due to: {ex.Message}", ex) { Batch = batch };
                 //WriteError(new ErrorRecord(exception, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
             }
             finally
@@ -443,28 +366,31 @@ namespace DataverseModule
             batch.Response = response;
             return batch;
         }
-    }
 
-    public class BatchPointer<T>
-    {
-        public Batch<T> Batch { get; set; }
-        public Task<BatchResult> Task { get; set; }
-
-        public BatchPointer(Batch<T> batch, Task<BatchResult> task)
+        #region Dispose Pattern
+        /// <summary>
+        /// IDisposable implementation, dispose of any disposable resources created by the cmdlet.
+        /// </summary>
+        public void Dispose()
         {
-            Batch = batch;
-            Task = task;
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
-    }
 
-    public class BatchResult
-    {
-        public TimeSpan Elapsed { get; set; }
-        public BatchResponse Response { get; set; }
-        public BatchResult(TimeSpan elapsed, BatchResponse response)
+        /// <summary>
+        /// Implementation of IDisposable for both manual Dispose() and finalizer-called disposal of resources.
+        /// </summary>
+        /// <param name="disposing">
+        /// Specified as true when Dispose() was called, false if this is called from the finalizer.
+        /// </param>
+        protected virtual void Dispose(bool disposing)
         {
-            Elapsed = elapsed;
-            Response = response;
+            if (disposing)
+            {
+                _cancellationSource.Dispose();
+                taskThrottler?.Dispose();
+            }
         }
+        #endregion
     }
 }

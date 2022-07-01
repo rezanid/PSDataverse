@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace DataverseModule.Dataverse.Execute
 {
@@ -72,7 +73,7 @@ namespace DataverseModule.Dataverse.Execute
             }
 
             Log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
-            var response = await Policy.ExecuteAsync(() => HttpClient.SendAsync(operation));
+            var response = await Policy.ExecuteAsync(() => HttpClient.SendAsync(operation, CancellationToken.None));
             Log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
 
             if (response.IsSuccessStatusCode) { return response; }
@@ -133,7 +134,7 @@ namespace DataverseModule.Dataverse.Execute
             OperationResponse response)
         {
             var entityName = ExtractEntityName(operation);
-            var errorMessage = response.Error?.Message;
+            var errorMessage = $"{response.Error?.Code} {response.Error?.Message}";
             return new OperationException(errorMessage)
             {
                 BatchId = batchId,
