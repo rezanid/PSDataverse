@@ -15,7 +15,7 @@ The first thing to do is to connect to your Dataverse environment `Connect-Datav
 
 ```
 
-> 🚧 I am working on brining the same connection string format as supported by [Xrm Tooling](https://docs.microsoft.com/en-us/dynamics365/customerengagement/on- premises/developer/xrm-tooling/use-powershell-cmdlets-xrm-tooling-connect?view=op-9-1). Ultimately you will be able to either provide a connection string as the only paramtere or provide each property of the connection string, separately as a parameter.
+> 🚧 I am working on brining the same connection string format as supported by (Xrm Tooling)[https://docs.microsoft.com/en-us/dynamics365/customerengagement/on- premises/developer/xrm-tooling/use-powershell-cmdlets-xrm-tooling-connect?view=op-9-1]. Ultimately you will be able to either provide a connection string as the only paramtere or provide each property of the connection string, separately as a parameter.
 
 After that you can send any number of operations to your Dataverse environment. Let's look at a simple operation.
 
