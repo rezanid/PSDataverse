@@ -19,7 +19,7 @@ The first thing to do is to connect to your Dataverse environment `Connect-Datav
 
 After that you can send any number of operations to your Dataverse environment. Let's look at a simple operation.
 
-*Example 1: Running a simple global action using piping*
+**Example 1: Running a global action using piping**
  ```powershell
  @{Uri="WhoAmI"} | Send-DataverseOperation
  ```
@@ -41,7 +41,8 @@ StatusCode : OK
 
 You can easily see the original headers and status code from dynamics. If there's any error, it will be reflected in 'Error' property. The most important property that you will often need is the 'Content' that includes the payload in JSON format.
 
-Let's see how we can easily get to JSON value of the 'Content' property, convert it to a PowerShell object and even display it as a list, all in one line.
+**Example 2: Running a global action using piping and display the returned object**
+Now, let's see how we can get to the of the 'Content' property, convert it to a PowerShell object and then display it as a list, all in one line.
 
 ```powershell
 @{Uri="WhoAmI"} | Send-DataverseOperation | select -ExpandProperty Content | ConvertFrom-Json | Format-List
@@ -57,8 +58,11 @@ UserId         : 88057198-a9b1-ec11-9840-00567ab5c181
 OrganizationId : e34c95a5-f34c-430c-a05e-a23437e5b9fa
 ```
 
+**Example 3: Running a global action and accessing the result**
+When the result is converted to an object, you can access any of the properties like any other PowerShell object.
+
 ```powershell
-    $whoAmI = ConvertTo-Json ([pscustomobject]@{Uri="WhoAmI";Method="GET"}) | Send-DataverseOperation | ConvertFrom-Json
+    $whoAmI = ConvertTo-Json ([pscustomobject]@{Uri="WhoAmI"}) | Send-DataverseOperation | ConvertFrom-Json
     Write-Host $whoAmI.UserId
 ```
 The above example sends a WhoAmI request to the Dataverse and gets back the result. If you check carefully this is what happens in each step:
