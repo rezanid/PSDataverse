@@ -1,5 +1,15 @@
-# PSDataverse
-PowerShell module that brings Dataverse's Web API to PowerShell 7 with features like piping, batching and more. It is designed with ease-of-use and performance is mind and follows the patterns of native PowerShell cmdlets to play nicely with other modules.
+# What is PSDataverse?
+PSDataverse is a PowerShell module that brings Dataverse's Web API to PowerShell 7+ with features like piping, batching and more. It is designed with ease-of-use and performance in mind and follows the patterns of native PowerShell cmdlets to play nicely with other modules.
+
+# Features
+* Securely connect to Dataverse.
+* Supports bacthing.
+* Supports parallelism.
+* Automatically reconnects when authentication token is about to expire.
+* Enhanced pipeline support (accepts different data types as input and emits responses to the pipeline).
+* Automatic wait-and-retry for transient errors by default.
+* Repects throttling data sent by Dataverse.
+* Does not hide the response sent back by Dataverse.
 
 # How to install
 At the moment the module is not published on any package library. The easiest way to use this module is to download the latest released version and load the module using the following command.
