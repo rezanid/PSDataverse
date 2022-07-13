@@ -61,7 +61,7 @@ Now, let's see how we can get to the of the 'Content' property, convert it to a 
 This will reult in the following output:
 
 ```
-@odata.context : https://crm4kbcgen-datamigration.crm4.dynamics.com/api/data/v9.2/$metadata#Microsoft.Dynamics.CRM.WhoA
+@odata.context : https://helloworld.crm4.dynamics.com/api/data/v9.2/$metadata#Microsoft.Dynamics.CRM.WhoA
                  mIResponse
 BusinessUnitId : 6f202e6c-e471-ec11-8941-000d3adf0002
 UserId         : 88057198-a9b1-ec11-9840-00567ab5c181
