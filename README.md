@@ -14,14 +14,14 @@ PSDataverse is a PowerShell module that brings Dataverse's Web API to PowerShell
 # How to install
 At the moment the module is not published on any package library. The easiest way to use this module is to download the latest released version and load the module using the following command.
 ```powershell
-    if (-not(Get-Module -ListAvailable -Name MigrationModule)) { 
-      Import-Module .\MigrationModule.dll
-    }
+if (-not(Get-Module -ListAvailable -Name MigrationModule)) { 
+  Import-Module .\MigrationModule.dll
+}
 ```
 # How to use
 The first thing to do is to connect to your Dataverse environment `Connect-Dataverse` cmdlet. For example the following command uses a certificate that is installed in Windows to connect.
 ```powershell
-    Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;thumbprint=<thumbprint-of-your-certificate>;resource=https://<your-environment-name>.crm4.dynamics.com/"
+Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;thumbprint=<thumbprint-of-your-certificate>;resource=https://<your-environment-name>.crm4.dynamics.com/"
 
 ```
 
@@ -72,8 +72,8 @@ OrganizationId : e34c95a5-f34c-430c-a05e-a23437e5b9fa
 When the result is converted to an object, you can access any of the properties like any other PowerShell object.
 
 ```powershell
-    $whoAmI = ConvertTo-Json ([pscustomobject]@{Uri="WhoAmI"}) | Send-DataverseOperation | ConvertFrom-Json
-    Write-Host $whoAmI.UserId
+$whoAmI = ConvertTo-Json ([pscustomobject]@{Uri="WhoAmI"}) | Send-DataverseOperation | ConvertFrom-Json
+Write-Host $whoAmI.UserId
 ```
 The above example sends a WhoAmI request to the Dataverse and gets back the result. If you check carefully this is what happens in each step:
 1. An operation is defined as a Hashtable i.e. `@{Uri="WhoAmI";Method="GET"}` and using `ConvertTo-Json` this Hashtable is converted to JSON, because at the moment `Send-Operation` only support operations in JSON format.
