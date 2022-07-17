@@ -86,6 +86,7 @@ OrganizationId : e34c95a5-f34c-430c-a05e-a23437e5b9fa
 ```
 
 **Example 5: Running a global action and accessing the result**
+
 When the result is converted to an object, you can access any of the properties like any other PowerShell object.
 
 ```powershell
