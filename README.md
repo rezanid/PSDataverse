@@ -19,17 +19,23 @@ if (-not(Get-Module -ListAvailable -Name MigrationModule)) {
 }
 ```
 # How to use
-The first thing to do is to connect to your Dataverse environment `Connect-Dataverse` cmdlet. For example the following command uses a certificate that is installed in Windows to connect.
+The first thing to do is to connect to your Dataverse environment `Connect-Dataverse` cmdlet. Currently there are two ways that you can connect, using a Client ID (aka Application ID) and a Client Password or using a Client ID and a certificate that you have installed in OS's certificate store. 
+
+## Example 1 - Connecting to Dataverse using a client ID and a client certificate installed in certificate store. 
 ```powershell
 Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;thumbprint=<thumbprint-of-your-certificate>;resource=https://<your-environment-name>.crm4.dynamics.com/"
+```
 
+## Example 2 - Connecting to Dataverse using a client ID and a client secret installed in certificate store. 
+```powershell
+Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;clientsecret=<your-client-secret>;resource=https://<your-environment-name>.crm4.dynamics.com/"
 ```
 
 > 🚧 I am working on bringing the same connection string format as supported by [Xrm Tooling](https://docs.microsoft.com/en-us/dynamics365/customerengagement/on-premises/developer/xrm-tooling/use-powershell-cmdlets-xrm-tooling-connect?view=op-9-1). Ultimately you will be able to either provide a connection string as the only parameter or provide each property of the connection string, separately as a parameter.
 
 After that you can send any number of operations to your Dataverse environment. Let's look at a simple operation.
 
-**Example 1: Running a global action using piping**
+**Example 3: Running a global action using piping**
  ```powershell
  @{Uri="WhoAmI"} | Send-DataverseOperation
  ```
@@ -49,9 +55,17 @@ Headers    : {[Cache-Control, no-cache], [x-ms-service-request-id, c9af118d-b483
 StatusCode : OK
 ```
 
-You can easily see the original headers and status code from dynamics. If there's any error, it will be reflected in 'Error' property. The most important property that you will often need is the 'Content' that includes the payload in JSON format.
+You can always see the original headers and status code from dynamics. If there's any error, it will be reflected in 'Error' property. The most important property that you will often need is the 'Content' that includes the payload in JSON format.
 
-**Example 2: Running a global action using piping and display the returned object**
+The following command will have exactly the same result, but it is sending a string which is considered as JSON.
+```powershell
+'{"Uri":"WhoAmI"} | Send-DataverseOperation
+```
+
+> **ℹ NOTE**
+> When the input is a Hashtable like object, it will be converted to JSON equivalent before sending to Dataverse. To have more control over the conversion to JSON, it is recommended to use the native `[ConvertTo-Json](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/convertto-json)` before Send-DataverseOperation.
+
+**Example 4: Running a global action using piping and display the returned object**
 Now, let's see how we can get to the of the 'Content' property, convert it to a PowerShell object and then display it as a list, all in one line.
 
 ```powershell
@@ -68,7 +82,7 @@ UserId         : 88057198-a9b1-ec11-9840-00567ab5c181
 OrganizationId : e34c95a5-f34c-430c-a05e-a23437e5b9fa
 ```
 
-**Example 3: Running a global action and accessing the result**
+**Example 5: Running a global action and accessing the result**
 When the result is converted to an object, you can access any of the properties like any other PowerShell object.
 
 ```powershell
