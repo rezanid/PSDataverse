@@ -21,12 +21,12 @@ if (-not(Get-Module -ListAvailable -Name MigrationModule)) {
 # How to use
 The first thing to do is to connect to your Dataverse environment `Connect-Dataverse` cmdlet. Currently there are two ways that you can connect, using a Client ID (aka Application ID) and a Client Password or using a Client ID and a certificate that you have installed in OS's certificate store. 
 
-## Example 1 - Connecting to Dataverse using a client ID and a client certificate installed in certificate store. 
+**Example 1 - Connecting to Dataverse using a client ID and a client certificate installed in certificate store.**
 ```powershell
 Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;thumbprint=<thumbprint-of-your-certificate>;resource=https://<your-environment-name>.crm4.dynamics.com/"
 ```
 
-## Example 2 - Connecting to Dataverse using a client ID and a client secret. 
+**Example 2 - Connecting to Dataverse using a client ID and a client secret.**
 ```powershell
 Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;clientsecret=<your-client-secret>;resource=https://<your-environment-name>.crm4.dynamics.com/"
 ```
@@ -97,3 +97,7 @@ The above example sends a WhoAmI request to the Dataverse and gets back the resu
 2. The operation is piped to `Send-DataverseOperation` that sends the operation to Dataverse and gets back the result.
 3. The result of `Send-Operation` is then converted back to a Hashtable. The table will contain thres properties as per documentation. BusinessUnitId, UserId, and OrganizationId
 4. The second line is just printing the UserId to the host.
+
+# Status
+
+[![PSScriptAnalyzer](https://github.com/rezanid/PSDataverse/actions/workflows/powershell.yml/badge.svg)](https://github.com/rezanid/PSDataverse/actions/workflows/powershell.yml)
