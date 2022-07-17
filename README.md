@@ -31,6 +31,10 @@ Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/
 Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;clientsecret=<your-client-secret>;resource=https://<your-environment-name>.crm4.dynamics.com/"
 ```
 
+> **ℹ NOTE**
+> For any of the above examples to work you need an app registration mapped to an application user in Power Platform. To learn how to do that, please read the following article from the official documentation: [Manage application users in the Power Platform admin center](https://docs.microsoft.com/en-us/power-platform/admin/manage-application-users)
+
+
 > 🚧 I am working on bringing the same connection string format as supported by [Xrm Tooling](https://docs.microsoft.com/en-us/dynamics365/customerengagement/on-premises/developer/xrm-tooling/use-powershell-cmdlets-xrm-tooling-connect?view=op-9-1). Ultimately you will be able to either provide a connection string as the only parameter or provide each property of the connection string, separately as a parameter.
 
 After that you can send any number of operations to your Dataverse environment. Let's look at a simple operation.
