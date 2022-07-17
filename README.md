@@ -26,7 +26,7 @@ The first thing to do is to connect to your Dataverse environment `Connect-Datav
 Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;thumbprint=<thumbprint-of-your-certificate>;resource=https://<your-environment-name>.crm4.dynamics.com/"
 ```
 
-## Example 2 - Connecting to Dataverse using a client ID and a client secret installed in certificate store. 
+## Example 2 - Connecting to Dataverse using a client ID and a client secret. 
 ```powershell
 Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;clientsecret=<your-client-secret>;resource=https://<your-environment-name>.crm4.dynamics.com/"
 ```
