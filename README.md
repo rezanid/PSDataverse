@@ -62,7 +62,7 @@ You can always see the original headers and status code from dynamics. If there'
 
 The following command will have exactly the same result, but it is sending a string which is considered as JSON.
 ```powershell
-'{"Uri":"WhoAmI"} | Send-DataverseOperation
+'{"Uri":"WhoAmI"}' | Send-DataverseOperation
 ```
 
 > **ℹ NOTE**
