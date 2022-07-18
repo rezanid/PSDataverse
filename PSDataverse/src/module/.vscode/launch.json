@@ -16,7 +16,7 @@
             "type": "PowerShell",
             "request": "attach",
             "name": "PowerShell Attach to Host Process",
-            "processId": "${command.PickPSHostProcess}",
+            "processId": "${command:PickPSHostProcess}",
             "runspaceId": 1
         },
         {
@@ -26,7 +26,7 @@
             "cwd": "${workspaceRoot}"
         },
         {
-            "name": "PowerShell cmdlets: pwsh",
+            "name": "PowerShell debug binary module: pwsh",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
@@ -35,14 +35,14 @@
                 "-NoExit",
                 "-NoProfile",
                 "-Command",
-                "Import-Module ${workspaceFolder}/bin/Debug/net5.0/MigrationModule.dll"
+                "Import-Module ${workspaceFolder}/bin/Debug/net5.0/DataverseModule.dll"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "stopAtEntry": false
         },
         {
-            "name": "PowerShell cmdlets: powershell",
+            "name": "PowerShell debug binary module: powershell",
             "type": "clr",
             "request": "launch",
             "preLaunchTask": "build",
@@ -51,7 +51,7 @@
                 "-NoExit",
                 "-NoProfile",
                 "-Command",
-                "Import-Module ${workspaceFolder}/bin/Debug/netstandard2.0/MigrationModule.dll",
+                "Import-Module ${workspaceFolder}/bin/Debug/netstandard2.0/DataverseModule.dll",
             ],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,

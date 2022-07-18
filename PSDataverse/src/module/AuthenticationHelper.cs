@@ -8,20 +8,31 @@ namespace DataverseModule
 {
     internal class AuthenticationHelper
     {
-        public static bool TestAuth()
+        public static AuthenticationResult Authenticate(DataverseConnectionString connectionString)
         {
-            string authority = "https://login.microsoftonline.com/c89214f1-7515-48ee-9cd0-9b859ed3e4c4/oauth2/authorize";
-            string clientId = "b84d3f12-8ec4-4107-9812-dbfeceb8f17f";
-            string thumbprint = "320DAC96A53579C484248523ABD090FA5C223FE1";
-            var certificate = FindCertificate(thumbprint, StoreName.My);
-            var result = Authenticate(authority, clientId, resource: "https://crm4kbcgen-dev-202205.crm4.dynamics.com/", certificate);
-            return result != null && !string.IsNullOrEmpty(result.AccessToken);
+            if (connectionString == null) { throw new ArgumentNullException(nameof(connectionString)); }
+            if (!string.IsNullOrEmpty(connectionString.CertificationThumbprint))
+            {
+                var certificate = AuthenticationHelper.FindCertificate(connectionString.CertificationThumbprint, StoreName.My);
+                if (certificate == null) { throw new InvalidOperationException($"No certificate found with thumbprint '{connectionString.CertificationThumbprint}'."); }
+                return Authenticate(connectionString.Authority, connectionString.ClientId, connectionString.Resource, certificate);
+            }
+            return Authenticate(connectionString.Authority, connectionString.ClientId, connectionString.Resource, connectionString.ClientSecret);
         }
 
         public static AuthenticationResult Authenticate(string authority, string clientId, string resource, X509Certificate2 clientCert)
         {
             var confidentialClient = ConfidentialClientApplicationBuilder.Create(clientId)
                 .WithCertificate(clientCert)
+                .WithAuthority(authority)
+                .Build();
+            return confidentialClient.AcquireTokenForClient(new string[] { $"{resource}/.default" }).ExecuteAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+        }
+
+        public static AuthenticationResult Authenticate(string authority, string clientId, string resource, string clientSecret)
+        {
+            var confidentialClient = ConfidentialClientApplicationBuilder.Create(clientId)
+                .WithClientSecret(clientSecret)
                 .WithAuthority(authority)
                 .Build();
             return confidentialClient.AcquireTokenForClient(new string[] { $"{resource}/.default" }).ExecuteAsync().ConfigureAwait(false).GetAwaiter().GetResult();

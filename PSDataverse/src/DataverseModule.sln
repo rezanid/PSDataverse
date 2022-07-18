@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.32413.511
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataverseModule", "DataverseModule.csproj", "{5CA8AB93-A251-4E36-BC31-2DF75D5705B0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataverseModule", "module\DataverseModule.csproj", "{5CA8AB93-A251-4E36-BC31-2DF75D5705B0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{12E9A227-70ED-4A0E-A754-33809331B6DA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PSDataverse.Tests", "tests\PSDataverse.Tests\PSDataverse.Tests.csproj", "{DCECD5CC-0B8C-4241-AD9D-A8EC6B145498}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,11 +19,18 @@ Global
 		{5CA8AB93-A251-4E36-BC31-2DF75D5705B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5CA8AB93-A251-4E36-BC31-2DF75D5705B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5CA8AB93-A251-4E36-BC31-2DF75D5705B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCECD5CC-0B8C-4241-AD9D-A8EC6B145498}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCECD5CC-0B8C-4241-AD9D-A8EC6B145498}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCECD5CC-0B8C-4241-AD9D-A8EC6B145498}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCECD5CC-0B8C-4241-AD9D-A8EC6B145498}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B36CDF1-9A9C-4548-8884-75455E9F9BF7}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DCECD5CC-0B8C-4241-AD9D-A8EC6B145498} = {12E9A227-70ED-4A0E-A754-33809331B6DA}
 	EndGlobalSection
 EndGlobal
