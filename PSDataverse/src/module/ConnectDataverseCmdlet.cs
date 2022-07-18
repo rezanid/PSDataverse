@@ -21,12 +21,9 @@ namespace DataverseModule
 
         protected override void ProcessRecord()
         {
-            //TODO: Implement exception handling and logging.
-            //TODO: Implement retry logic
             var dataverseCnnStr = ConnectionStringObject ?? DataverseConnectionString.Parse(ConnectionString);
-            var certificate = AuthenticationHelper.FindCertificate(dataverseCnnStr.CertificationThumbprint, StoreName.My);
-            
-            var authResult = AuthenticationHelper.Authenticate(dataverseCnnStr.Authority, dataverseCnnStr.ClientId, dataverseCnnStr.Resource, certificate);
+
+            var authResult = AuthenticationHelper.Authenticate(dataverseCnnStr);
             SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
             SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
             SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameConnectionString, dataverseCnnStr, ScopedItemOptions.AllScope));
@@ -36,9 +33,6 @@ namespace DataverseModule
             {
                 InitializeServiceProvider(new Uri(dataverseCnnStr.Resource, UriKind.Absolute));
             }
-
-            //var processor = new OperationProcessor(NullLogger.Instance, new HttpClientFactory(new Uri(dataverseCnnStr.Resource, UriKind.Absolute), "v9.2"), startup.SetupRetryPolicies(), authResult.AccessToken);
-            //SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameOperationProcessor, processor, ScopedItemOptions.Private));
 
             WriteDebug("AccessToken: " + authResult.AccessToken);
             WriteInformation("Dataverse authenticated successfully.", new string[] { "dataverse" });

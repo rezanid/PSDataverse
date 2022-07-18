@@ -8,6 +8,7 @@ namespace DataverseModule
         public string Authority { get; set; }
         public string Resource { get; set; }
         public string ClientId { get; set; }
+        public string ClientSecret { get; set; }
         public string CertificationThumbprint { get; set; }
 
         public static DataverseConnectionString Parse(string connectionString)
@@ -19,7 +20,8 @@ namespace DataverseModule
                     Authority = connectionProperties["authority"],
                     ClientId = connectionProperties["clientid"],
                     Resource = connectionProperties["resource"],
-                    CertificationThumbprint = connectionProperties["thumbprint"]
+                    ClientSecret = connectionProperties.TryGetValue("clientsecret", out var secret) ? secret : null,
+                    CertificationThumbprint = connectionProperties.TryGetValue("thumbprint", out var thumbprint) ? thumbprint : null
                 };
         }
     }

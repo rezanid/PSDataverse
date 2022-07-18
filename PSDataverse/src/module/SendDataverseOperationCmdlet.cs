@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace DataverseModule
 {
-    [Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Json")]
+    [Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Object")]
     public class SendDataverseOperationCmdlet : PSCmdlet, IDisposable
     {
         [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Operation", ValueFromPipeline = true)]
@@ -186,8 +186,8 @@ namespace DataverseModule
                         ContentId = InputObject.TryGetPropertyValue("ContentId"),
                         Method = InputObject.TryGetPropertyValue("Method"),
                         Uri = InputObject.TryGetPropertyValue("Uri"),
-                        Headers = dictionary.Contains("Headers") ? 
-                            (dictionary["Headers"] as IDictionary).Cast<DictionaryEntry>().ToDictionary(e => e.Key.ToString(), e => e.Value.ToString()) 
+                        Headers = dictionary.Contains("Headers") ?
+                            (dictionary["Headers"] as IDictionary).Cast<DictionaryEntry>().ToDictionary(e => e.Key.ToString(), e => e.Value.ToString())
                             : null,
                         Value = dictionary.Contains("Value") ? JObject.FromObject(dictionary["Value"]) : null
                     };
@@ -198,7 +198,7 @@ namespace DataverseModule
             return false;
         }
 
-       
+
 
         private static void ValidateOperation(Operation<JObject> operation)
         {
@@ -232,8 +232,7 @@ namespace DataverseModule
             }
             if (dataverseCnnStr != null && authExpiresOn <= DateTimeOffset.Now)
             {
-                var certificate = AuthenticationHelper.FindCertificate(dataverseCnnStr.CertificationThumbprint, StoreName.My);
-                var authResult = AuthenticationHelper.Authenticate(dataverseCnnStr.Authority, dataverseCnnStr.ClientId, dataverseCnnStr.Resource, certificate);
+                var authResult = AuthenticationHelper.Authenticate(dataverseCnnStr);
                 SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
                 SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
             }
