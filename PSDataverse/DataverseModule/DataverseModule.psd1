@@ -15,7 +15,7 @@ RootModule = 'DataverseModule.psm1'
 ModuleVersion = '0.0.1'
 
 # Supported PSEditions
-# CompatiblePSEditions = @()
+CompatiblePSEditions = @("Core")
 
 # ID used to uniquely identify this module
 GUID = '081185a0-92be-4624-85e8-4903acb07e03'
@@ -24,31 +24,22 @@ GUID = '081185a0-92be-4624-85e8-4903acb07e03'
 Author = 'Reza Niroomand'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+CompanyName = 'Novovio'
 
 # Copyright statement for this module
-Copyright = '(c) Reza Niroomand. All rights reserved.'
+Copyright = 'Copyright (c) Reza Niroomand.'
 
 # Description of the functionality provided by this module
-# Description = ''
+Description = 'Bring Dataverse''s Web API to PowerShell.'
 
 # Minimum version of the PowerShell engine required by this module
-# PowerShellVersion = ''
-
-# Name of the PowerShell host required by this module
-# PowerShellHostName = ''
-
-# Minimum version of the PowerShell host required by this module
-# PowerShellHostVersion = ''
+PowerShellVersion = '5.1'
 
 # Minimum version of Microsoft .NET Framework required by this module. This prerequisite is valid for the PowerShell Desktop edition only.
-# DotNetFrameworkVersion = ''
+DotNetFrameworkVersion = '5.0'
 
 # Minimum version of the common language runtime (CLR) required by this module. This prerequisite is valid for the PowerShell Desktop edition only.
-# ClrVersion = ''
-
-# Processor architecture (None, X86, Amd64) required by this module
-# ProcessorArchitecture = ''
+ClrVersion = '5.0'
 
 # Modules that must be imported into the global environment prior to importing this module
 # RequiredModules = @()
@@ -66,28 +57,19 @@ Copyright = '(c) Reza Niroomand. All rights reserved.'
 # FormatsToProcess = @()
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
-NestedModules = @('bin\MigrationModule.dll')
+NestedModules = @('bin\DataverseModule.dll')
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Resolve-MyCmdlet'
+FunctionsToExport = @('Connect-Dataverse', 'Send-DataverseOperation')
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
-CmdletsToExport = '*'
+CmdletsToExport = @()
 
 # Variables to export from this module
-VariablesToExport = '*'
+VariablesToExport = @()
 
 # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-AliasesToExport = '*'
-
-# DSC resources to export from this module
-# DscResourcesToExport = @()
-
-# List of all modules packaged with this module
-# ModuleList = @()
-
-# List of all files packaged with this module
-# FileList = @()
+AliasesToExport = @()
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{
@@ -95,13 +77,13 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = @('PSEdition_Core', 'PSEdition_Desktop', 'Windows', 'Linux', 'macOS', 'Dataverse')
 
         # A URL to the license for this module.
         # LicenseUri = ''
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/rezanid/PSDataverse'
 
         # A URL to an icon representing this module.
         # IconUri = ''
@@ -110,10 +92,10 @@ PrivateData = @{
         # ReleaseNotes = ''
 
         # Prerelease string of this module
-        # Prerelease = ''
+        Prerelease = 'This module is still in beta, even though it has been stress-tested with several different types of operations and even in a few real-world projects. So, keep that in mind before using it in any environments.'
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
-        # RequireLicenseAcceptance = $false
+        RequireLicenseAcceptance = $true
 
         # External dependent modules of this module
         # ExternalModuleDependencies = @()
