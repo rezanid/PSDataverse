@@ -19,7 +19,12 @@ if (-not(Get-Module -ListAvailable -Name MigrationModule)) {
 }
 ```
 # How to use
-The first thing to do is to connect to your Dataverse environment `Connect-Dataverse` cmdlet. Currently there are two ways that you can connect, using a Client ID (aka Application ID) and a Client Password or using a Client ID and a certificate that you have installed in OS's certificate store. 
+
+The first thing to do is to connect to your Dataverse environment `Connect-Dataverse` cmdlet and right after that if authentication goes well, you can start using `Send-DataverseOperation`. 
+
+## How to connect to Dataverse
+
+Currently there are two ways that you can connect, using a Client ID (aka Application ID) and a Client Password or using a Client ID and a certificate that you have installed in OS's certificate store. 
 
 **Example 1 - Connecting to Dataverse using a client ID and a client certificate installed in certificate store.**
 ```powershell
@@ -36,7 +41,11 @@ Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/
 
 > 🚧 I am working on bringing the same connection string format as supported by [Xrm Tooling](https://docs.microsoft.com/en-us/dynamics365/customerengagement/on-premises/developer/xrm-tooling/use-powershell-cmdlets-xrm-tooling-connect?view=op-9-1). Ultimately you will be able to either provide a connection string as the only parameter or provide each property of the connection string, separately as a parameter.
 
-After that you can send any number of operations to your Dataverse environment. If the authentication expires, PSDataverse will automatically reauthenticate behind the scene. Let's look at a simple operation.
+After that you can send any number of operations to your Dataverse environment. If the authentication expires, PSDataverse will automatically reauthenticate behind the scene. 
+
+## How to run Dataverse commands (aka operations)
+
+Let's start with an example right away.
 
 **Example 3: Running a global action using piping**
  ```powershell
