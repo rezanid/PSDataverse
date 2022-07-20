@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Globalization;
 using JsonConverter = Newtonsoft.Json.JsonConverter;
 
 namespace DataverseModule.Dataverse
@@ -28,7 +29,7 @@ namespace DataverseModule.Dataverse
             {
                 throw new JsonSerializationException("Converter cannot write specified value to JSON. Int32 is required.");
             }
-            writer.WriteValue("0x" + ((int)value).ToString("x"));
+            writer.WriteValue("0x" + ((int)value).ToString("x", CultureInfo.InvariantCulture));
         }
     }
 }

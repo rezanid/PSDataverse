@@ -13,6 +13,7 @@ using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Globalization;
 
 namespace DataverseModule.Dataverse.Execute
 {
@@ -21,7 +22,7 @@ namespace DataverseModule.Dataverse.Execute
         readonly ILogger Log;
         readonly HttpClient HttpClient;
         readonly IAsyncPolicy<HttpResponseMessage> Retry;
-        readonly bool doThrowOperationException = false;
+        readonly bool canThrowOperationException;
         public string AuthenticationToken
         {
             set
@@ -35,6 +36,7 @@ namespace DataverseModule.Dataverse.Execute
             IReadOnlyPolicyRegistry<string> policyRegistry,
             string authenticationToken) : this(log, httpClientFactory, policyRegistry)
         {
+            canThrowOperationException = false;
             AuthenticationToken = authenticationToken;
         }
 
@@ -141,7 +143,7 @@ namespace DataverseModule.Dataverse.Execute
             Log.LogWarning($"Failed operation: {failedOperation}.");
             failedOperation.RunCount++;
 
-            if (doThrowOperationException)
+            if (canThrowOperationException)
             {
                 throw CreateOperationException(batch.Id, failedOperation, failedOperationResponse);
             }
@@ -172,6 +174,7 @@ namespace DataverseModule.Dataverse.Execute
             }
             throw new HttpRequestException(
                 string.Format(
+                    CultureInfo.InvariantCulture,
                     "Response status code does not indicate success: {0} ({1}) and the response contains no content.",
                     response.StatusCode,
                     response.ReasonPhrase));

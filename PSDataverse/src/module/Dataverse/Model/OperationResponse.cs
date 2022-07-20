@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -13,7 +14,7 @@ namespace DataverseModule.Dataverse.Model
     public class OperationResponse
     {
         public string? ContentId { get; set; }
-        public HttpStatusCode? StatusCode;
+        public HttpStatusCode? StatusCode { get; set; }
         public string? Content { get; set; }
         public OperationError? Error { get; set; }
         public Dictionary<string, string>? Headers { get; set; }
@@ -64,13 +65,13 @@ namespace DataverseModule.Dataverse.Model
         }
         #endregion
 
-        public static OperationResponse? From(HttpResponseMessage message) 
+        public static OperationResponse? From(HttpResponseMessage message)
         {
             if (message == null) { throw new ArgumentNullException(nameof(message)); }
             if (message.Content == null) { throw new InvalidOperationException($"{nameof(message)}'s Content cannot be null"); }
             return new OperationResponse(
-                statusCode: message.StatusCode,  
-                contentId: message.Headers.TryGetValues("Content-ID", out var values) ? string.Join(',', values) : "", 
+                statusCode: message.StatusCode,
+                contentId: message.Headers.TryGetValues("Content-ID", out var values) ? string.Join(',', values) : "",
                 error: (int)message.StatusCode >= 400 ? System.Text.Json.JsonSerializer.Deserialize<OperationError>(message!.Content!.ToString() ?? "") : null,
                 content: message.StatusCode == HttpStatusCode.OK ? message!.Content!.ReadAsStringAsync().Result : null,
                 headers: message.Headers.ToDictionary(h => h.Key, h => string.Join(',', h.Value)));
@@ -81,25 +82,27 @@ namespace DataverseModule.Dataverse.Model
             //--changesetresponse_66ffbfa0-8e37-4eb1-b843-1b4260b0235e
             var buffer = reader.ReadLine();
             if (buffer == null) { return null; }
-            if (buffer.StartsWith("--batchresponse_") && buffer.EndsWith("--"))
+            if (buffer.StartsWith("--batchresponse_", StringComparison.OrdinalIgnoreCase) && buffer.EndsWith("--", StringComparison.OrdinalIgnoreCase))
             {
                 // end of batch
                 return null;
             }
-            if (!buffer.StartsWith("--changesetresponse_"))
+            if (!buffer.StartsWith("--changesetresponse_", StringComparison.OrdinalIgnoreCase))
             {
                 throw new ParseException(
                     string.Format(
+                        CultureInfo.InvariantCulture,
                         "Expected \"--changesetresponse_\", but found \"{0}\".", buffer.Substring(0, 20)));
             }
-            if (buffer.EndsWith("--"))
+            if (buffer.EndsWith("--", StringComparison.OrdinalIgnoreCase))
             {
                 // end of changeset
                 buffer = reader.ReadLine();
-                if ((!buffer?.StartsWith("--batchresponse_") ?? false) || (!buffer?.EndsWith("--") ?? false))
+                if ((!buffer?.StartsWith("--batchresponse_", StringComparison.OrdinalIgnoreCase) ?? false) || (!buffer?.EndsWith("--", StringComparison.OrdinalIgnoreCase) ?? false))
                 {
                     throw new ParseException(
                         string.Format(
+                            CultureInfo.InvariantCulture,
                             "Expected \"--batchresponse_<batch-id>--\", but found \"{0}\".", buffer?.Substring(0, 16)));
                 }
                 return null;
@@ -123,7 +126,7 @@ namespace DataverseModule.Dataverse.Model
             //*********###*xxxxxxxxxxxxxxxxxxxxx<CRLF>
             buffer = reader.ReadLine();
             if (string.IsNullOrEmpty(buffer)) { return null; }
-            var status = int.Parse(buffer.Substring(9, 3));
+            var status = int.Parse(buffer.Substring(9, 3), NumberStyles.None, CultureInfo.InvariantCulture);
             // Reason text could also be extracted by `buffer.Substring(13)`;
 
             //Content-Type: application/json; odata.metadata=minimal<CRLF>
@@ -149,7 +152,7 @@ namespace DataverseModule.Dataverse.Model
                 // "HTTP/1.1 429 Unknown Status Code\r\n"
                 var content = new StringBuilder();
                 buffer = reader.ReadLine();
-                while (buffer != null && !buffer.StartsWith("--changesetresponse_"))
+                while (buffer != null && !buffer.StartsWith("--changesetresponse_", StringComparison.OrdinalIgnoreCase))
                 {
                     content.AppendLine(buffer);
                     buffer = reader.ReadLine();

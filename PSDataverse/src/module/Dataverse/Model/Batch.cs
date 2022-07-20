@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -134,9 +135,10 @@ namespace DataverseModule.Dataverse.Model
             if (operations.Count() == 1 && compressedBatch.Length > maxBinarySize)
             {
                 var errorMessage = string.Format(
+                    CultureInfo.InvariantCulture,
                     "Even with one operation, the size of the batch is {0} which is larger than maximum allowed ({1}).",
                     compressedBatch.Length, maxBinarySize);
-                throw new Exception(errorMessage);
+                throw new InvalidOperationException(errorMessage);
             }
             else if (compressedBatch.Length > maxBinarySize)
             {
@@ -175,9 +177,10 @@ namespace DataverseModule.Dataverse.Model
             if (operations.Count() == 1 && compressedBatch.Length > maxBinarySize)
             {
                 var errorMessage = string.Format(
+                    CultureInfo.InvariantCulture,
                     "Even with one operation, the size of the batch is {0} which is larger than maximum allowed ({1}).",
                     compressedBatch.Length, maxBinarySize);
-                throw new Exception(errorMessage);
+                throw new InvalidOperationException(errorMessage);
             }
             else if (compressedBatch.Length > maxBinarySize)
             {
@@ -221,7 +224,7 @@ namespace DataverseModule.Dataverse.Model
             return request;
         }
 
-        public static Batch<T> Parse(string compressedBase64String)
+        internal static Batch<T> Parse(string compressedBase64String)
         {
             var bytes = Convert.FromBase64String(compressedBase64String);
             using (var compressedStream = new MemoryStream(bytes))

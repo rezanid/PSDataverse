@@ -15,10 +15,21 @@
     <PackageReference Include="Polly" Version="7.2.3" />
     <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
+    <PackageReference Include="Sylvan.BuildTools.Resources" Version="0.6.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="6.0.0" />
   </ItemGroup>
   <PropertyGroup>
     <!--Copy nuget packages to the output during build-->
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
+  <ItemGroup>
+    <JsonResource Update="Resources.resj">
+      <AccessModifier>Public</AccessModifier>
+      <Namespace>DataverseModule</Namespace>
+      <ResourceName>Resources</ResourceName>
+    </JsonResource>
+  </ItemGroup>
 </Project>

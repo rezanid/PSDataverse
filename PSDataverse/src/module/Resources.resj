@@ -1,0 +1,8 @@
+{
+    "Strings": {
+        "AssertStringNotEmptyInvalidError": "{0} is not set",
+        "AssertStringNotEmptyInvalidPrefix": "string",
+        "AssertNumberPositiveInvalidError": "{0} must be greater than zero",
+        "AssertNumberPositiveInvalidPrefix":"number",
+    }
+}

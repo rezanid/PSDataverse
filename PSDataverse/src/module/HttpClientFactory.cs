@@ -31,10 +31,30 @@ namespace DataverseModule
             return _HttpClient;
         }
 
+        #region Dispose Pattern
+        /// <summary>
+        /// IDisposable implementation, dispose of any disposable resources created by the cmdlet.
+        /// </summary>
         public void Dispose()
         {
-            ((IDisposable)_HttpClient).Dispose();
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
+
+        /// <summary>
+        /// Implementation of IDisposable for both manual Dispose() and finalizer-called disposal of resources.
+        /// </summary>
+        /// <param name="disposing">
+        /// Specified as true when Dispose() was called, false if this is called from the finalizer.
+        /// </param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                ((IDisposable)_HttpClient).Dispose();
+            }
+        }
+        #endregion
 
 
         /// <summary>
@@ -59,7 +79,7 @@ namespace DataverseModule
                 new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        private TimeSpan GetRequestTimeout()
+        private static TimeSpan GetRequestTimeout()
         {
             string requestTimeout = Environment.GetEnvironmentVariable("Request_Timeout", EnvironmentVariableTarget.Process);
             if (!string.IsNullOrEmpty(requestTimeout) && TimeSpan.TryParse(requestTimeout, out var timeout))

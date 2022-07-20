@@ -15,7 +15,7 @@ namespace DataverseModule.Dataverse.Model
         public OperationException() { }
         public OperationException(string message) : base(message) { }
         public OperationException(string message, Exception inner) : base(message, inner) { }
-        public OperationException(SerializationInfo info, StreamingContext context) : base(info, context)
+        protected OperationException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             Operation = (Operation<JObject>)info.GetValue("Operation", typeof(Operation<JObject>));
             Error = (OperationError)info.GetValue("Error", typeof(OperationError));
