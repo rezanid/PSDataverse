@@ -20,9 +20,12 @@ if (-not(Get-Module -ListAvailable -Name MigrationModule)) {
 ```
 # How to use
 
-The first thing to do is to connect to your Dataverse environment `Connect-Dataverse` cmdlet and right after that if authentication goes well, you can start using `Send-DataverseOperation`. 
+The first thing to do is to connect to your Dataverse environment `Connect-Dataverse` cmdlet and right after that if authentication goes well, you can start using `Send-DataverseOperation`.
 
-## How to connect to Dataverse
+1. [Connecting to Dataverse](#connecting-to-Dataverse)
+2. [Running Dataverse commands (aka operations)](#running-dataverse-commands-aka-operations)
+
+## Connecting to Dataverse
 
 Currently there are two ways that you can connect, using a Client ID (aka Application ID) and a Client Password or using a Client ID and a certificate that you have installed in OS's certificate store. 
 
@@ -43,7 +46,7 @@ Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/
 
 After that you can send any number of operations to your Dataverse environment. If the authentication expires, PSDataverse will automatically reauthenticate behind the scene. 
 
-## How to run Dataverse commands (aka operations)
+## Running Dataverse commands (aka operations)
 
 Let's start with an example right away.
 
