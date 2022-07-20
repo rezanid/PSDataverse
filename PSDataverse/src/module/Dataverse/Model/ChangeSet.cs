@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -51,12 +52,12 @@ namespace DataverseModule.Dataverse.Model
             foreach (var operation in Operations)
             {
                 //if (!operation.ContentId.HasValue) { operation.ContentId = ++i; };
-                if (string.IsNullOrEmpty(operation.ContentId)) { operation.ContentId = (++i).ToString(); }
+                if (string.IsNullOrEmpty(operation.ContentId)) { operation.ContentId = (++i).ToString(CultureInfo.InvariantCulture); }
                 sb.Append("--changeset_").AppendLine(Id);
                 sb.AppendLine("Content-Type:application/http");
                 sb.AppendLine("Content-Transfer-Encoding:binary");
                 sb.Append("Content-ID:").AppendLine(operation.ContentId.ToString()).AppendLine();
-                sb.Append(operation.Method).Append(" ").Append(operation.Uri).Append(" ").AppendLine("HTTP/1.1");
+                sb.Append(operation.Method).Append(' ').Append(operation.Uri).Append(' ').AppendLine("HTTP/1.1");
                 if (operation.Value != null) { sb.AppendLine("Content-Type:application/json;type=entry"); }
                 if (operation.Headers != null)
                 {

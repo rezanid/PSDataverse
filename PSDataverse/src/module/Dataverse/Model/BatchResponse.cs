@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 
 namespace DataverseModule.Dataverse.Model
@@ -42,26 +43,28 @@ namespace DataverseModule.Dataverse.Model
         {
             //--batchresponse_0ece16b0-e21d-4eb1-8805-feb2a61b887e
             var buffer = reader.ReadLine();
-            if (!buffer.StartsWith("--batchresponse_"))
+            if (!buffer.StartsWith("--batchresponse_", StringComparison.OrdinalIgnoreCase))
             {
                 var length = Math.Min(buffer.Length, 16);
                 throw new ParseException(
-                    string.Format("Line 1: Expected \"--batchresponse_\" but found\"{0}\".", buffer.Substring(0, length)));
+                    string.Format(CultureInfo.InvariantCulture, "Line 1: Expected \"--batchresponse_\" but found\"{0}\".", buffer.Substring(0, length)));
             }
             var batchResponseId = buffer.Substring(16);
             //Content-Type: multipart/mixed; boundary=changesetresponse_66ffbfa0-8e37-4eb1-b843-1b4260b0235e
             buffer = reader.ReadLine();
-            if (!buffer.StartsWith("Content-Type:"))
+            if (!buffer.StartsWith("Content-Type:", StringComparison.OrdinalIgnoreCase))
             {
                 throw new ParseException(
                     string.Format(
+                        CultureInfo.InvariantCulture,
                         "Line 2: Expected \"Content-Type:\", but found \"{0}\".", buffer.Substring(0, 13)));
             }
             var segments = buffer.Substring(13).Trim().Split(new string[] { "; ", ";" }, StringSplitOptions.None);
-            if (!segments[1].StartsWith("boundary=changesetresponse_"))
+            if (!segments[1].StartsWith("boundary=changesetresponse_", StringComparison.OrdinalIgnoreCase))
             {
                 throw new ParseException(
                     string.Format(
+                        CultureInfo.InvariantCulture,
                         "Line 2: Expected \"boundary=changesetresponse_\" as the second part of content type, but found \"{0}\".",
                         segments[1].Substring(0, 27)));
             }

@@ -10,6 +10,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Globalization;
 
 namespace DataverseModule.Dataverse.Execute
 {
@@ -43,7 +44,7 @@ namespace DataverseModule.Dataverse.Execute
         {
             Log = log;
             HttpClient = httpClientFactory.CreateClient("Dataverse");
-            Policy = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);            
+            Policy = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
         }
 
         public async IAsyncEnumerable<HttpResponseMessage> ProcessAsync(Batch<JObject> batch)
@@ -59,7 +60,7 @@ namespace DataverseModule.Dataverse.Execute
                 //        operation.Value["@odata.id"] = new Uri(ServiceUrl, operation.Value["@odata.id"].ToString());
                 //    }
                 //}
-                yield return await ExecuteAsync(operation);                    
+                yield return await ExecuteAsync(operation);
             }
         }
 
@@ -67,7 +68,7 @@ namespace DataverseModule.Dataverse.Execute
         {
             if (operation is null) { throw new ArgumentNullException(nameof(operation)); }
 
-            if (!operation.Uri.StartsWith("http"))
+            if (!operation.Uri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
                 operation.Uri = (new Uri(HttpClient.BaseAddress, operation.Uri)).ToString();
             }
@@ -123,7 +124,7 @@ namespace DataverseModule.Dataverse.Execute
             }
             return new OperationError
             {
-                Code = ((int)response.StatusCode).ToString(),
+                Code = ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture),
                 Message = responseContent
             };
         }
