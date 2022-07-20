@@ -39,6 +39,11 @@ Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/
 Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;clientsecret=<your-client-secret>;resource=https://<your-environment-name>.crm4.dynamics.com/"
 ```
 
+**Example 3 - Connecting to Dataverse using device code authentication flow.**
+```powershell
+Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;device=true;resource=https://<your-environment-name>.crm4.dynamics.com/"
+```
+
 > **ℹ NOTE**
 > For any of the above examples to work you need an application user in Power Platform. To learn how to do create an application user, please read the following article from the official documentation: [Manage application users in the Power Platform admin center](https://docs.microsoft.com/en-us/power-platform/admin/manage-application-users).
 
