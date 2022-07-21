@@ -1,50 +1,45 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using System.Management.Automation;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace DataverseModule
+namespace PSDataverse;
+public static class PSObjectExtentions
 {
-    public static class PSObjectExtentions
+
+    internal static string GetPSPropertyInfoValue(this PSPropertyInfo property)
     {
+        if (property == null)
+        { throw new ArgumentNullException(nameof(property)); }
 
-        internal static string GetPSPropertyInfoValue(this PSPropertyInfo property)
+        try
         {
-            if (property == null) { throw new ArgumentNullException(nameof(property)); }
-
-            try
-            {
-                return property.Value?.ToString();
-            }
-            catch (Exception)
-            {
-                // If we cannot read some value, treat it as null.
-            }
-
-            return null;
+            return property.Value?.ToString();
+        }
+        catch (Exception)
+        {
+            // If we cannot read some value, treat it as null.
         }
 
-        internal static string TryGetPropertyValue(this PSObject inputObject, string propertyName)
+        return null;
+    }
+
+    internal static string TryGetPropertyValue(this PSObject inputObject, string propertyName)
+    {
+        if (inputObject.BaseObject is IDictionary dictionary)
         {
-            if (inputObject.BaseObject is IDictionary dictionary)
+            if (dictionary.Contains(propertyName))
             {
-                if (dictionary.Contains(propertyName))
-                {
-                    return dictionary[propertyName].ToString();
-                }
-                else if (inputObject.Properties[propertyName] is PSPropertyInfo property)
-                {
-                    return GetPSPropertyInfoValue(property);
-                }
+                return dictionary[propertyName].ToString();
             }
             else if (inputObject.Properties[propertyName] is PSPropertyInfo property)
             {
                 return GetPSPropertyInfoValue(property);
             }
-            return null;
         }
+        else if (inputObject.Properties[propertyName] is PSPropertyInfo property)
+        {
+            return GetPSPropertyInfoValue(property);
+        }
+        return null;
     }
 }

@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\module\DataverseModule.csproj" />
+    <ProjectReference Include="..\..\module\PSDataverse.csproj" />
   </ItemGroup>
 
 </Project>

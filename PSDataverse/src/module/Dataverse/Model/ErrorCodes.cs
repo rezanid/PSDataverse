@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace DataverseModule.Dataverse.Model
+namespace PSDataverse.Dataverse.Model
 {
     public class ErrorCode
     {

@@ -1,9 +1,9 @@
-﻿namespace DataverseModule;
+﻿namespace PSDataverse;
 
-using DataverseModule.Auth;
-using DataverseModule.Dataverse;
-using DataverseModule.Dataverse.Execute;
-using DataverseModule.Dataverse.Model;
+using PSDataverse.Auth;
+using PSDataverse.Dataverse;
+using PSDataverse.Dataverse.Execute;
+using PSDataverse.Dataverse.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;

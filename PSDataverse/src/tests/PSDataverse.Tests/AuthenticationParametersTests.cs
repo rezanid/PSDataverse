@@ -1,4 +1,4 @@
-using DataverseModule;
+using PSDataverse;
 
 namespace PSDataverse.Tests;
 

@@ -1,4 +1,4 @@
-namespace DataverseModule.Extensions
+namespace PSDataverse.Extensions
 {
     using System;
     using System.Globalization;

@@ -1,8 +1,8 @@
-﻿using DataverseModule.Dataverse.Model;
+﻿using PSDataverse.Dataverse.Model;
 using System.Collections.Generic;
 using System.Net.Http;
 
-namespace DataverseModule.Dataverse.Execute
+namespace PSDataverse.Dataverse.Execute
 {
     public interface IBatchProcessor<T>
     {

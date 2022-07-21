@@ -35,7 +35,7 @@
                 "-NoExit",
                 "-NoProfile",
                 "-Command",
-                "Import-Module ${workspaceFolder}/bin/Debug/net5.0/DataverseModule.dll"
+                "Import-Module ${workspaceFolder}/bin/Debug/net5.0/PSDataverse.dll"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
@@ -51,7 +51,7 @@
                 "-NoExit",
                 "-NoProfile",
                 "-Command",
-                "Import-Module ${workspaceFolder}/bin/Debug/netstandard2.0/DataverseModule.dll",
+                "Import-Module ${workspaceFolder}/bin/Debug/netstandard2.0/PSDataverse.dll",
             ],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,

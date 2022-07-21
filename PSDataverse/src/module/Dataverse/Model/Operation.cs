@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DataverseModule.Dataverse.Model
+namespace PSDataverse.Dataverse.Model
 {
     [Serializable]
     public class Operation<T>
