@@ -24,7 +24,10 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
     - name: Restore dependencies
-      run: dotnet restore
+      run: |
+        pushd '${{ env.BINARY_MODULE_PATH}}'
+        dotnet restore
+        popd
       
     - name: Build
       run: |
