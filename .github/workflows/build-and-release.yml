@@ -50,7 +50,11 @@ jobs:
         
     - name: Publish
       shell: pwsh
-      run: Publish-Module -Name "PSDataverse" -NuGetApiKey "${{ secrets.POWERSHELL_GALLERY_API_KEY }}"
+      run: |
+        pushd '${{ env.BINARY_MODULE_PATH}}'
+        Publish-Module ./output -NuGetApiKey "${{ secrets.POWERSHELL_GALLERY_API_KEY }}"
+        popd
+        
         
     
         
