@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace DataverseModule.Dataverse
+namespace PSDataverse.Dataverse
 {
     [Serializable]
     internal class ParseException : Exception

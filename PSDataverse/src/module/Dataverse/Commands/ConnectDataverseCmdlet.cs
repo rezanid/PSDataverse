@@ -1,6 +1,6 @@
-﻿namespace DataverseModule;
+﻿namespace PSDataverse;
 
-using DataverseModule.Auth;
+using PSDataverse.Auth;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Client;
 using System;

@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using DataverseModule.Dataverse.Model;
+using PSDataverse.Dataverse.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Polly;
@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Globalization;
 
-namespace DataverseModule.Dataverse.Execute
+namespace PSDataverse.Dataverse.Execute
 {
     public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
     {

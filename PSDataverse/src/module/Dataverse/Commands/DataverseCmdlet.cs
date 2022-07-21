@@ -1,4 +1,4 @@
-namespace DataverseModule;
+namespace PSDataverse;
 
 using System;
 using System.Management.Automation;

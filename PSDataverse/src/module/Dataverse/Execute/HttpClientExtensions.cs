@@ -1,4 +1,4 @@
-﻿using DataverseModule.Dataverse.Model;
+﻿using PSDataverse.Dataverse.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DataverseModule.Dataverse.Execute
+namespace PSDataverse.Dataverse.Execute
 {
     public static class HttpClientExtensions
     {

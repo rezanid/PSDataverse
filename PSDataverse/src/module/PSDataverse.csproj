@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
@@ -28,7 +28,7 @@
   <ItemGroup>
     <JsonResource Update="Resources.resj">
       <AccessModifier>Public</AccessModifier>
-      <Namespace>DataverseModule</Namespace>
+      <Namespace>PSDataverse</Namespace>
       <ResourceName>Resources</ResourceName>
     </JsonResource>
   </ItemGroup>

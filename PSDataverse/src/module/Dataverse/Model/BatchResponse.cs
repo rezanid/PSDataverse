@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 
-namespace DataverseModule.Dataverse.Model
+namespace PSDataverse.Dataverse.Model
 {
     [Serializable]
     public class BatchResponse

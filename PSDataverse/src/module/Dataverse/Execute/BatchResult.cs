@@ -1,7 +1,7 @@
-﻿using DataverseModule.Dataverse.Model;
+﻿using PSDataverse.Dataverse.Model;
 using System;
 
-namespace DataverseModule.Dataverse.Execute
+namespace PSDataverse.Dataverse.Execute
 {
     public class BatchResult
     {

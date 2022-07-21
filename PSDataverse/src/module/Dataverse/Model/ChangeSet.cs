@@ -6,7 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 
-namespace DataverseModule.Dataverse.Model
+namespace PSDataverse.Dataverse.Model
 {
     [Serializable]
     public class ChangeSet<T>

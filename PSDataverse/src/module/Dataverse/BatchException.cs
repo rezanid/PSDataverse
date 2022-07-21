@@ -1,8 +1,8 @@
-﻿using DataverseModule.Dataverse.Model;
+﻿using PSDataverse.Dataverse.Model;
 using System;
 using System.Runtime.Serialization;
 
-namespace DataverseModule.Dataverse
+namespace PSDataverse.Dataverse
 {
     [Serializable]
     public class BatchException<T> : Exception

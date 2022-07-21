@@ -3,7 +3,7 @@ using System;
 using System.Globalization;
 using JsonConverter = Newtonsoft.Json.JsonConverter;
 
-namespace DataverseModule.Dataverse
+namespace PSDataverse.Dataverse
 {
     class Int32Converter : JsonConverter
     {

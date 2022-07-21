@@ -1,4 +1,4 @@
-namespace DataverseModule;
+namespace PSDataverse;
 
 using Microsoft.Identity.Client;
 

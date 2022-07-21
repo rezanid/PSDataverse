@@ -1,9 +1,9 @@
-﻿namespace DataverseModule;
+﻿namespace PSDataverse;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using DataverseModule.Dataverse.Execute;
+using PSDataverse.Dataverse.Execute;
 using Polly;
 using Polly.Registry;
 using Polly.Timeout;
@@ -15,7 +15,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using DataverseModule.Auth;
+using PSDataverse.Auth;
 
 internal class Startup
 {

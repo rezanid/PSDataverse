@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace DataverseModule.Dataverse.Model
+namespace PSDataverse.Dataverse.Model
 {
     [Serializable]
     public class OperationException : Exception

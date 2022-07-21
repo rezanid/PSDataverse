@@ -9,7 +9,7 @@ using System.Net.Http;
 using System.Text;
 
 #nullable enable
-namespace DataverseModule.Dataverse.Model
+namespace PSDataverse.Dataverse.Model
 {
     public class OperationResponse
     {

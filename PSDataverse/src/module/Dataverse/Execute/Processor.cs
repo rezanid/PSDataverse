@@ -1,6 +1,6 @@
-﻿using DataverseModule.Dataverse.Model;
+﻿using PSDataverse.Dataverse.Model;
 
-namespace DataverseModule.Dataverse.Execute
+namespace PSDataverse.Dataverse.Execute
 {
     public abstract class Processor<T>
     {

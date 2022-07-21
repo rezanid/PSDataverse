@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 
-namespace DataverseModule.Dataverse
+namespace PSDataverse.Dataverse
 {
     public class ThrottlingExceededException : Exception
     {
