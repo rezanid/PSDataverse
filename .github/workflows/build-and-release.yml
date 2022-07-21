@@ -38,4 +38,6 @@ jobs:
     - name: Test (.NET)
       run: |
         pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet test --no-build --verbosity normal
+        dotnet test --no-build --verbosity normal --output ./output
+        popd
+        
