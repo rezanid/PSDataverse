@@ -86,7 +86,7 @@ PrivateData = @{
         ProjectUri = 'https://github.com/rezanid/PSDataverse'
 
         # A URL to an icon representing this module.
-        # IconUri = ''
+        IconUri = 'https://github.com/rezanid/PSDataverse/raw/268e36c93ddfbcb6bcc2255beed9b03499210dfb/media/PSDataverse-Logo.png'
 
         # ReleaseNotes of this module
         # ReleaseNotes = ''
