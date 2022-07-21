@@ -1,0 +1,38 @@
+name: .NET
+
+on:
+  pull_request:
+    branches: [ "main", "release/*" ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '6.0.x'
+  BINARY_MODULE_PATH: './PSDataverse/src/'
+
+jobs:
+  build:
+    
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    
+    - name: Setup .NET ${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: |
+        pushd '${{ env.BINARY_MODULE_PATH}}'
+        dotnet build --no-restore --configuration Release --output ./output
+        popd
+      
+    - name: Test (.NET)
+      run: |
+        pushd '${{ env.BINARY_MODULE_PATH}}'
+        dotnet test --no-build --verbosity normal
