@@ -32,12 +32,25 @@ jobs:
     - name: Build
       run: |
         pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet build --no-restore --configuration Release --output ./output
+        dotnet build --no-restore --configuration Release --output ./output/bin
         popd
       
     - name: Test (.NET)
       run: |
         pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet test --no-build --verbosity normal --output ./output
+        dotnet test --no-build --verbosity normal --output ./output/bin
         popd
+        
+    - name: Prepare package
+      shell: pwsh
+      run: |
+        pushd '${{ env.BINARY_MODULE_PATH}}'
+        Copy-Item ("./module/PSDataverse.psd1" , "./module/PSDataverse.psm1") ./output
+        popd
+        
+    - name: Publish
+      shell: pwsh
+      run: Publish-Module -Name "PSDataverse" -NuGetApiKey "${{ secrets.POWERSHELL_GALLERY_API_KEY }}"
+        
+    
         
