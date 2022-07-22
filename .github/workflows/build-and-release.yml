@@ -8,6 +8,7 @@ on:
 env:
   DOTNET_VERSION: '6.0.x'
   BINARY_MODULE_PATH: './PSDataverse/src/'
+  MODULE_NAME: 'PSDataverse'
 
 jobs:
   build:
@@ -34,27 +35,27 @@ jobs:
     - name: Build
       run: |
         pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet build --no-restore --configuration Release --output ./output/bin
+        dotnet build --no-restore --configuration Release --output ./output/${{ env.MODULE_NAME }}/bin
         popd
       
     - name: Test (.NET)
       run: |
         pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet test --no-build --verbosity normal --output ./output/bin
+        dotnet test --no-build --verbosity normal --output ./output/${{ env.MODULE_NAME }}/bin
         popd
         
     - name: Prepare package
       shell: pwsh
       run: |
         pushd '${{ env.BINARY_MODULE_PATH}}'
-        Copy-Item ("./module/PSDataverse.psd1" , "./module/PSDataverse.psm1") ./output
+        Copy-Item ("./module/PSDataverse.psd1" , "./module/PSDataverse.psm1") ./output/${{ env.MODULE_NAME }}
         popd
         
     - name: Publish
       shell: pwsh
       run: |
         pushd '${{ env.BINARY_MODULE_PATH}}'
-        Publish-Module -Path ./output -NuGetApiKey "${{ secrets.POWERSHELL_GALLERY_API_KEY }}"
+        Publish-Module -Path ./output/${{ env.MODULE_NAME }} -NuGetApiKey "${{ secrets.POWERSHELL_GALLERY_API_KEY }}"
         popd
         
         
