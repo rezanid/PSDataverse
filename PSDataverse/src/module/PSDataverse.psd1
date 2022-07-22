@@ -80,7 +80,7 @@ PrivateData = @{
         Tags = @('PSEdition_Core', 'PSEdition_Desktop', 'Windows', 'Linux', 'macOS', 'Dataverse')
 
         # A URL to the license for this module.
-        # LicenseUri = ''
+        LicenseUri = 'https://github.com/rezanid/PSDataverse/blob/main/LICENSE'
 
         # A URL to the main website for this project.
         ProjectUri = 'https://github.com/rezanid/PSDataverse'
@@ -92,7 +92,7 @@ PrivateData = @{
         # ReleaseNotes = ''
 
         # Prerelease string of this module
-        Prerelease = 'https://github.com/rezanid/PSDataverse/blob/main/LICENSE'
+        # Prerelease = ''
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         RequireLicenseAcceptance = $true
