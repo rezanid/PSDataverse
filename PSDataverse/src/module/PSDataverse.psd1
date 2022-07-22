@@ -92,7 +92,7 @@ PrivateData = @{
         # ReleaseNotes = ''
 
         # Prerelease string of this module
-        Prerelease = 'This module is still in beta, even though it has been stress-tested with several different types of operations and even in a few real-world projects. So, keep that in mind before using it in any environments.'
+        # Prerelease = ''
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         RequireLicenseAcceptance = $true
