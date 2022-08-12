@@ -24,6 +24,10 @@ internal class AuthenticationService
         {
             current = current.NextAuthenticator;
         }
+        if (current == null)
+        {
+            throw new InvalidOperationException("Unable to detect required authentication flow. Please check the input parameters and try again.");
+        }
         return await current?.AuthenticateAsync(parameters, onMessageForUser, cancellationToken);
     }
 }
