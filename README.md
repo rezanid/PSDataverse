@@ -1,3 +1,11 @@
+# Table of Contents
+* [What is PSDataverse](#what-is-psdataverse)
+* [Features](#features)
+* [How to install](#how-to-install)
+* [How to use](#how-to-use)
+  * [Connecting to Dataverse](#connecting-to-dataverse)
+  * [Sending operations to Dataverse](#sending-operations-to-dataverse)
+
 # What is PSDataverse?
 PSDataverse is a PowerShell module that brings Dataverse's Web API to PowerShell 7+ with features like piping, batching and more. It is designed with ease-of-use and performance in mind and follows the patterns of native PowerShell cmdlets to play nicely with other modules.
 
@@ -19,7 +27,12 @@ if (-not(Get-Module -ListAvailable -Name MigrationModule)) {
 }
 ```
 # How to use
-The first thing to do is to connect to your Dataverse environment `Connect-Dataverse` cmdlet. Currently there are two ways that you can connect, using a Client ID (aka Application ID) and a Client Password or using a Client ID and a certificate that you have installed in OS's certificate store. 
+The first thing to do is to connect to your Dataverse environment using `Connect-Dataverse` cmdlet. Currently there are three ways that you can connect: 
+* Using a Client ID (aka Application ID) and a Client Password
+* Using a Client ID and a certificate that you have installed in OS's certificate store
+* Using a device authentication flow (interactive login)
+
+## Connecting to Dataverse
 
 **Example 1 - Connecting to Dataverse using a client ID and a client certificate installed in certificate store.**
 ```powershell
@@ -31,12 +44,25 @@ Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/
 Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;clientsecret=<your-client-secret>;resource=https://<your-environment-name>.crm4.dynamics.com/"
 ```
 
+**Example 3 - Connecting to Dataverse using device authentication flow.**
+```powershell
+Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=1950a258-227b-4e31-a9cf-717495945fc2;device=true" -InformationAction Continue
+```
+When you run the above command, a message like the following will be printed in the console, and you just need to do what is asked. After that, you will be prompted to use your credentials and that's it.
+```
+To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code CSPUJ9S7K to authenticate.
+```
+This is the easiest way to log in, when your just need to to ad-hoc operations.
+
 > **ℹ NOTE**
-> For any of the above examples to work you need an application user in Power Platform. To learn how to do create an application user, please read the following article from the official documentation: [Manage application users in the Power Platform admin center](https://docs.microsoft.com/en-us/power-platform/admin/manage-application-users).
+> For any of first two examples to work you need an application user in Power Platform. To learn how to do create an application user, please read the following article from the official documentation: [Manage application users in the Power Platform admin center](https://docs.microsoft.com/en-us/power-platform/admin/manage-application-users).
+The third one is using a wellknown client id, but if you want you can also use the client id of your own app registration. If you wish to use your own app registration for device authentication flow, you will need to enable "Allow public client flows" for your app registration. 
 
-> 🚧 I am working on bringing the same connection string format as supported by [Xrm Tooling](https://docs.microsoft.com/en-us/dynamics365/customerengagement/on-premises/developer/xrm-tooling/use-powershell-cmdlets-xrm-tooling-connect?view=op-9-1). Ultimately you will be able to either provide a connection string as the only parameter or provide each property of the connection string, separately as a parameter.
+After connecting to the Dataverse, you can send any number of operations to your Dataverse environment. If the authentication expires, PSDataverse will automatically reauthenticate behind the scene. 
 
-After that you can send any number of operations to your Dataverse environment. If the authentication expires, PSDataverse will automatically reauthenticate behind the scene. Let's look at a simple operation.
+## Sending operations to Dataverse
+
+Let's look at a simple operation.
 
 **Example 3: Running a global action using piping**
  ```powershell
