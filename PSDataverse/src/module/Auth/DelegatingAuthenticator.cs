@@ -22,13 +22,12 @@ namespace PSDataverse.Auth
         {
             if (!parameters.UseDeviceFlow & (
                 !string.IsNullOrEmpty(parameters.CertificateThumbprint) ||
-                !string.IsNullOrEmpty(parameters.ServicePrincipalSecret) ||
                 !string.IsNullOrEmpty(parameters.ClientSecret)))
             {
                 return CreateConfidentialClient(
                     parameters.Authority,
                     parameters.ClientId,
-                    parameters.ServicePrincipalSecret,
+                    parameters.ClientSecret,
                     FindCertificate(parameters.CertificateThumbprint),
                     redirectUri,
                     parameters.TenantId);
