@@ -64,9 +64,13 @@ After connecting to the Dataverse, you can send any number of operations to your
 
 Let's look at a simple operation.
 
-**Example 3: Running a global action using piping**
+**Example 1: Running a global action using piping**
  ```powershell
  @{Uri="WhoAmI"} | Send-DataverseOperation
+ ```
+ Or:
+ ```powershell
+ Send-DataverseOperation @{Uri="WhoAmI"}
  ```
  
 This will result in an OperationResponse like the following:
@@ -90,11 +94,16 @@ The following command will have exactly the same result, but it is sending a str
 ```powershell
 '{"Uri":"WhoAmI"}' | Send-DataverseOperation
 ```
+or:
+```powershell
+Send-DataverseOperation '{"Uri":"WhoAmI"}'
+```
+
 
 > **ℹ NOTE**
 > When the input is a Hashtable like object, it will be converted to JSON equivalent before sending to Dataverse. To have more control over the conversion to JSON, it is recommended to use the native `[ConvertTo-Json](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/convertto-json)` before Send-DataverseOperation.
 
-**Example 4: Running a global action using piping and display the returned object**
+**Example 2: Running a global action using piping and display the returned object**
 Now, let's see how we can get to the of the 'Content' property, convert it to a PowerShell object and then display it as a list, all in one line.
 
 ```powershell
@@ -111,7 +120,7 @@ UserId         : 88057198-a9b1-ec11-9840-00567ab5c181
 OrganizationId : e34c95a5-f34c-430c-a05e-a23437e5b9fa
 ```
 
-**Example 5: Running a global action and accessing the result**
+**Example 3: Running a global action and accessing the result**
 
 When the result is converted to an object, you can access any of the properties like any other PowerShell object.
 
