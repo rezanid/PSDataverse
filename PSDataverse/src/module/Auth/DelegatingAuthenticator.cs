@@ -13,8 +13,25 @@ namespace PSDataverse.Auth
     {
         public IAuthenticator NextAuthenticator { get; set; }
 
-        public abstract Task<AuthenticationResult> AuthenticateAsync(
-            AuthenticationParameters parameters, Action<string> onMessageForUser = default, CancellationToken cancellationToken = default);
+        public virtual async Task<AuthenticationResult> AuthenticateAsync(
+            AuthenticationParameters parameters, Action<string> onMessageForUser = default, CancellationToken cancellationToken = default)
+        {
+            IClientApplicationBase app = GetClient(parameters);
+
+            var account = parameters.Account ?? (await app.GetAccountsAsync()).FirstOrDefault();
+            if (account == null) { return null; }
+
+            try
+            {
+                return await app.AcquireTokenSilent(parameters.Scopes, account).ExecuteAsync().ConfigureAwait(false);
+            }
+            catch (MsalUiRequiredException)
+            {
+                //TODO: Needs logging
+            }
+
+            return null;
+        }
 
         public abstract bool CanAuthenticate(AuthenticationParameters parameters);
 
