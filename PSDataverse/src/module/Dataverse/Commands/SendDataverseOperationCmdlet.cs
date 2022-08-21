@@ -17,6 +17,7 @@ using System.Management.Automation;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using PSDataverse.Extensions;
 
 [Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Object")]
 public class SendDataverseOperationCmdlet : DataverseCmdlet
@@ -69,16 +70,17 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
 
         stopwatch = Stopwatch.StartNew();
 
+        var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
+        operationProcessor = serviceProvider.GetService<OperationProcessor>();
+        batchProcessor = serviceProvider.GetService<BatchProcessor>();
+        authenticationService = serviceProvider.GetService<AuthenticationService>();
+
         if (!VerifyConnection())
         {
             isValidationFailed = true;
             return;
         }
 
-        var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
-        operationProcessor = serviceProvider.GetService<OperationProcessor>();
-        batchProcessor = serviceProvider.GetService<BatchProcessor>();
-        authenticationService = serviceProvider.GetService<AuthenticationService>();
         if (BatchSize > 0)
         {
             operations = new(new List<Operation<JObject>>(BatchSize));
@@ -92,10 +94,8 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
     {
         base.ProcessRecord();
 
-        if (isValidationFailed)
-        { return; }
-        if (!VerifyConnection())
-        { return; }
+        if (isValidationFailed) { return; }
+        if (!VerifyConnection()) { return; }
 
         if (!TryGetInputOperation(out var op))
         {
@@ -176,22 +176,30 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         }
         if (InputJson is not null)
         {
-            operation = JsonConvert.DeserializeObject<Operation<JObject>>(InputJson);
+            string input = null;
+            // If the given string is not in JSON format, assume it's a URL.
+            if (!InputJson.StartsWith('{')) { input = $"{{\"Uri\":\"{InputJson}\"}}"; }
+            operation = JsonConvert.DeserializeObject<Operation<JObject>>(input ?? InputJson);
             return true;
         }
         if (InputObject is not null)
         {
             if (InputObject.BaseObject is IDictionary dictionary)
             {
+                var ser = JsonSerializer.Create(
+                    new JsonSerializerSettings
+                    {
+                        NullValueHandling = NullValueHandling.Include
+                    });
                 operation = new Operation<JObject>
                 {
                     ContentId = InputObject.TryGetPropertyValue("ContentId"),
                     Method = InputObject.TryGetPropertyValue("Method"),
                     Uri = InputObject.TryGetPropertyValue("Uri"),
-                    Headers = dictionary.Contains("Headers") ?
-                        (dictionary["Headers"] as IDictionary).Cast<DictionaryEntry>().ToDictionary(e => e.Key.ToString(), e => e.Value.ToString())
+                    Headers = dictionary.TryGetValue("Headers", out var headers) && headers != null ?
+                        (headers as IDictionary).Cast<DictionaryEntry>().ToDictionary(e => e.Key.ToString(), e => e.Value.ToString())
                         : null,
-                    Value = dictionary.Contains("Value") ? JObject.FromObject(dictionary["Value"]) : null
+                    Value = dictionary.TryGetValue("Value", out var value) && value != null ? JObject.FromObject(dictionary["Value"], ser) : null
                 };
                 return true;
             }
@@ -232,13 +240,14 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         }
         if (dataverseCnnStr != null && authExpiresOn <= DateTimeOffset.Now)
         {
-            //var authResult = AuthenticationHelper.Authenticate(dataverseCnnStr);
-            var authResult = authenticationService.AuthenticateAsync(dataverseCnnStr, null, CancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+            var authResult = authenticationService.AuthenticateAsync(dataverseCnnStr, OnMessageForUser, CancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
             SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
             SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
         }
         return true;
     }
+
+    private void OnMessageForUser(string message) => WriteInformation(message, new string[] { "dataverse" });
 
     private bool IsNewBatchNeeded() => BatchSize > 0 && operationCounter == 0 || operationCounter % BatchSize == 0;
 

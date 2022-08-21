@@ -3,6 +3,7 @@ namespace PSDataverse;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Identity.Client;
 
 public class AuthenticationParameters
 {
@@ -11,10 +12,11 @@ public class AuthenticationParameters
     public string ClientId { get; set; }
     public string ClientSecret { get; set; }
     public string CertificateThumbprint { get; set; }
-    public string ServicePrincipalSecret { get; set; }
     public string TenantId { get; set; }
     public IEnumerable<string> Scopes { get; set; }
     public bool UseDeviceFlow { get; set; }
+
+    public IAccount Account { get; set; }
 
     public static AuthenticationParameters Parse(string connectionString)
     {
@@ -30,8 +32,7 @@ public class AuthenticationParameters
             ClientSecret = connectionProperties.TryGetValue("clientsecret", out var secret) ? secret : null,
             CertificateThumbprint = connectionProperties.TryGetValue("thumbprint", out var thumbprint) ? thumbprint : null,
             TenantId = connectionProperties.TryGetValue("tenantid", out var tenantid) ? tenantid : null,
-            ServicePrincipalSecret = connectionProperties.TryGetValue("serviceprincipalsecret", out var principalsecret) ? principalsecret : null,
-            Scopes = connectionProperties.TryGetValue("scopes", out var scopes) ? scopes.Split(',') : new string[] { $"{resource}/.default" },
+            Scopes = connectionProperties.TryGetValue("scopes", out var scopes) ? scopes.Split(',') : new string[] { (new Uri(new Uri(resource, UriKind.Absolute) , ".default")).ToString() },
             UseDeviceFlow = connectionProperties.TryGetValue("device", out var device) ? bool.Parse(device) : false
         };
     }

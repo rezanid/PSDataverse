@@ -92,7 +92,7 @@ namespace PSDataverse.Dataverse.Execute
                 operation,
                 new OperationResponse(
                     response.StatusCode,
-                    string.IsNullOrEmpty(operation.ContentId) ? Guid.NewGuid().ToString() : operation.ContentId,
+                    string.IsNullOrEmpty(operation.ContentId) ? Guid.Empty.ToString() : operation.ContentId,
                     error));
         }
 
@@ -125,7 +125,7 @@ namespace PSDataverse.Dataverse.Execute
             return new OperationError
             {
                 Code = ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture),
-                Message = responseContent
+                Message = string.IsNullOrWhiteSpace(responseContent) ? response.ReasonPhrase : responseContent
             };
         }
 

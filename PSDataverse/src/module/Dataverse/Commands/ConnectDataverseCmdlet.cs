@@ -6,55 +6,88 @@ using Microsoft.Identity.Client;
 using System;
 using System.Management.Automation;
 
-[Cmdlet(VerbsCommunications.Connect, "Dataverse")]
+[Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = "AuthResult")]
 public class ConnectDataverseCmdlet : DataverseCmdlet
 {
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthResult")]
+    public AuthenticationResult AuthResult { get; set; }
+
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "String")]
     public string ConnectionString { get; set; }
 
-    [Parameter(Position = 1, Mandatory = false)]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthParams")]
+    public AuthenticationParameters ConnectionStringObject { get; set; }
+
+    [Parameter(DontShow = true, ParameterSetName = "String")]
+    [Parameter(DontShow = true, ParameterSetName = "AuthParams")]
     public int Retry { get; set; }
 
-    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Object")]
-    public AuthenticationParameters ConnectionStringObject { get; set; }
+    [Parameter(Mandatory = true, ParameterSetName = "AuthResult")]
+    public string Endpoint { get; set; }
 
     private readonly object _lock = new();
 
     protected override void ProcessRecord()
     {
-
-        var authParams = ConnectionStringObject ?? AuthenticationParameters.Parse(ConnectionString);
-
         var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
+        var authParams = ConnectionStringObject ??
+            (string.IsNullOrWhiteSpace(ConnectionString) ?
+            new AuthenticationParameters() :
+            AuthenticationParameters.Parse(ConnectionString));
+
+        var endpointUrl =
+            string.IsNullOrWhiteSpace(Endpoint) ?
+            new Uri(authParams.Resource, UriKind.Absolute) :
+            new Uri(Endpoint, UriKind.Absolute);
         if (serviceProvider == null)
         {
-            serviceProvider = InitializeServiceProvider(new Uri(authParams.Resource, UriKind.Absolute));
+            serviceProvider = InitializeServiceProvider(endpointUrl);
         }
 
-        //var authResult = AuthenticationHelper.Authenticate(dataverseCnnStr);
-        AuthenticationResult authResult = null;
-        try
+        // if previously authented, extract the account. It will be required for silent authentication.
+        var previouAuthResult = SessionState.PSVariable.GetValue(Globals.VariableNameAuthResult) as AuthenticationResult;
+        if (previouAuthResult != null) { authParams.Account = previouAuthResult.Account; }
+
+        var authResult = AuthResult ?? HandleAuthentication(serviceProvider, authParams);
+        if (authResult == null)
         {
-            authResult = serviceProvider.GetService<AuthenticationService>()?.AuthenticateAsync(authParams, OnMessageForUser, CancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-        }
-        catch (OperationCanceledException)
-        {
-            WriteInformation("Dataverse authentication cancelled.", new string[] { "dataverse" });
             return;
         }
-        catch (System.Exception)
-        {
-            throw;
-        }
 
+        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAuthResult, authResult, ScopedItemOptions.AllScope));
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameConnectionString, authParams, ScopedItemOptions.AllScope));
 
         WriteDebug("AccessToken: " + authResult.AccessToken);
         WriteInformation("Dataverse authenticated successfully.", new string[] { "dataverse" });
-        WriteObject("Dataverse authenticated successfully.");
+        // Check if '-InformationAction Continue' is given and if so omit the following
         base.ProcessRecord();
+    }
+
+    private AuthenticationResult HandleAuthentication(
+        IServiceProvider serviceProvider,
+        AuthenticationParameters parameters)
+    {
+        var service = serviceProvider.GetService<AuthenticationService>();
+        try
+        {
+            return service?.AuthenticateAsync(parameters, OnMessageForUser, CancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException)
+        {
+            WriteError(
+                new ErrorRecord(
+                    new InvalidOperationException("Dataverse authentication cancelled."), Globals.ErrorIdAuthenticationFailed, ErrorCategory.AuthenticationError, this));
+            return null;
+        }
+        catch (System.Exception ex)
+        {
+            WriteError(
+                new ErrorRecord(
+                    new InvalidOperationException("Authentication failed.", ex), Globals.ErrorIdAuthenticationFailed, ErrorCategory.AuthenticationError, this));
+            return null;
+        }
     }
 
     private void OnMessageForUser(string message) => WriteInformation(message, new string[] { "dataverse" });
