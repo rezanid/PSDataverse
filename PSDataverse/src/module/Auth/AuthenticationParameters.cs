@@ -3,6 +3,7 @@ namespace PSDataverse;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Identity.Client;
 
 public class AuthenticationParameters
 {
@@ -14,6 +15,8 @@ public class AuthenticationParameters
     public string TenantId { get; set; }
     public IEnumerable<string> Scopes { get; set; }
     public bool UseDeviceFlow { get; set; }
+
+    public IAccount Account { get; set; }
 
     public static AuthenticationParameters Parse(string connectionString)
     {
