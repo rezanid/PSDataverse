@@ -76,6 +76,8 @@ public class HttpClientFactory : IHttpClientFactory, IDisposable
         client.DefaultRequestHeaders.Add("OData-Version", "4.0");
         client.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
+                client.DefaultRequestHeaders.Accept.Add(
+            new MediaTypeWithQualityHeaderValue("application/xml"));
     }
 
     private static TimeSpan GetRequestTimeout()
