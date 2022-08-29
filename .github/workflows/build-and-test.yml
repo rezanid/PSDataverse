@@ -15,8 +15,6 @@ jobs:
   build:
     
     runs-on: ubuntu-latest
-    environment: 
-      name: PowerShell Gallery
 
     steps:
     - name: Checkout
