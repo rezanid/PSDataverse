@@ -4,7 +4,7 @@ namespace PSDataverse.Dataverse.Execute
 {
     public abstract class Processor<T>
     {
-        public string ExtractEntityName(Operation<T> operation)
+        public string ExtractEntityName(Operation operation)
         {
             var uriSegments = operation.Uri.Split('/');
             string entitySegment = uriSegments[^1] == "$ref" ? uriSegments[^3] : uriSegments[^1];

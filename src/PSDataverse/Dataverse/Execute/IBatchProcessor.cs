@@ -9,6 +9,6 @@ namespace PSDataverse.Dataverse.Execute
         //Task ProcessAsync(Batch<T> batch);
         //IAsyncEnumerable<HttpResponseMessage> ProcessAsync(Batch<T> batch);
         IAsyncEnumerable<BatchResponse> ProcessAsync(Batch<T> batch);
-        string ExtractEntityName(Operation<T> operation);
+        string ExtractEntityName(Operation operation);
     }
 }

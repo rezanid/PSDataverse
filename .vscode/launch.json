@@ -1,0 +1,76 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET Core Attach",
+      "type": "coreclr",
+      "request": "attach"
+    },
+    {
+      "name": ".NET Core Launch (pwsh)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "pwsh",
+      "args": [
+        "-NoExit",
+        "-NoProfile",
+        "-Command",
+        "Import-Module ${workspaceFolder}/output/bin/PSDataverse.dll"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "stopAtEntry": true
+    },
+    {
+      "name": ".NET Launch (powershell)",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "powershell",
+      "args": [
+        "-NoExit",
+        "-NoProfile",
+        "-Command",
+        "Import-Module ${workspaceFolder}/output/bin/netstandard2.0/PSDataverse.dll",
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": true,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "PowerShell Launch Current File",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${file}",
+      "args": [],
+      "cwd": "${file}"
+    },
+    {
+      "type": "PowerShell",
+      "request": "launch",
+      "name": "PowerShell Launch Current File w/Args Prompt",
+      "script": "${file}",
+      "args": [
+          "${command:SpecifyScriptArgs}"
+      ],
+      "cwd": "${file}"
+    }
+    {
+      "type": "PowerShell",
+      "request": "attach",
+      "name": "PowerShell Attach to Host Process",
+      "processId": "${command:PickPSHostProcess}",
+      "runspaceId": 1
+    },
+    {
+      "type": "PowerShell",
+      "request": "launch",
+      "name": "PowerShell Interactive Session",
+      "cwd": "${workspaceRoot}"
+    },
+  ]
+}
