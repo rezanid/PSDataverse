@@ -14,16 +14,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Management.Automation;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using PSDataverse.Extensions;
+using Microsoft.PowerShell.Commands;
 
 [Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Object")]
 public class SendDataverseOperationCmdlet : DataverseCmdlet
 {
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Operation", ValueFromPipeline = true)]
-    public Operation<JObject> InputOperation { get; set; }
+    public Operation<string> InputOperation { get; set; }
 
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Json", ValueFromPipeline = true)]
     public string InputJson { get; set; }
@@ -57,8 +57,8 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
     private BatchProcessor batchProcessor;
     private int operationCounter;
     private int batchCounter;
-    private ConcurrentBag<Operation<JObject>> operations;
-    private List<Task<Batch<JObject>>> tasks;
+    private ConcurrentBag<Operation<string>> operations;
+    private List<Task<Batch<string>>> tasks;
     private Stopwatch stopwatch;
     private SemaphoreSlim taskThrottler;
 
@@ -83,7 +83,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
 
         if (BatchSize > 0)
         {
-            operations = new(new List<Operation<JObject>>(BatchSize));
+            operations = new(new List<Operation<string>>(BatchSize));
             tasks = new();
             taskThrottler = new SemaphoreSlim(MaxDop <= 0 ? 20 : MaxDop);
         }
@@ -104,7 +104,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
             return;
         }
 
-        if (op.Value is null && op.Method is null)
+        if (!op.HasValue && op.Method is null)
         { op.Method = "GET"; }
         else if (op.Method is null)
         { op.Method = "POST"; }
@@ -167,7 +167,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         base.EndProcessing();
     }
 
-    private bool TryGetInputOperation(out Operation<JObject> operation)
+    private bool TryGetInputOperation(out Operation<string> operation)
     {
         if (InputOperation is not null)
         {
@@ -179,19 +179,14 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
             string input = null;
             // If the given string is not in JSON format, assume it's a URL.
             if (!InputJson.StartsWith('{')) { input = $"{{\"Uri\":\"{InputJson}\"}}"; }
-            operation = JsonConvert.DeserializeObject<Operation<JObject>>(input ?? InputJson);
+            operation = JsonConvert.DeserializeObject<Operation<string>>(input ?? InputJson);
             return true;
         }
         if (InputObject is not null)
         {
             if (InputObject.BaseObject is IDictionary dictionary)
             {
-                var ser = JsonSerializer.Create(
-                    new JsonSerializerSettings
-                    {
-                        NullValueHandling = NullValueHandling.Include
-                    });
-                operation = new Operation<JObject>
+                operation = new Operation<string>
                 {
                     ContentId = InputObject.TryGetPropertyValue("ContentId"),
                     Method = InputObject.TryGetPropertyValue("Method"),
@@ -199,7 +194,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
                     Headers = dictionary.TryGetValue("Headers", out var headers) && headers != null ?
                         (headers as IDictionary).Cast<DictionaryEntry>().ToDictionary(e => e.Key.ToString(), e => e.Value.ToString())
                         : null,
-                    Value = dictionary.TryGetValue("Value", out var value) && value != null ? JObject.FromObject(dictionary["Value"], ser) : null
+                    Value = dictionary.TryGetValue("Value", out var value)  && value != null ? ConvertToJson(value) : null
                 };
                 return true;
             }
@@ -208,13 +203,25 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         return false;
     }
 
-    private static void ValidateOperation(Operation<JObject> operation)
+    private string ConvertToJson(object objectToProcess)
+    {
+        var context = new JsonObject.ConvertToJsonContext(
+                    maxDepth: 10,
+                    enumsAsStrings: false,
+                    compressOutput: true,
+                    stringEscapeHandling: StringEscapeHandling.Default,
+                    targetCmdlet: this,
+                    cancellationToken: CancellationToken);
+        return JsonObject.ConvertToJson(objectToProcess, in context);
+    }
+
+    private static void ValidateOperation(Operation<string> operation)
     {
         if (operation is null)
         {
             throw new InvalidOperationException("Operation parameter is not provided.");
         }
-        if (!validMethodsWithoutPayload.Contains(operation.Method, StringComparer.OrdinalIgnoreCase) && operation.Value == null)
+        if (!validMethodsWithoutPayload.Contains(operation.Method, StringComparer.OrdinalIgnoreCase) && !operation.HasValue)
         {
             throw new InvalidOperationException(
                 $"Operation does not have a 'Value' but it has a {operation.Method} method. All operations with non-GET method should have a value.");
@@ -255,7 +262,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
     {
         if (operations?.Count > 0)
         {
-            var batch = new Batch<JObject>(operations);
+            var batch = new Batch<string>(operations);
             operations.Clear();
             var task = SendBatchAsync(batch);
             tasks.Add(task);
@@ -305,7 +312,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         }
     }
 
-    private void WriteOutput(Batch<JObject> batch)
+    private void WriteOutput(Batch<string> batch)
     {
         if (!OutputTable)
         {
@@ -345,7 +352,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         }
     }
 
-    private async Task<Batch<JObject>> SendBatchAsync(Batch<JObject> batch)
+    private async Task<Batch<string>> SendBatchAsync(Batch<string> batch)
     {
         WriteInformation($"Batch-{batch.Id}[total:{batch.ChangeSet.Operations.Count()}, starting: {batch.ChangeSet.Operations.First().ContentId}] being sent...", new string[] { "dataverse" });
         BatchResponse response = null;
@@ -364,7 +371,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         }
         catch (Exception ex)
         {
-            throw new BatchException<JObject>($"Batch has been faild due to: {ex.Message}", ex) { Batch = batch };
+            throw new BatchException<string>($"Batch has been faild due to: {ex.Message}", ex) { Batch = batch };
             //WriteError(new ErrorRecord(exception, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
         }
         finally

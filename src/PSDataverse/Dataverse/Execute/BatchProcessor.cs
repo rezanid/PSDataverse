@@ -69,6 +69,7 @@ namespace PSDataverse.Dataverse.Execute
         }
 
         public Task<BatchResponse> ExecuteBatchAsync(Batch<JObject> batch) => ExecuteBatchAsync(batch, CancellationToken.None);
+        public Task<BatchResponse> ExecuteBatchAsync(Batch<string> batch) => ExecuteBatchAsync(batch, CancellationToken.None);
         public async Task<BatchResponse> ExecuteBatchAsync(Batch<JObject> batch, CancellationToken cancellationToken)
         {
             // Make the request
@@ -153,9 +154,119 @@ namespace PSDataverse.Dataverse.Execute
             }
         }
 
+        public async Task<BatchResponse> ExecuteBatchAsync(Batch<string> batch, CancellationToken cancellationToken)
+        {
+            // Make the request
+            var response = await SendBatchAsync(batch, cancellationToken);
+            Log.LogDebug($"Dynamics 365: {(int)response.StatusCode} {response.ReasonPhrase}");
+
+            // Extract the response content
+            string responseContent = null;
+            if (response.Content != null)
+            {
+                responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                response.Content.Dispose();
+            }
+
+            // Catch throtelling exceptions
+            WebApiFault details = null;
+            if (!response.IsSuccessStatusCode && response.Content.Headers.ContentType?.MediaType == MediaTypeNames.Application.Json)
+            {
+                details = JsonConvert.DeserializeObject<WebApiFault>(responseContent);
+            }
+            if (response.StatusCode == (HttpStatusCode)429)
+            {
+                details.RetryAfter = response.Headers.RetryAfter?.Delta;
+                throw new ThrottlingExceededException(details);
+            }
+            if (response.Headers.RetryAfter != null)
+            {
+                details = new WebApiFault
+                {
+                    Message = $"Response status code does not indicate success: " +
+                        $"{response.StatusCode} ({response.ReasonPhrase}) content: {responseContent}.",
+                    ErrorCode = (int)response.StatusCode,
+                    RetryAfter = response.Headers.RetryAfter.Delta
+                };
+                throw new ThrottlingExceededException(details);
+            }
+
+            if (response.Content.Headers.ContentType != null && !string.Equals("multipart/mixed", response.Content.Headers.ContentType.MediaType, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ParseException($"Unsupported response media type received from Dataverse. Expected: multipart/mixed, Actual: " + response.Content.Headers.ContentType.MediaType);
+            }
+
+            if (!response.IsSuccessStatusCode && response.Content.Headers.ContentLength == 0)
+            {
+                throw new BatchException<string>($"{(int)response.StatusCode} {response.ReasonPhrase}")
+                {
+                    Batch = batch
+                };
+            }
+
+            BatchResponse batchResponse = null;
+            try
+            {
+                // Try to parse the response content like a batch response
+                batchResponse = BatchResponse.Parse(responseContent);
+            }
+            catch (Exception)
+            {
+                Log.LogWarning("It is not possible to parse the CRM response!\r\n" + responseContent);
+            }
+
+            if (batchResponse.IsSuccessful)
+            {
+                return batchResponse;
+            }
+
+            Log.LogDebug("Dynamics 365 response: " + responseContent);
+
+            var failedOperationResponse = batchResponse.Operations.First();
+            var failedOperation = batch.ChangeSet.Operations.FirstOrDefault(
+                o => o.ContentId == failedOperationResponse.ContentId);
+            Log.LogWarning($"Failed operation: {failedOperation}.");
+            failedOperation.RunCount++;
+
+            if (canThrowOperationException)
+            {
+                throw CreateOperationException(batch.Id, failedOperation, failedOperationResponse);
+            }
+            else
+            {
+                return batchResponse;
+            }
+        }
+
+        private Task<HttpResponseMessage> SendBatchAsync(Batch<string> batch) => SendBatchAsync(batch, CancellationToken.None);
         private Task<HttpResponseMessage> SendBatchAsync(Batch<JObject> batch) => SendBatchAsync(batch, CancellationToken.None);
 
         private async Task<HttpResponseMessage> SendBatchAsync(Batch<JObject> batch, CancellationToken cancellationToken)
+        {
+            HttpResponseMessage response = null;
+            if (batch is null) { throw new ArgumentNullException(nameof(batch)); }
+            if (batch.Id == null) { throw new ArgumentException("Batch.Id cannot be null."); }
+
+            Log.LogDebug($"Executing batch {batch.Id}...");
+            response = await Retry.ExecuteAsync(() => HttpClient.SendAsync(HttpMethod.Post, "$batch", batch, cancellationToken));
+            if (response.IsSuccessStatusCode)
+            {
+                Log.LogDebug($"Batch {batch.Id} succeeded.");
+                return response;
+            }
+            if (response != null)
+            {
+                return response;
+            }
+            throw new HttpRequestException(
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    "Response status code does not indicate success: {0} ({1}) and the response contains no content.",
+                    response.StatusCode,
+                    response.ReasonPhrase));
+        }
+
+        private async Task<HttpResponseMessage> SendBatchAsync(Batch<string> batch, CancellationToken cancellationToken)
         {
             HttpResponseMessage response = null;
             if (batch is null) { throw new ArgumentNullException(nameof(batch)); }
@@ -195,7 +306,31 @@ namespace PSDataverse.Dataverse.Execute
             //    exception.Error = response.Error;
             //    return exception;
             //}
-            return new OperationException(errorMessage)
+            return new OperationException<JObject>(errorMessage)
+            {
+                BatchId = batchId,
+                Operation = operation,
+                Error = response.Error,
+                EntityName = entityName,
+            };
+        }
+
+        private OperationException CreateOperationException(
+            string batchId,
+            Operation<string> operation,
+            OperationResponse response)
+        {
+            var entityName = ExtractEntityName(operation);
+            var errorMessage = response.Error.Message;
+            //if (operationExceptions.TryGetValue(entityName, out OperationException exception))
+            //{
+            //    exception.Message = errorMessage;
+            //    exception.BatchId = batchId;
+            //    exception.Operation = operation;
+            //    exception.Error = response.Error;
+            //    return exception;
+            //}
+            return new OperationException<string>(errorMessage)
             {
                 BatchId = batchId,
                 Operation = operation,

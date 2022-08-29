@@ -12,13 +12,20 @@ using System.Text;
 namespace PSDataverse.Dataverse.Model
 {
     [Serializable]
-    public class Batch<T>
+    public class Batch
     {
         public string Id { get; set; }
-        public ChangeSet<T> ChangeSet { get; set; }
+
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public BatchResponse Response { get; set; }
+
         public int RunCount { get; set; }
+    }
+
+    [Serializable]
+    public class Batch<T> : Batch
+    {
+        public ChangeSet<T> ChangeSet { get; set; }
 
         public Batch() { }
 
@@ -111,19 +118,12 @@ namespace PSDataverse.Dataverse.Model
         }
 
         public IEnumerable<byte[]> ToJsonCompressed(
-            CompressionLevel compressionLevel,
-            int maxBinarySize,
-            bool useFirstOperationIdAsBatchId)
-        {
-            return GenerateBatches(ChangeSet.Operations, compressionLevel, maxBinarySize, useFirstOperationIdAsBatchId);
-        }
+            CompressionLevel compressionLevel, int maxBinarySize, bool useFirstOperationIdAsBatchId)
+            => GenerateBatches(ChangeSet.Operations, compressionLevel, maxBinarySize, useFirstOperationIdAsBatchId);
 
         public IEnumerable<byte[]> ToJsonCompressed(
-            CompressionLevel compressionLevel,
-            int maxBinarySize)
-        {
-            return GenerateBatches(ChangeSet.Operations, compressionLevel, maxBinarySize, useFirstOperationIdAsBatchId: false);
-        }
+            CompressionLevel compressionLevel, int maxBinarySize)
+            => GenerateBatches(ChangeSet.Operations, compressionLevel, maxBinarySize, useFirstOperationIdAsBatchId: false);
 
         private static IEnumerable<byte[]> GenerateBatches(
             IEnumerable<Operation<T>> operations,

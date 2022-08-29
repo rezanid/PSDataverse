@@ -1,6 +1,5 @@
 ﻿using PSDataverse.Dataverse.Model;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -27,7 +26,7 @@ namespace PSDataverse.Dataverse.Execute
         }
 
         public static async Task<HttpResponseMessage> SendAsync(
-            this HttpClient client, HttpMethod method, string requestUri, Batch<JObject> batch, CancellationToken cancellationToken)
+            this HttpClient client, HttpMethod method, string requestUri, Batch batch, CancellationToken cancellationToken)
         {
             var request = new HttpRequestMessage(method, requestUri)
             {
@@ -38,12 +37,12 @@ namespace PSDataverse.Dataverse.Execute
         }
 
         public static async Task<HttpResponseMessage> SendAsync(
-            this HttpClient client, Operation<JObject> operation, CancellationToken cancellationToken)
+            this HttpClient client, Operation operation, CancellationToken cancellationToken)
         {
             var request = new HttpRequestMessage(new HttpMethod(operation.Method), operation.Uri);
-            if (operation?.Value != null)
+            if (operation?.HasValue is true)
             {
-                request.Content = new StringContent(operation?.Value?.ToString());
+                request.Content = new StringContent(operation?.GetValueAsJsonString());
                 request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
             }
             if (operation.Headers != null)

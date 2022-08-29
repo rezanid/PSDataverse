@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "Import-Module '${workspaceFolder}/build.psm1'; Start-PSDataverseBuild -Output (Join-Path '${workspaceFolder}' output)",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build (standard)",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/PSDataverse/PSDataverse.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary",
+        "-o",
+        "${workspaceFolder}/output"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "publish (standard)",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "publish",
+        "${workspaceFolder}/src/PSDataverse/PSDataverse.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "watch (standard)",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "watch",
+        "run",
+        "--project",
+        "${workspaceFolder}/src/PSDataverse/PSDataverse.csproj"
+      ],
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

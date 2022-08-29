@@ -7,7 +7,6 @@ namespace PSDataverse.Dataverse.Model
     [Serializable]
     public class OperationException : Exception
     {
-        public Operation<JObject> Operation { get; set; }
         public OperationError Error { get; set; }
         public string EntityName { get; set; }
         public string BatchId { get; set; }
@@ -15,9 +14,19 @@ namespace PSDataverse.Dataverse.Model
         public OperationException() { }
         public OperationException(string message) : base(message) { }
         public OperationException(string message, Exception inner) : base(message, inner) { }
+        public OperationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+    }
+
+    [Serializable]
+    public class OperationException<T> : OperationException
+    {
+        public Operation<T> Operation { get; set; }
+        public OperationException() { }
+        public OperationException(string message) : base(message) { }
+        public OperationException(string message, Exception inner) : base(message, inner) { }
         protected OperationException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
-            Operation = (Operation<JObject>)info.GetValue("Operation", typeof(Operation<JObject>));
+            Operation = (Operation<T>)info.GetValue("Operation", typeof(Operation<T>));
             Error = (OperationError)info.GetValue("Error", typeof(OperationError));
             EntityName = info.GetString("EntityName");
             BatchId = info.GetString("BatchId");
@@ -28,7 +37,7 @@ namespace PSDataverse.Dataverse.Model
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null) { throw new ArgumentNullException(nameof(info)); }
-            info.AddValue("Operation", Operation, typeof(Operation<JObject>));
+            info.AddValue("Operation", Operation, typeof(Operation<T>));
             info.AddValue("Error", Error, typeof(OperationError));
             info.AddValue("EntityName", EntityName);
             info.AddValue("BatchId", BatchId);

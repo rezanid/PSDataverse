@@ -83,7 +83,39 @@ namespace PSDataverse.Dataverse.Execute
             return null;
         }
 
+        public async Task<HttpResponseMessage> ExecuteAsync(Operation<string> operation)
+        {
+            if (operation is null) { throw new ArgumentNullException(nameof(operation)); }
+
+            if (!operation.Uri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                operation.Uri = (new Uri(HttpClient.BaseAddress, operation.Uri)).ToString();
+            }
+
+            Log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
+            var response = await Policy.ExecuteAsync(() => HttpClient.SendAsync(operation, CancellationToken.None));
+            Log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
+
+            if (response.IsSuccessStatusCode) { return response; }
+
+            await ThrowOperationExceptionAsync(operation, response);
+            return null;
+        }
+
         private async Task ThrowOperationExceptionAsync(Operation<JObject> operation, HttpResponseMessage response)
+        {
+            operation.RunCount++;
+            var error = await ExtractError(response);
+            throw CreateOperationException(
+                "operationerror",
+                operation,
+                new OperationResponse(
+                    response.StatusCode,
+                    string.IsNullOrEmpty(operation.ContentId) ? Guid.Empty.ToString() : operation.ContentId,
+                    error));
+        }
+
+        private async Task ThrowOperationExceptionAsync(Operation<string> operation, HttpResponseMessage response)
         {
             operation.RunCount++;
             var error = await ExtractError(response);
@@ -129,14 +161,30 @@ namespace PSDataverse.Dataverse.Execute
             };
         }
 
-        private OperationException CreateOperationException(
+        private OperationException<JObject> CreateOperationException(
             string batchId,
             Operation<JObject> operation,
             OperationResponse response)
         {
             var entityName = ExtractEntityName(operation);
             var errorMessage = $"{response.Error?.Code} {response.Error?.Message}";
-            return new OperationException(errorMessage)
+            return new OperationException<JObject>(errorMessage)
+            {
+                BatchId = batchId,
+                Operation = operation,
+                Error = response?.Error,
+                EntityName = entityName,
+            };
+        }
+
+        private OperationException<string> CreateOperationException(
+            string batchId,
+            Operation<string> operation,
+            OperationResponse response)
+        {
+            var entityName = ExtractEntityName(operation);
+            var errorMessage = $"{response.Error?.Code} {response.Error?.Message}";
+            return new OperationException<string>(errorMessage)
             {
                 BatchId = batchId,
                 Operation = operation,

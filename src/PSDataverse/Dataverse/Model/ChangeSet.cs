@@ -39,8 +39,11 @@ namespace PSDataverse.Dataverse.Model
         {
             var sb = new StringBuilder();
             var i = 0;
-            var ToJson =
-                typeof(T).Name.Equals("JObject", StringComparison.Ordinal) ?
+            // var ToJson =
+            //     typeof(T).Name.Equals("JObject", StringComparison.Ordinal) ?
+            //     new Func<object, string>(ConvertJObjectToJson) :
+            //     new Func<object, string>(ConvertToJson);
+            var ToJson = Operations is IEnumerable<Operation<JObject>> ?
                 new Func<object, string>(ConvertJObjectToJson) :
                 new Func<object, string>(ConvertToJson);
 
@@ -58,7 +61,7 @@ namespace PSDataverse.Dataverse.Model
                 sb.AppendLine("Content-Transfer-Encoding:binary");
                 sb.Append("Content-ID:").AppendLine(operation.ContentId.ToString()).AppendLine();
                 sb.Append(operation.Method).Append(' ').Append(operation.Uri).Append(' ').AppendLine("HTTP/1.1");
-                if (operation.Value != null) { sb.AppendLine("Content-Type:application/json;type=entry"); }
+                if (operation.HasValue) { sb.AppendLine("Content-Type:application/json;type=entry"); }
                 if (operation.Headers != null)
                 {
                     foreach (var header in operation.Headers)
@@ -67,7 +70,7 @@ namespace PSDataverse.Dataverse.Model
                     }
                 }
                 sb.AppendLine();
-                if (operation.Value != null) { sb.AppendLine(ToJson(operation.Value)); }
+                if (operation.HasValue) { sb.AppendLine(ToJson(operation.Value)); }
             }
 
             // Terminator
@@ -78,6 +81,6 @@ namespace PSDataverse.Dataverse.Model
 
         private string ConvertJObjectToJson(object obj) => ((JObject)obj).ToString(Formatting.None);
 
-        private string ConvertToJson(object obj) => JsonConvert.SerializeObject(obj);
+        private string ConvertToJson(object obj) => System.Text.Json.JsonSerializer.Serialize(obj);
     }
 }
