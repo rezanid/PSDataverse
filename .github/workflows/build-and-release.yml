@@ -7,7 +7,7 @@ on:
 
 env:
   DOTNET_VERSION: '6.0.x'
-  BINARY_MODULE_PATH: './PSDataverse/src/'
+  BINARY_MODULE_PATH: '.'
   MODULE_NAME: 'PSDataverse'
 
 jobs:
