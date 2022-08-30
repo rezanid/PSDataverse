@@ -55,6 +55,8 @@ jobs:
       shell: pwsh
       run: |
         pushd '${{ env.BINARY_MODULE_PATH}}'
+        ls ./output
+        type ./output/PSDataverse.psd1
         Publish-Module -Path ./output -NuGetApiKey "${{ secrets.POWERSHELL_GALLERY_API_KEY }}"
         popd
         
