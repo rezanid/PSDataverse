@@ -25,13 +25,16 @@ You can either install the [PSDataverse module directly from PowerShell Gallery]
 Install-Module -Name PSDataverse
 ```
 
-You you can also download the dll or clone the repository and build it locally. To import the module from the dll to your current session you can run the following command.
+You you can also download the dll and module or clone the repository and build it locally. After that, to import the module to your current session you can run the following command.
 
 ```powershell
 if (-not(Get-Module -ListAvailable -Name MigrationModule)) { 
-  Import-Module .\MigrationModule.dll
+  Import-Module .\PSDataverse.psd1
 }
 ```
+
+> **NOTE!**
+> PSDataverse is hybrid module that is a mix of PSDataverse.dll and PSDataverse.psd1 module definition. Only the commands that made more sense to be implemented as binary are included in the dll, and the rest of the implementation is done using PowerShell language.
 
 # How to use
 The first thing to do is to connect to your Dataverse environment using `Connect-Dataverse` cmdlet. Currently there are three ways that you can connect: 
