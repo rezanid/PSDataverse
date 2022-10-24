@@ -34,7 +34,7 @@ if (-not(Get-Module -ListAvailable -Name MigrationModule)) {
 ```
 
 > **NOTE!**
-> PSDataverse is hybrid module that is a mix of PSDataverse.dll and PSDataverse.psd1 module definition. Only the commands that made more sense to be implemented as binary are included in the dll, and the rest of the implementation is done using PowerShell language.
+> PSDataverse is a hybrid module that is a mix of PSDataverse.dll and PSDataverse.psd1 module definition. Only the commands that made more sense to be implemented as binary are included in the dll, and the rest of the implementation is done using PowerShell language.
 
 # How to use
 The first thing to do is to connect to your Dataverse environment using `Connect-Dataverse` cmdlet. Currently there are three ways that you can connect: 
