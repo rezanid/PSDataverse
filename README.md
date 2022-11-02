@@ -116,7 +116,7 @@ Send-DataverseOperation '{"Uri":"WhoAmI"}'
 
 **Example 2: Running a global action using piping and display the returned object**
 
-Now, let's see how we can get to the of the 'Content' property, convert it to a PowerShell object and then display it as a list, all in one line.
+Now, let's see how we can get to the 'Content' property, convert it to a PowerShell object and then display it as a list, all in one line.
 
 ```powershell
 @{Uri="WhoAmI"} | Send-DataverseOperation | select -ExpandProperty Content | ConvertFrom-Json | Format-List
