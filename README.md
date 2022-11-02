@@ -141,9 +141,9 @@ $whoAmI = ConvertTo-Json ([pscustomobject]@{Uri="WhoAmI"}) | Send-DataverseOpera
 Write-Host $whoAmI.UserId
 ```
 The above example sends a WhoAmI request to the Dataverse and gets back the result. If you check carefully this is what happens in each step:
-1. An operation is defined as a Hashtable i.e. `@{Uri="WhoAmI";Method="GET"}` and using `ConvertTo-Json` this Hashtable is converted to JSON, because at the moment `Send-Operation` only support operations in JSON format.
+1. An operation is defined as a Hashtable i.e. `@{Uri="WhoAmI";Method="GET"}` and using `ConvertTo-Json` this Hashtable is converted to JSON.
 2. The operation is piped to `Send-DataverseOperation` that sends the operation to Dataverse and gets back the result.
-3. The result of `Send-Operation` is then converted back to a Hashtable. The table will contain thres properties as per documentation. BusinessUnitId, UserId, and OrganizationId
+3. The result of `Send-Operation` is then converted back to a Hashtable. The table will contain three properties as per documentation. BusinessUnitId, UserId, and OrganizationId
 4. The second line is just printing the UserId to the host.
 
 # Status
