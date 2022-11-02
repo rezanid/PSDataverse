@@ -20,12 +20,12 @@ PSDataverse is a PowerShell module that brings Dataverse's Web API to PowerShell
 * Does not hide the response sent back by Dataverse.
 
 # How to install
-You can either install the [PSDataverse module directly from PowerShell Gallery](https://www.powershellgallery.com/packages/PSDataverse) using the following command
+You can install the [PSDataverse module directly from PowerShell Gallery](https://www.powershellgallery.com/packages/PSDataverse) using the following command
 ```powershell
 Install-Module -Name PSDataverse
 ```
 
-You you can also download the dll and module or clone the repository and build it locally. After that, to import the module to your current session you can run the following command.
+As an alternative, you can also download the dll and module or clone the repository and build it locally. After that, to import the module to your current session you can run the following command.
 
 ```powershell
 if (-not(Get-Module -ListAvailable -Name MigrationModule)) { 
