@@ -62,7 +62,7 @@ When you run the above command, a message like the following will be printed in 
 ```
 To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code CSPUJ9S7K to authenticate.
 ```
-This is the easiest way to log in, when your just need to to ad-hoc operations.
+This is the easiest way to log in, when your just need to do ad-hoc operations.
 
 > **ℹ NOTE**
 > For any of first two examples to work you need an application user in Power Platform. To learn how to do create an application user, please read the following article from the official documentation: [Manage application users in the Power Platform admin center](https://docs.microsoft.com/en-us/power-platform/admin/manage-application-users).
