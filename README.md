@@ -115,6 +115,7 @@ Send-DataverseOperation '{"Uri":"WhoAmI"}'
 > When the input is a Hashtable like object, it will be converted to JSON equivalent before sending to Dataverse. To have more control over the conversion to JSON, it is recommended to use the native `[ConvertTo-Json](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/convertto-json)` before Send-DataverseOperation.
 
 **Example 2: Running a global action using piping and display the returned object**
+
 Now, let's see how we can get to the of the 'Content' property, convert it to a PowerShell object and then display it as a list, all in one line.
 
 ```powershell
