@@ -1,7 +1,8 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.Text.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace PSDataverse.Dataverse.Model
 {
