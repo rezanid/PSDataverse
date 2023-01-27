@@ -4,7 +4,7 @@
     {
       "label": "build",
       "type": "shell",
-      "command": "Import-Module '${workspaceFolder}/build.psm1'; Start-PSDataverseBuild -Output (Join-Path '${workspaceFolder}' output)",
+      "command": "Import-Module '${workspaceFolder}/build.psm1'; Start-PSDataverseBuild -Output (Join-Path '${workspaceFolder}' output PSDataverse)",
       "group": {
         "kind": "build",
         "isDefault": true
@@ -21,7 +21,7 @@
         "/property:GenerateFullPaths=true",
         "/consoleloggerparameters:NoSummary",
         "-o",
-        "${workspaceFolder}/output"
+        "${workspaceFolder}/output/PSDataverse"
       ],
       "problemMatcher": "$msCompile"
     },

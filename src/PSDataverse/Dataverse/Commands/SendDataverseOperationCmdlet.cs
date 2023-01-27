@@ -1,4 +1,4 @@
-﻿namespace PSDataverse;
+namespace PSDataverse;
 
 using PSDataverse.Auth;
 using PSDataverse.Dataverse;
@@ -6,7 +6,6 @@ using PSDataverse.Dataverse.Execute;
 using PSDataverse.Dataverse.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -25,8 +24,8 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Operation", ValueFromPipeline = true)]
     public Operation<string> InputOperation { get; set; }
 
-    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Json", ValueFromPipeline = true)]
-    public string InputJson { get; set; }
+    //[Parameter(Position = 0, Mandatory = true, ParameterSetName = "Json", ValueFromPipeline = true)]
+    //public string InputJson { get; set; }
 
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Object", ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
     public PSObject InputObject { get; set; }
@@ -62,7 +61,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
     private Stopwatch stopwatch;
     private SemaphoreSlim taskThrottler;
 
-    private static readonly string[] validMethodsWithoutPayload = { "GET", "DELETE" };
+    private static readonly string[] ValidMethodsWithoutPayload = { "GET", "DELETE" };
 
     protected override void BeginProcessing()
     {
@@ -94,12 +93,12 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
     {
         base.ProcessRecord();
 
-        if (isValidationFailed) { return; }
-        if (!VerifyConnection()) { return; }
+        if (isValidationFailed || !VerifyConnection())
+        { return; }
 
         if (!TryGetInputOperation(out var op))
         {
-            var errMessage = "No operation has been given. Please provide an operation using either of -InputOperation or -InputJson or -InputObject arguments.";
+            var errMessage = "No operation has been given. Please provide an operation using either of -InputOperation or -InputObject arguments.";
             WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdMissingOperation, ErrorCategory.ConnectionError, null));
             return;
         }
@@ -174,16 +173,28 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
             operation = InputOperation;
             return true;
         }
-        if (InputJson is not null)
-        {
-            string input = null;
-            // If the given string is not in JSON format, assume it's a URL.
-            if (!InputJson.StartsWith('{')) { input = $"{{\"Uri\":\"{InputJson}\"}}"; }
-            operation = JsonConvert.DeserializeObject<Operation<string>>(input ?? InputJson);
-            return true;
-        }
+        //TODO: Remove InputJson parameter
+        //if (InputJson is not null)
+        //{
+        //    string input = null;
+        //    // If the given string is not in JSON format, assume it's a URL.
+        //    if (!InputJson.StartsWith('{')) { input = $"{{\"Uri\":\"{InputJson}\"}}"; }
+        //    operation = JsonConvert.DeserializeObject<Operation<string>>(input ?? InputJson);
+        //    return true;
+        //}
         if (InputObject is not null)
         {
+            if (InputObject.BaseObject is string str)
+            {
+                string input = null;
+                // If the given string is not in JSON format, assume it's a URL.
+                if (!str.StartsWith('{'))
+                {
+                    input = $"{{\"Uri\":\"{str}\"}}";
+                }
+                operation = JsonConvert.DeserializeObject<Operation<string>>(input ?? str);
+                return true;
+            }
             if (InputObject.BaseObject is IDictionary dictionary)
             {
                 operation = new Operation<string>
@@ -194,7 +205,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
                     Headers = dictionary.TryGetValue("Headers", out var headers) && headers != null ?
                         (headers as IDictionary).Cast<DictionaryEntry>().ToDictionary(e => e.Key.ToString(), e => e.Value.ToString())
                         : null,
-                    Value = dictionary.TryGetValue("Value", out var value)  && value != null ? ConvertToJson(value) : null
+                    Value = dictionary.TryGetValue("Value", out var value) && value != null ? ConvertToJson(value) : null
                 };
                 return true;
             }
@@ -221,7 +232,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         {
             throw new InvalidOperationException("Operation parameter is not provided.");
         }
-        if (!validMethodsWithoutPayload.Contains(operation.Method, StringComparer.OrdinalIgnoreCase) && !operation.HasValue)
+        if (!ValidMethodsWithoutPayload.Contains(operation.Method, StringComparer.OrdinalIgnoreCase) && !operation.HasValue)
         {
             throw new InvalidOperationException(
                 $"Operation does not have a 'Value' but it has a {operation.Method} method. All operations with non-GET method should have a value.");
@@ -256,7 +267,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
 
     private void OnMessageForUser(string message) => WriteInformation(message, new string[] { "dataverse" });
 
-    private bool IsNewBatchNeeded() => BatchSize > 0 && operationCounter == 0 || operationCounter % BatchSize == 0;
+    private bool IsNewBatchNeeded() => (BatchSize > 0 && operationCounter == 0) || operationCounter % BatchSize == 0;
 
     private void MakeAndSendBatchThenOutput(bool waitForAll)
     {
@@ -385,7 +396,8 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
 
     protected override void Dispose(bool disposing)
     {
-        if (Disposed) { return; }
+        if (Disposed)
+        { return; }
         if (disposing)
         {
             taskThrottler?.Dispose();
