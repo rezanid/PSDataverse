@@ -17,6 +17,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using PSDataverse.Extensions;
 using Microsoft.PowerShell.Commands;
+using Newtonsoft.Json.Linq;
+using Namotion.Reflection;
 
 [Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Object")]
 public class SendDataverseOperationCmdlet : DataverseCmdlet
@@ -192,7 +194,16 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
                 {
                     input = $"{{\"Uri\":\"{str}\"}}";
                 }
-                operation = JsonConvert.DeserializeObject<Operation<string>>(input ?? str);
+                var jobject = JObject.Parse(str);
+                operation = new Operation<string>
+                {
+                    ContentId = jobject.TryGetValue("ContentId", out var contentId) ? contentId.ToString() : null,
+                    Method = jobject.TryGetValue("Method", out var method) ? method.ToString() : null,
+                    Uri = jobject.TryGetValue("Uri", out var uri) ? uri.ToString() : null,
+                    Headers = jobject.TryGetValue("Headers", out var headers) ? headers.ToObject<Dictionary<string, string>>() : null,
+                    Value = jobject.TryGetValue("Value", out var value) ? value.ToString(Formatting.None, Array.Empty<JsonConverter>()) : null
+                };
+                //operation = JsonConvert.DeserializeObject<Operation<JObject>>(input ?? str);
                 return true;
             }
             if (InputObject.BaseObject is IDictionary dictionary)
