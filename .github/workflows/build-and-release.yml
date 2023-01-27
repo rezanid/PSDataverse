@@ -48,7 +48,7 @@ jobs:
       shell: pwsh
       run: |
         pushd '${{ env.BINARY_MODULE_PATH}}'
-        Copy-Item "./src/Module/*" ./output/${{ env.MODULE_NAME }}
+        Copy-Item "./src/Module/*" ./output/${{ env.MODULE_NAME }} -Recurse
         popd
         
     - name: Publish
