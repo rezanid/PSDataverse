@@ -7,8 +7,12 @@ function Get-DvTableRowCount {
         [string]$Filter = ""
     )
     Write-Progress -Activity "Counting rows"
-    $collectionName = Send-DataverseOperation '{"Uri":"EntityDefinitions(LogicalName=''be_filing'')?$select=LogicalCollectionName"}' | Select-Object -ExpandProperty Content | ConvertFrom-Json | Select-Object -ExpandProperty LogicalCollectionName
-    $resp = Send-DataverseOperation "{""Uri"":""$($collectionName)?`$select=be_filingname&`$count=true""}" | Select-Object -ExpandProperty Content | ConvertFrom-Json
+    $meta = Send-DataverseOperation '{"Uri":"EntityDefinitions(LogicalName=''be_filing'')?$select=LogicalCollectionName,PrimaryIdAttribute"}' | Select-Object -ExpandProperty Content | ConvertFrom-Json
+    $uri = $meta | Select-Object -ExpandProperty LogicalCollectionName
+    $primaryAttr = $meta | Select-Object -ExpandProperty PrimaryIdAttribute
+    $uri += "?`$count=true&`$select=$($primaryAttr)"""
+    if ($Filter -ne "") { $uri += "&`$filter=$($Filter)" }
+    $resp = Send-DataverseOperation "{""Uri"":""$uri""}" | Select-Object -ExpandProperty Content | ConvertFrom-Json
     $next = $resp | Select-Object -ExpandProperty "@odata.nextLink"
     $count = $resp | Select-Object -ExpandProperty "@odata.count"
     while ($next -ne "") {
