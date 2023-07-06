@@ -18,7 +18,6 @@ using System.Threading.Tasks;
 using PSDataverse.Extensions;
 using Microsoft.PowerShell.Commands;
 using Newtonsoft.Json.Linq;
-using Namotion.Reflection;
 
 [Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Object")]
 public class SendDataverseOperationCmdlet : DataverseCmdlet
@@ -188,11 +187,10 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         {
             if (InputObject.BaseObject is string str)
             {
-                string input = null;
                 // If the given string is not in JSON format, assume it's a URL.
                 if (!str.StartsWith('{'))
                 {
-                    input = $"{{\"Uri\":\"{str}\"}}";
+                    str = $"{{\"Uri\":\"{str}\"}}";
                 }
                 var jobject = JObject.Parse(str);
                 operation = new Operation<string>

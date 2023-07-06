@@ -1,4 +1,4 @@
-﻿namespace PSDataverse;
+namespace PSDataverse;
 
 using PSDataverse.Auth;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,8 +45,10 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
         }
 
         // if previously authented, extract the account. It will be required for silent authentication.
-        var previouAuthResult = SessionState.PSVariable.GetValue(Globals.VariableNameAuthResult) as AuthenticationResult;
-        if (previouAuthResult != null) { authParams.Account = previouAuthResult.Account; }
+        if (SessionState.PSVariable.GetValue(Globals.VariableNameAuthResult) is AuthenticationResult previouAuthResult)
+        {
+            authParams.Account = previouAuthResult.Account;
+        }
 
         var authResult = AuthResult ?? HandleAuthentication(serviceProvider, authParams);
         if (authResult == null)
