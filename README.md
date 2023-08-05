@@ -56,7 +56,7 @@ Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/
 
 **Example 3 - Connecting to Dataverse using device authentication flow.**
 ```powershell
-Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=1950a258-227b-4e31-a9cf-717495945fc2;device=true" -InformationAction Continue
+Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=1950a258-227b-4e31-a9cf-717495945fc2;device=true;resource=https://<your-environment-name>.crm4.dynamics.com/" -InformationAction Continue
 ```
 When you run the above command, a message like the following will be printed in the console, and you just need to do what is asked. After that, you will be prompted to use your credentials and that's it.
 ```
