@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Management.Automation;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +48,9 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
 
     [Parameter(Position = 4, Mandatory = false)]
     public SwitchParameter OutputTable { get; set; }
+
+    [Parameter(Position = 5, Mandatory = false)]
+    public SwitchParameter AutoPaginate { get; set; }
 
     private bool isValidationFailed;
     private string accessToken;
@@ -123,8 +127,28 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
                 var response = operationProcessor.ExecuteAsync(op).Result;
                 var opResponse = OperationResponse.From(response);
                 if (string.IsNullOrEmpty(opResponse.ContentId))
-                { opResponse.ContentId = op.ContentId; }
-                WriteObject(opResponse);
+                {
+                    opResponse.ContentId = op.ContentId;
+                }
+                if (!AutoPaginate.IsPresent)
+                {
+                    WriteObject(opResponse);
+                }
+                else
+                {
+                    var result = FromODataJsonString(opResponse.Content);
+                    WriteObject(result);
+                    var nextPage = result.Properties["@odata.nextLink"]?.Value as string;
+                    while (!string.IsNullOrEmpty(nextPage))
+                    {
+                        op.Uri = nextPage;
+                        response = operationProcessor.ExecuteAsync(op).Result;
+                        opResponse = OperationResponse.From(response);
+                        result = FromODataJsonString(opResponse.Content);
+                        WriteObject(result);
+                        nextPage = result.Properties["@odata.nextLink"]?.Value as string;
+                    }
+                }
             }
             catch (OperationException ex)
             {
@@ -144,6 +168,61 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         {
             batchProcessor.AuthenticationToken = accessToken;
             MakeAndSendBatchThenOutput(waitForAll: false);
+        }
+    }
+
+    private PSObject FromODataJsonString(string jsonString)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(jsonString);
+            var rootElement = document.RootElement;
+
+            return ConvertJsonElementToPSObject(rootElement) as PSObject;
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            WriteError(new ErrorRecord(ex, "JsonParsingError", ErrorCategory.ParserError, jsonString));
+        }
+        return null;
+    }
+
+    private object ConvertJsonElementToPSObject(JsonElement element) =>
+        element.ValueKind switch
+        {
+            JsonValueKind.Object => ConvertJsonObjectToPSObject(element),
+            JsonValueKind.Array => ConvertJsonArrayToPSObject(element),
+            _ => element.ToString()
+        };
+
+    private PSObject ConvertJsonObjectToPSObject(JsonElement element)
+    {
+        var psObj = new PSObject();
+
+        foreach (var prop in element.EnumerateObject())
+        {
+            psObj.Properties.Add(new PSNoteProperty(prop.Name, ConvertJsonElementToPSObject(prop.Value)));
+        }
+
+        return psObj;
+    }
+
+    private object ConvertJsonArrayToPSObject(JsonElement element)
+    {
+        // For huge arrays, parallel processing can be beneficial. 
+        const int parallelThreshold = 500;
+
+        if (element.GetArrayLength() > parallelThreshold)
+        {
+            var results = new ConcurrentBag<object>();
+            Parallel.ForEach(element.EnumerateArray(), item => results.Add(ConvertJsonElementToPSObject(item)));
+            return results.ToList();
+        }
+        else
+        {
+            return element.EnumerateArray()
+                          .Select(ConvertJsonElementToPSObject)
+                          .ToList();
         }
     }
 
