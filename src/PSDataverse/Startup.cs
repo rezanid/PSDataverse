@@ -1,47 +1,39 @@
-﻿namespace PSDataverse;
+namespace PSDataverse;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using PSDataverse.Dataverse.Execute;
-using Polly;
-using Polly.Registry;
-using Polly.Timeout;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Polly;
+using Polly.Registry;
+using Polly.Timeout;
 using PSDataverse.Auth;
+using PSDataverse.Dataverse.Execute;
 
 internal class Startup
 {
-    private readonly Uri _baseUri;
+    private readonly Uri baseUri;
 
-    public Startup(Uri baseUrl)
-    {
-        _baseUri = baseUrl;
-    }
+    public Startup(Uri baseUrl) => baseUri = baseUrl;
 
-    public IServiceCollection ConfigureServices(IServiceCollection services)
-    {
-        services.AddSingleton<ILogger>(NullLogger.Instance);
-        services.AddSingleton<IHttpClientFactory, HttpClientFactory>(
-            (provider) => new HttpClientFactory(_baseUri, "v9.2"));
-        services.AddSingleton<IReadOnlyPolicyRegistry<string>>((s) => SetupRetryPolicies());
-        services.AddSingleton<OperationProcessor>();
-        services.AddSingleton<BatchProcessor>();
-        services.AddSingleton<IAuthenticator, DelegatingAuthenticator>(
-            (provider) => new ClientAppAuthenticator {
-                NextAuthenticator = new DeviceCodeAuthenticator()
-            }
-        );
-        services.AddSingleton<AuthenticationService>();
-        return services;
-    }
+    public IServiceCollection ConfigureServices(IServiceCollection services) => services
+        .AddSingleton<ILogger>(NullLogger.Instance)
+        .AddSingleton<IHttpClientFactory, HttpClientFactory>(
+            (provider) => new HttpClientFactory(baseUri, "v9.2"))
+        .AddSingleton<IReadOnlyPolicyRegistry<string>>((s) => SetupRetryPolicies())
+        .AddSingleton<OperationProcessor>()
+        .AddSingleton<BatchProcessor>()
+        .AddSingleton<IAuthenticator, DelegatingAuthenticator>(
+        (provider) => new ClientAppAuthenticator
+        {
+            NextAuthenticator = new DeviceCodeAuthenticator()
+        })
+        .AddSingleton<AuthenticationService>();
 
     public PolicyRegistry SetupRetryPolicies()
     {
@@ -61,7 +53,7 @@ internal class Startup
             .Or<TimeoutRejectedException>()
             .WaitAndRetryAsync(5, WaitTimeProvider, OnRetryAsync);
 
-        registry.Add(Globals.PolicyNameHttp , httpPolicy);
+        registry.Add(Globals.PolicyNameHttp, httpPolicy);
         return registry;
     }
 

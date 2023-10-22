@@ -9,7 +9,7 @@ internal class ClientAppAuthenticator : DelegatingAuthenticator
 {
     public override async Task<AuthenticationResult> AuthenticateAsync(AuthenticationParameters parameters, Action<string> onMessageForUser = default, CancellationToken cancellationToken = default)
     {
-        IClientApplicationBase app = GetClient(parameters);
+        var app = GetClient(parameters);
 
         //TODO: Implement logging
         //ServiceClientTracing.Information($"[DeviceCodeAuthenticator] Calling AcquireTokenWithDeviceCode - Scopes: '{string.Join(", ", parameters.Scopes)}'");

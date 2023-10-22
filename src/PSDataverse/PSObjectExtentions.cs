@@ -1,8 +1,8 @@
-﻿using System;
+﻿namespace PSDataverse;
+using System;
 using System.Collections;
 using System.Management.Automation;
 
-namespace PSDataverse;
 public static class PSObjectExtentions
 {
 

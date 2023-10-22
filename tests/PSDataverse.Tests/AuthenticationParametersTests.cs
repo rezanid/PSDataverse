@@ -1,5 +1,3 @@
-using PSDataverse;
-
 namespace PSDataverse.Tests;
 
 public class AuthenticationParametersTests

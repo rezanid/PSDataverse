@@ -1,11 +1,5 @@
 namespace PSDataverse;
 
-using PSDataverse.Auth;
-using PSDataverse.Dataverse;
-using PSDataverse.Dataverse.Execute;
-using PSDataverse.Dataverse.Model;
-using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -15,9 +9,15 @@ using System.Linq;
 using System.Management.Automation;
 using System.Threading;
 using System.Threading.Tasks;
-using PSDataverse.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.PowerShell.Commands;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PSDataverse.Auth;
+using PSDataverse.Dataverse;
+using PSDataverse.Dataverse.Execute;
+using PSDataverse.Dataverse.Model;
+using PSDataverse.Extensions;
 
 [Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Object")]
 public class SendDataverseOperationCmdlet : DataverseCmdlet

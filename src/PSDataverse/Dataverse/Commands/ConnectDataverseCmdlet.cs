@@ -1,10 +1,10 @@
 namespace PSDataverse;
 
-using PSDataverse.Auth;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Identity.Client;
 using System;
 using System.Management.Automation;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Identity.Client;
+using PSDataverse.Auth;
 
 [Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = "AuthResult")]
 public class ConnectDataverseCmdlet : DataverseCmdlet
@@ -39,10 +39,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
             string.IsNullOrWhiteSpace(Endpoint) ?
             new Uri(authParams.Resource, UriKind.Absolute) :
             new Uri(Endpoint, UriKind.Absolute);
-        if (serviceProvider == null)
-        {
-            serviceProvider = InitializeServiceProvider(endpointUrl);
-        }
+        serviceProvider ??= InitializeServiceProvider(endpointUrl);
 
         // if previously authented, extract the account. It will be required for silent authentication.
         if (SessionState.PSVariable.GetValue(Globals.VariableNameAuthResult) is AuthenticationResult previouAuthResult)

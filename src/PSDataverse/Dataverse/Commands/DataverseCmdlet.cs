@@ -6,17 +6,17 @@ using System.Threading;
 
 public abstract class DataverseCmdlet : PSCmdlet, IDisposable
 {
-    private Guid correlationId;
     private CancellationTokenSource cancellationSource;
-    protected Guid CorrelationId => correlationId;
+    protected Guid CorrelationId { get; private set; }
     protected CancellationToken CancellationToken => cancellationSource.Token;
-    protected bool Disposed { get; set;}
+    protected bool Disposed { get; set; }
 
     protected override void BeginProcessing()
     {
         cancellationSource ??= new CancellationTokenSource();
 
-        if (correlationId == default) { correlationId = Guid.NewGuid(); }
+        if (CorrelationId == default)
+        { CorrelationId = Guid.NewGuid(); }
     }
 
     protected override void EndProcessing()
@@ -36,7 +36,8 @@ public abstract class DataverseCmdlet : PSCmdlet, IDisposable
 
     private void CleanupCancellationSource()
     {
-        if (cancellationSource == null) { return; }
+        if (cancellationSource == null)
+        { return; }
         if (!cancellationSource.IsCancellationRequested)
         {
             cancellationSource.Cancel();
@@ -56,7 +57,8 @@ public abstract class DataverseCmdlet : PSCmdlet, IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        if (Disposed) { return; }
+        if (Disposed)
+        { return; }
         if (disposing)
         {
             cancellationSource?.Dispose();
