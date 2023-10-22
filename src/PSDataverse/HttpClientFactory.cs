@@ -1,18 +1,15 @@
-﻿using System;
+﻿namespace PSDataverse;
+using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 
-namespace PSDataverse;
 public class HttpClientFactory : IHttpClientFactory, IDisposable
 {
-    HttpClient _HttpClient;
+    private HttpClient _HttpClient;
     private readonly object _Lock = new();
     private readonly Uri _baseUrl;
 
-    public HttpClientFactory(Uri baseUrl, string apiVersion)
-    {
-        _baseUrl = new Uri(baseUrl, $"/api/data/{apiVersion}/");
-    }
+    public HttpClientFactory(Uri baseUrl, string apiVersion) => _baseUrl = new Uri(baseUrl, $"/api/data/{apiVersion}/");
 
     public HttpClient GetHttpClientInstance()
     {
@@ -55,7 +52,6 @@ public class HttpClientFactory : IHttpClientFactory, IDisposable
     }
     #endregion
 
-
     /// <summary>
     /// Sets the default values for HttpClient.
     /// </summary>
@@ -76,13 +72,13 @@ public class HttpClientFactory : IHttpClientFactory, IDisposable
         client.DefaultRequestHeaders.Add("OData-Version", "4.0");
         client.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
-                client.DefaultRequestHeaders.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/xml"));
+        client.DefaultRequestHeaders.Accept.Add(
+    new MediaTypeWithQualityHeaderValue("application/xml"));
     }
 
     private static TimeSpan GetRequestTimeout()
     {
-        string requestTimeout = Environment.GetEnvironmentVariable("Request_Timeout", EnvironmentVariableTarget.Process);
+        var requestTimeout = Environment.GetEnvironmentVariable("Request_Timeout", EnvironmentVariableTarget.Process);
         if (!string.IsNullOrEmpty(requestTimeout) && TimeSpan.TryParse(requestTimeout, out var timeout))
         {
             return timeout;

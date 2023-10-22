@@ -9,10 +9,7 @@ internal class AuthenticationService
 {
     public IAuthenticator Authenticator { get; set; }
 
-    public AuthenticationService(IAuthenticator authenticator)
-    {
-        Authenticator = authenticator;
-    }
+    public AuthenticationService(IAuthenticator authenticator) => Authenticator = authenticator;
 
     public async Task<AuthenticationResult> AuthenticateAsync(
         AuthenticationParameters parameters,

@@ -22,7 +22,7 @@ public class AuthenticationParameters
     {
         if (string.IsNullOrEmpty(connectionString))
         { throw new ArgumentNullException(nameof(connectionString)); }
-        var connectionProperties = connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToDictionary(s => s.Substring(0, s.IndexOf('=')), s => s.Substring(s.IndexOf('=') + 1), StringComparer.OrdinalIgnoreCase);
+        var connectionProperties = connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToDictionary(s => s[..s.IndexOf('=')], s => s[(s.IndexOf('=') + 1)..], StringComparer.OrdinalIgnoreCase);
         var resource = connectionProperties["resource"];
         return new AuthenticationParameters
         {
@@ -32,8 +32,8 @@ public class AuthenticationParameters
             ClientSecret = connectionProperties.TryGetValue("clientsecret", out var secret) ? secret : null,
             CertificateThumbprint = connectionProperties.TryGetValue("thumbprint", out var thumbprint) ? thumbprint : null,
             TenantId = connectionProperties.TryGetValue("tenantid", out var tenantid) ? tenantid : null,
-            Scopes = connectionProperties.TryGetValue("scopes", out var scopes) ? scopes.Split(',') : new string[] { (new Uri(new Uri(resource, UriKind.Absolute) , ".default")).ToString() },
-            UseDeviceFlow = connectionProperties.TryGetValue("device", out var device) ? bool.Parse(device) : false
+            Scopes = connectionProperties.TryGetValue("scopes", out var scopes) ? scopes.Split(',') : new string[] { new Uri(new Uri(resource, UriKind.Absolute), ".default").ToString() },
+            UseDeviceFlow = connectionProperties.TryGetValue("device", out var device) && bool.Parse(device)
         };
     }
 }
