@@ -4,7 +4,7 @@ using System;
 using System.Runtime.Serialization;
 
 [Serializable]
-internal class ParseException : Exception
+public class ParseException : Exception
 {
     public ParseException() { }
 
