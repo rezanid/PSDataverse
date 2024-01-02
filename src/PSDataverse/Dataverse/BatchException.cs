@@ -16,7 +16,6 @@ public class BatchException<T> : Exception
       SerializationInfo info,
       StreamingContext context) : base(info, context)
     {
-        //To add read Batch as a custom type: Batch = (Batch<T>)info.GetValue("Batch", typeof(Batch<T>));
         Batch = Batch<T>.Parse(info.GetString("Batch"));
         _ = Guid.TryParse(info.GetString("CorrelationId"), out var correlationId);
         CorrelationId = correlationId;

@@ -356,7 +356,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
             response = await batchProcessor.ExecuteBatchAsync(batch, CancellationToken);
             if (response is not null)
             {
-                WriteInformation($"Batch-{batch.Id} completed.", new string[] { "dataverse" });
+                WriteInformation($"Batch-{batch.Id} completed.", ["dataverse"]);
             }
             else
             {
