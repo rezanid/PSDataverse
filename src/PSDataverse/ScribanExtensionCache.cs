@@ -13,10 +13,10 @@ public static class ScribanExtensionCache
         Humanizr,
     }
 
-    private static readonly Dictionary<KnownAssemblies, ScriptObject> CachedResults =
-    new();
+    private static readonly Dictionary<KnownAssemblies, ScriptObject> CachedResults = [];
 
-    public static ScriptObject GetHumanizrMethods() => GetOrCreate(KnownAssemblies.Humanizr,
+    public static ScriptObject GetHumanizrMethods() => GetOrCreate(
+        KnownAssemblies.Humanizr,
         () =>
         {
             //force a load of the DLL otherwise we won't see the types
@@ -36,7 +36,7 @@ public static class ScribanExtensionCache
             return scriptObject;
         }
 
-        scriptObject = new ScriptObject();
+        scriptObject = [];
         foreach (var extensionClass in typeFetcher())
         {
             scriptObject.Import(extensionClass);

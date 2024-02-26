@@ -15,11 +15,9 @@ using Polly.Timeout;
 using PSDataverse.Auth;
 using PSDataverse.Dataverse.Execute;
 
-internal class Startup
+internal class Startup(Uri baseUrl)
 {
-    private readonly Uri baseUri;
-
-    public Startup(Uri baseUrl) => baseUri = baseUrl;
+    private readonly Uri baseUri = baseUrl;
 
     public IServiceCollection ConfigureServices(IServiceCollection services) => services
         .AddSingleton<ILogger>(NullLogger.Instance)
@@ -37,14 +35,15 @@ internal class Startup
 
     public PolicyRegistry SetupRetryPolicies()
     {
-        HttpStatusCode[] httpStatusCodesWorthRetrying = {
+        HttpStatusCode[] httpStatusCodesWorthRetrying =
+        [
             HttpStatusCode.RequestTimeout,       // 408
             HttpStatusCode.InternalServerError,  // 500
             HttpStatusCode.BadGateway,           // 502
             HttpStatusCode.ServiceUnavailable,   // 503
             HttpStatusCode.GatewayTimeout,       // 504
             (HttpStatusCode)429      // Too Many Requests
-        };
+        ];
 
         var registry = new PolicyRegistry();
 

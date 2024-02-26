@@ -7,12 +7,8 @@ using FluentAssertions;
 using PSDataverse.Commands;
 using Xunit;
 
-public class ConvertToCodeCommandTests
+public class ConvertToCustomTextTests
 {
-    private readonly ConvertToCodeCmdlet convertToCodeCommand;
-
-    public ConvertToCodeCommandTests() => convertToCodeCommand = new ConvertToCodeCmdlet();
-
     [Fact]
     public void ProcessRecord_NoOutputFile_ProvidesExpectedResult()
     {
@@ -23,7 +19,7 @@ public class ConvertToCodeCommandTests
         iss.Commands.Add(new SessionStateCmdletEntry(
             "Import-Module", typeof(Microsoft.PowerShell.Commands.ImportModuleCommand), ""));
         iss.Commands.Add(new SessionStateCmdletEntry(
-            "ConvertTo-Code", typeof(ConvertToCodeCmdlet), ""));
+            "ConvertTo-CustomText", typeof(ConvertToCustomTextCmdlet), ""));
         iss.Commands.Add(new SessionStateCmdletEntry(
             "ConvertFrom-Json", typeof(Microsoft.PowerShell.Commands.ConvertFromJsonCommand), ""));
         var rs = RunspaceFactory.CreateRunspace(iss);
@@ -40,7 +36,7 @@ public class ConvertToCodeCommandTests
         powershell
             .AddCommand("Get-Content").AddParameter("Path", Path.Combine(Directory.GetCurrentDirectory(), "samples", "account-Definition.json"))
             .AddCommand("ConvertFrom-Json")
-            .AddCommand("ConvertTo-Code")
+            .AddCommand("ConvertTo-CustomText")
             .AddParameter("Template", Path.Combine(Directory.GetCurrentDirectory(), "samples", "Template1.sbn"));
 
         // Act
