@@ -58,7 +58,7 @@
           "${command:SpecifyScriptArgs}"
       ],
       "cwd": "${file}"
-    }
+    },
     {
       "type": "PowerShell",
       "request": "attach",

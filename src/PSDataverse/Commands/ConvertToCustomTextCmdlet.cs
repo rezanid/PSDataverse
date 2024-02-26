@@ -7,9 +7,9 @@ using System.Management.Automation;
 using Scriban;
 using Scriban.Runtime;
 
-[Cmdlet(VerbsData.ConvertTo, "Code")]
+[Cmdlet(VerbsData.ConvertTo, "CustomText")]
 [OutputType(typeof(string))]
-public class ConvertToCodeCmdlet : PSCmdlet
+public class ConvertToCustomTextCmdlet : PSCmdlet
 {
     [Parameter(Mandatory = true, ValueFromPipeline = true)]
     public PSObject InputObject { get; set; }

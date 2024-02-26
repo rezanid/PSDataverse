@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <RestoreSources>$(RestoreSources);</RestoreSources>
@@ -35,7 +35,7 @@
       <ResourceName>Resources</ResourceName>
     </JsonResource>
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
+  <!--<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
     <Exec Command="rd &quot;..\..\output\PSDataverse\bin&quot; /S /Q&#xD;&#xA;xcopy &quot;$(TargetDir)&quot; &quot;..\..\output\PSDataverse\bin&quot; /E /Y /I" />
-  </Target>
+  </Target>-->
 </Project>
