@@ -34,7 +34,7 @@
     <None Update="samples\Template0.sbn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="samples\Template1.sbn">
+    <None Update="samples/DataverseEntity.sbn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

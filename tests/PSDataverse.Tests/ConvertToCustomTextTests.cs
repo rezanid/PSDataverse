@@ -37,7 +37,7 @@ public class ConvertToCustomTextTests
             .AddCommand("Get-Content").AddParameter("Path", Path.Combine(Directory.GetCurrentDirectory(), "samples", "account-Definition.json"))
             .AddCommand("ConvertFrom-Json")
             .AddCommand("ConvertTo-CustomText")
-            .AddParameter("Template", Path.Combine(Directory.GetCurrentDirectory(), "samples", "Template1.sbn"));
+            .AddParameter("Template", Path.Combine(Directory.GetCurrentDirectory(), "samples", "DataverseEntity.sbn"));
 
         // Act
         var results = powershell.Invoke();

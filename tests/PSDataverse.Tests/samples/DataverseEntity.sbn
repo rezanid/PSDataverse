@@ -12,7 +12,7 @@ using System;
 public class {{ classname }} : Entity
 {
     #region Local OptionSets
-    {{ unique_enums = [] }}
+    {{~ unique_enums = [] ~}}
     {{~ for attribute in StatusAttributes | array.filter @isLocal~}}
         {{ name = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize}}
         {{~ if !array.contains unique_enums name ~}}
@@ -27,7 +27,7 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in PickListAttributes | array.filter @isLocal~}}
-        {{ name = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize}}
+        {{~ name = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize ~}}
         {{~ if !array.contains unique_enums name ~}}
             {{~ unique_enums = unique_enums | array.add name ~}}
     public enum {{ name }}
@@ -38,7 +38,6 @@ public class {{ classname }} : Entity
     }
         {{~ end ~}}
     {{~ end ~}}
-
     #endregion
 
     public {{classname}}() : base("{{ EntityDefinition.LogicalName }}") { }
@@ -81,9 +80,8 @@ public class {{ classname }} : Entity
     }
 
     {{~ for attribute in StatusAttributes ~}}
-        {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
-        {{ enumName = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize}}
-
+        {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+        {{~ enumName = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize ~}}
     public virtual {{enumName}}? {{propertyName}}
     {
         get =>  ({{attribute.OptionSet.Name}}?)GetAttributeValue<OptionSetValue>("{{ attribute.LogicalName }}")?.Value;
@@ -94,8 +92,8 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in PicklistAttributes ~}}
-        {{ enumName = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize}}
-        {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+        {{~ enumName = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize ~}}
+        {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual {{enumName}}? {{propertyName}}
     {
         get =>  ({{attribute.OptionSet.Name}}?)GetAttributeValue<OptionSetValue>("{{ attribute.LogicalName }}")?.Value;
@@ -106,8 +104,8 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in MultiSelectPicklistAttributes ~}}
-        {{ enumName = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize}}
-        {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+        {{~ enumName = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize ~}}
+        {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual {{enumName}}? {{propertyName}}
     {
         get
@@ -126,10 +124,10 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in MoneyAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual decimal? {{propertyName}}
     {
-        get =>  ({{decimal}}?)GetAttributeValue<Money>("{{ attribute.LogicalName }}")?.Value;
+        get =>  (decimal?)GetAttributeValue<Money>("{{ attribute.LogicalName }}")?.Value;
         {{~ if attribute.IsValidForUpdate == "True" ~}}
         set => this["{{ attribute.LogicalName }}"] = value.HasValue ? new Money(value) : null;
         {{~ end ~}}
@@ -137,10 +135,10 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in DecimalAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual decimal? {{propertyName}}
     {
-        get =>  GetAttributeValue<Decimal>("{{ attribute.LogicalName }}")?.Value;
+        get =>  GetAttributeValue<decimal?>("{{ attribute.LogicalName }}")?.Value;
         {{~ if attribute.IsValidForUpdate == "True" ~}}
         set => this["{{ attribute.LogicalName }}"] = value.HasValue ? value : null;
         {{~ end ~}}
@@ -148,7 +146,7 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in BigIntAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual BigInteger? {{propertyName}}
     {
         get =>  GetAttributeValue<BigInteger>("{{ attribute.LogicalName }}")?.Value;
@@ -159,7 +157,7 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in IntegerAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual int? {{propertyName}}
     {
         get =>  GetAttributeValue<int>("{{ attribute.LogicalName }}")?.Value;
@@ -170,7 +168,7 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in DoubleAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual double? {{propertyName}}
     {
         get =>  GetAttributeValue<double>("{{ attribute.LogicalName }}")?.Value;
@@ -181,7 +179,7 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in DateTimeAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual DateTime? {{propertyName}}
     {
         get =>  GetAttributeValue<DateTime>("{{ attribute.LogicalName }}")?.Value;
@@ -192,7 +190,7 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in BooleanAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual bool? {{propertyName}}
     {
         get =>  GetAttributeValue<bool>("{{ attribute.LogicalName }}")?.Value;
@@ -203,7 +201,7 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in UniqueIdentifierAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual Guid? {{propertyName}}
     {
         get =>  GetAttributeValue<Guid>("{{ attribute.LogicalName }}")?.Value;
@@ -214,7 +212,7 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in StringAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual string {{propertyName}}
     {
         get =>  GetAttributeValue<string>("{{ attribute.LogicalName }}")?.Value;
@@ -225,7 +223,7 @@ public class {{ classname }} : Entity
     {{~ end ~}}
 
     {{~ for attribute in MemoAttributes ~}}
-    {{ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
     public virtual string {{propertyName}}
     {
         get =>  GetAttributeValue<string>("{{ attribute.LogicalName }}")?.Value;
