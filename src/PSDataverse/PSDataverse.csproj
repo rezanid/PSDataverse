@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -33,4 +33,8 @@
       <ResourceName>Resources</ResourceName>
     </JsonResource>
   </ItemGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="echo Copying the build output ($(ProjectDir)$(OutDir)) to the output ($(SolutionDir)..\..\test)" />
+    <Exec Command="copy /y $(ProjectDir)$(OutDir)*.* $(SolutionDir)output\PSDataverse\bin" />
+  </Target>
 </Project>
