@@ -13,19 +13,31 @@ internal class DeviceCodeAuthenticator : DelegatingAuthenticator
         Action<string> onMessageForUser = default,
         CancellationToken cancellationToken = default)
     {
-        IClientApplicationBase app = GetClient(parameters);
+        var app = GetClient(parameters);
 
-        //TODO: Implement logging
-        //ServiceClientTracing.Information($"[DeviceCodeAuthenticator] Calling AcquireTokenWithDeviceCode - Scopes: '{string.Join(", ", parameters.Scopes)}'");
-
-        var result = await base.AuthenticateAsync(parameters, onMessageForUser, cancellationToken).ConfigureAwait(false);
-        if (result != null) { return result; }
-
-        return await app.AsPublicClient().AcquireTokenWithDeviceCode(parameters.Scopes, deviceCodeResult =>
+        // Attempt to get a token silently from the cache
+        //TODO: Currently accounts returned from GetAccountAsync is always null.
+        var accounts = await app.GetAccountsAsync().ConfigureAwait(false);
+        var account = accounts.FirstOrDefault();
+        if (account != null)
         {
-            onMessageForUser(deviceCodeResult.Message);
-            return Task.FromResult(0);
-        }).ExecuteAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var silentResult = await app.AcquireTokenSilent(parameters.Scopes, account).ExecuteAsync(cancellationToken).ConfigureAwait(false);
+                if (silentResult != null) { return silentResult; }
+            }
+            catch (MsalUiRequiredException)
+            {
+                // Silent acquisition failed, user interaction required
+            }
+        }
+
+        return await app.AsPublicClient().AcquireTokenWithDeviceCode(parameters.Scopes, callback =>
+        {
+            // Provide the user instructions
+            onMessageForUser(callback.Message);
+            return Task.CompletedTask;
+        }).ExecuteAsync(cancellationToken);
     }
 
     public override bool CanAuthenticate(AuthenticationParameters parameters) =>

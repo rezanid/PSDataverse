@@ -134,7 +134,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
             {
                 WriteError(new ErrorRecord(ex.InnerException, Globals.ErrorIdOperationException, ErrorCategory.WriteError, null));
             }
-            WriteInformation("Dataverse operation successfull.", new string[] { "dataverse" });
+            WriteInformation("Dataverse operation successfull.", ["dataverse"]);
             return;
         }
 
@@ -274,7 +274,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         return true;
     }
 
-    private void OnMessageForUser(string message) => WriteInformation(message, new string[] { "dataverse" });
+    private void OnMessageForUser(string message) => WriteInformation(message, ["dataverse"]);
 
     private bool IsNewBatchNeeded() => (BatchSize > 0 && operationCounter == 0) || operationCounter % BatchSize == 0;
 

@@ -16,14 +16,16 @@ namespace PSDataverse.Auth
         public virtual async Task<AuthenticationResult> AuthenticateAsync(
             AuthenticationParameters parameters, Action<string> onMessageForUser = default, CancellationToken cancellationToken = default)
         {
-            IClientApplicationBase app = GetClient(parameters);
+            var app = GetClient(parameters);
 
             var account = parameters.Account ?? (await app.GetAccountsAsync()).FirstOrDefault();
             if (account == null) { return null; }
 
             try
             {
-                return await app.AcquireTokenSilent(parameters.Scopes, account).ExecuteAsync().ConfigureAwait(false);
+                return await app.AcquireTokenSilent(parameters.Scopes, account)
+                    .ExecuteAsync(CancellationToken.None)
+                    .ConfigureAwait(false);
             }
             catch (MsalUiRequiredException)
             {
@@ -81,7 +83,7 @@ namespace PSDataverse.Auth
             string redirectUri = null,
             string tenantId = null)
         {
-            ConfidentialClientApplicationBuilder builder = ConfidentialClientApplicationBuilder.Create(clientId);
+            var builder = ConfidentialClientApplicationBuilder.Create(clientId);
 
             builder = builder.WithAuthority(authority);
 

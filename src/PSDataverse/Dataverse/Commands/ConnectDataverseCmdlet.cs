@@ -25,7 +25,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
     [Parameter(Mandatory = true, ParameterSetName = "AuthResult")]
     public string Endpoint { get; set; }
 
-    private readonly object _lock = new();
+    private readonly object @lock = new();
 
     protected override void ProcessRecord()
     {
@@ -39,10 +39,8 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
             string.IsNullOrWhiteSpace(Endpoint) ?
             new Uri(authParams.Resource, UriKind.Absolute) :
             new Uri(Endpoint, UriKind.Absolute);
-        if (serviceProvider == null)
-        {
-            serviceProvider = InitializeServiceProvider(endpointUrl);
-        }
+
+        serviceProvider ??= InitializeServiceProvider(endpointUrl);
 
         // if previously authented, extract the account. It will be required for silent authentication.
         if (SessionState.PSVariable.GetValue(Globals.VariableNameAuthResult) is AuthenticationResult previouAuthResult)
@@ -62,7 +60,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameConnectionString, authParams, ScopedItemOptions.AllScope));
 
         WriteDebug("AccessToken: " + authResult.AccessToken);
-        WriteInformation("Dataverse authenticated successfully.", new string[] { "dataverse" });
+        WriteInformation("Dataverse authenticated successfully.", ["dataverse"]);
         // Check if '-InformationAction Continue' is given and if so omit the following
         base.ProcessRecord();
     }
@@ -83,20 +81,20 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
                     new InvalidOperationException("Dataverse authentication cancelled."), Globals.ErrorIdAuthenticationFailed, ErrorCategory.AuthenticationError, this));
             return null;
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             WriteError(
                 new ErrorRecord(
-                    new InvalidOperationException("Authentication failed.", ex), Globals.ErrorIdAuthenticationFailed, ErrorCategory.AuthenticationError, this));
+                    new InvalidOperationException("Authentication failed. " + ex.ToString(), ex), Globals.ErrorIdAuthenticationFailed, ErrorCategory.AuthenticationError, this));
             return null;
         }
     }
 
-    private void OnMessageForUser(string message) => WriteInformation(message, new string[] { "dataverse" });
+    private void OnMessageForUser(string message) => WriteInformation(message, ["dataverse"]);
 
     private IServiceProvider InitializeServiceProvider(Uri baseUrl)
     {
-        lock (_lock)
+        lock (@lock)
         {
             var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
             if (serviceProvider == null)
