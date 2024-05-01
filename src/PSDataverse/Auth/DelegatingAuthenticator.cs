@@ -1,79 +1,78 @@
-namespace PSDataverse.Auth
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Security.Cryptography.X509Certificates;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using PSDataverse.Extensions;
-    using Microsoft.Identity.Client;
+namespace PSDataverse.Auth;
 
-    internal abstract class DelegatingAuthenticator : IAuthenticator
-    {
-        public IAuthenticator NextAuthenticator { get; set; }
+using System;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Identity.Client;
+using PSDataverse.Extensions;
+
+internal abstract class DelegatingAuthenticator : IAuthenticator
+{
+    public IAuthenticator NextAuthenticator { get; set; }
 
         public virtual async Task<AuthenticationResult> AuthenticateAsync(
             AuthenticationParameters parameters, Action<string> onMessageForUser = default, CancellationToken cancellationToken = default)
         {
             var app = GetClient(parameters);
 
-            var account = parameters.Account ?? (await app.GetAccountsAsync()).FirstOrDefault();
-            if (account == null) { return null; }
+        var account = parameters.Account ?? (await app.GetAccountsAsync()).FirstOrDefault();
+        if (account == null) { return null; }
 
-            try
-            {
-                return await app.AcquireTokenSilent(parameters.Scopes, account)
-                    .ExecuteAsync(CancellationToken.None)
-                    .ConfigureAwait(false);
-            }
-            catch (MsalUiRequiredException)
-            {
-                //TODO: Needs logging
-            }
-
-            return null;
+        try
+        {
+            return await app.AcquireTokenSilent(parameters.Scopes, account)
+                .ExecuteAsync(CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (MsalUiRequiredException)
+        {
+            //TODO: Needs logging
         }
 
-        public abstract bool CanAuthenticate(AuthenticationParameters parameters);
+        return null;
+    }
 
-        public virtual IClientApplicationBase GetClient(AuthenticationParameters parameters, string redirectUri = null)
+    public abstract bool CanAuthenticate(AuthenticationParameters parameters);
+
+    public virtual IClientApplicationBase GetClient(AuthenticationParameters parameters, string redirectUri = null)
+    {
+        if (!parameters.UseDeviceFlow & (
+            !string.IsNullOrEmpty(parameters.CertificateThumbprint) ||
+            !string.IsNullOrEmpty(parameters.ClientSecret)))
         {
-            if (!parameters.UseDeviceFlow & (
-                !string.IsNullOrEmpty(parameters.CertificateThumbprint) ||
-                !string.IsNullOrEmpty(parameters.ClientSecret)))
-            {
-                return CreateConfidentialClient(
-                    parameters.Authority,
-                    parameters.ClientId,
-                    parameters.ClientSecret,
-                    FindCertificate(parameters.CertificateThumbprint),
-                    redirectUri,
-                    parameters.TenantId);
-            }
-
-            return CreatePublicClient(
+            return CreateConfidentialClient(
                 parameters.Authority,
                 parameters.ClientId,
+                parameters.ClientSecret,
+                FindCertificate(parameters.CertificateThumbprint),
                 redirectUri,
                 parameters.TenantId);
         }
 
-        public async Task<AuthenticationResult> TryAuthenticateAsync(
-            AuthenticationParameters parameters, Action<string> onMessageForUser = default, CancellationToken cancellationToken = default)
+        return CreatePublicClient(
+            parameters.Authority,
+            parameters.ClientId,
+            redirectUri,
+            parameters.TenantId);
+    }
+
+    public async Task<AuthenticationResult> TryAuthenticateAsync(
+        AuthenticationParameters parameters, Action<string> onMessageForUser = default, CancellationToken cancellationToken = default)
+    {
+        if (CanAuthenticate(parameters))
         {
-            if (CanAuthenticate(parameters))
-            {
-                return await AuthenticateAsync(parameters, onMessageForUser, cancellationToken).ConfigureAwait(false);
-            }
-
-            if (NextAuthenticator != null)
-            {
-                return await NextAuthenticator.TryAuthenticateAsync(parameters, onMessageForUser, cancellationToken).ConfigureAwait(false);
-            }
-
-            return null;
+            return await AuthenticateAsync(parameters, onMessageForUser, cancellationToken).ConfigureAwait(false);
         }
+
+        if (NextAuthenticator != null)
+        {
+            return await NextAuthenticator.TryAuthenticateAsync(parameters, onMessageForUser, cancellationToken).ConfigureAwait(false);
+        }
+
+        return null;
+    }
 
         private static IConfidentialClientApplication CreateConfidentialClient(
             string authority,
@@ -85,90 +84,96 @@ namespace PSDataverse.Auth
         {
             var builder = ConfidentialClientApplicationBuilder.Create(clientId);
 
-            builder = builder.WithAuthority(authority);
+        builder = builder.WithAuthority(authority);
 
-            if (!string.IsNullOrEmpty(clientSecret)) { builder = builder.WithClientSecret(clientSecret); }
+        if (!string.IsNullOrEmpty(clientSecret))
+        { builder = builder.WithClientSecret(clientSecret); }
 
-            if (certificate != null) { builder = builder.WithCertificate(certificate); }
+        if (certificate != null)
+        { builder = builder.WithCertificate(certificate); }
 
-            if (!string.IsNullOrEmpty(redirectUri)) { builder = builder.WithRedirectUri(redirectUri); }
+        if (!string.IsNullOrEmpty(redirectUri))
+        { builder = builder.WithRedirectUri(redirectUri); }
 
-            if (!string.IsNullOrEmpty(tenantId)) { builder = builder.WithTenantId(tenantId); }
+        if (!string.IsNullOrEmpty(tenantId))
+        { builder = builder.WithTenantId(tenantId); }
 
-            var client = builder.WithLogging((level, message, pii) =>
-            {
-                //TODO: Replace the following line when logging is in-place.
-                //PartnerSession.Instance.DebugMessages.Enqueue($"[MSAL] {level} {message}");
-            }).Build();
-
-            return client;
-        }
-
-        private static IPublicClientApplication CreatePublicClient(
-            string authority,
-            string clientId = null,
-            string redirectUri = null,
-            string tenantId = null)
+        var client = builder.WithLogging((level, message, pii) =>
         {
-            var builder = PublicClientApplicationBuilder.Create(clientId);
+            //TODO: Replace the following line when logging is in-place.
+            //PartnerSession.Instance.DebugMessages.Enqueue($"[MSAL] {level} {message}");
+        }).Build();
 
-            builder = builder.WithAuthority(authority);
+        return client;
+    }
 
-            if (!string.IsNullOrEmpty(redirectUri)) { builder = builder.WithRedirectUri(redirectUri); }
+    private static IPublicClientApplication CreatePublicClient(
+        string authority,
+        string clientId = null,
+        string redirectUri = null,
+        string tenantId = null)
+    {
+        var builder = PublicClientApplicationBuilder.Create(clientId);
 
-            if (!string.IsNullOrEmpty(tenantId)) { builder = builder.WithTenantId(tenantId); }
+        builder = builder.WithAuthority(authority);
 
-            var client = builder.WithLogging((level, message, pii) =>
-            {
-                // TODO: Replace the following line when logging is in-place.
-                // PartnerSession.Instance.DebugMessages.Enqueue($"[MSAL] {level} {message}");
-            }).Build();
+        if (!string.IsNullOrEmpty(redirectUri))
+        { builder = builder.WithRedirectUri(redirectUri); }
 
-            return client;
-        }
+        if (!string.IsNullOrEmpty(tenantId))
+        { builder = builder.WithTenantId(tenantId); }
 
-        public static X509Certificate2 FindCertificate(string thumbprint) => FindCertificate(thumbprint, StoreName.My);
-
-        public static X509Certificate2 FindCertificate(
-            string thumbprint,
-            StoreName storeName)
+        var client = builder.WithLogging((level, message, pii) =>
         {
-            if (thumbprint == null) { return null; }
+            // TODO: Replace the following line when logging is in-place.
+            // PartnerSession.Instance.DebugMessages.Enqueue($"[MSAL] {level} {message}");
+        }).Build();
 
-            var source = new StoreLocation[2] { StoreLocation.CurrentUser, StoreLocation.LocalMachine };
-            X509Certificate2 certificate = null;
-            if (((IEnumerable<StoreLocation>)source).Any(storeLocation => TryFindCertificatesInStore(thumbprint, storeLocation, storeName, out certificate)))
-            {
-                return certificate;
-            }
-            return null;
-        }
+        return client;
+    }
 
-        private static bool TryFindCertificatesInStore(string thumbprint, StoreLocation location, out X509Certificate2 certificate)
-            => TryFindCertificatesInStore(thumbprint, location, StoreName.My, out certificate);
+    public static X509Certificate2 FindCertificate(string thumbprint) => FindCertificate(thumbprint, StoreName.My);
 
-        private static bool TryFindCertificatesInStore(string thumbprint, StoreLocation location, StoreName storeName, out X509Certificate2 certificate)
+    public static X509Certificate2 FindCertificate(
+        string thumbprint,
+        StoreName storeName)
+    {
+        if (thumbprint == null)
+        { return null; }
+
+        var source = new StoreLocation[2] { StoreLocation.CurrentUser, StoreLocation.LocalMachine };
+        X509Certificate2 certificate = null;
+        if (source.Any(storeLocation => TryFindCertificatesInStore(thumbprint, storeLocation, storeName, out certificate)))
         {
-            X509Store store = null;
-            X509Certificate2Collection col;
+            return certificate;
+        }
+        return null;
+    }
 
-            thumbprint.AssertArgumentNotNull(nameof(thumbprint));
+    private static bool TryFindCertificatesInStore(string thumbprint, StoreLocation location, out X509Certificate2 certificate)
+        => TryFindCertificatesInStore(thumbprint, location, StoreName.My, out certificate);
 
-            try
-            {
-                store = new X509Store(storeName, location);
-                store.Open(OpenFlags.ReadOnly);
+    private static bool TryFindCertificatesInStore(string thumbprint, StoreLocation location, StoreName storeName, out X509Certificate2 certificate)
+    {
+        X509Store store = null;
+        X509Certificate2Collection col;
 
-                col = store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
+        thumbprint.AssertArgumentNotNull(nameof(thumbprint));
 
-                certificate = col.Count == 0 ? null : col[0];
+        try
+        {
+            store = new X509Store(storeName, location);
+            store.Open(OpenFlags.ReadOnly);
 
-                return col.Count > 0;
-            }
-            finally
-            {
-                store?.Close();
-            }
+            col = store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
+
+            certificate = col.Count == 0 ? null : col[0];
+
+            return col.Count > 0;
+        }
+        finally
+        {
+            store?.Close();
         }
     }
 }

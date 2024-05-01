@@ -1,32 +1,37 @@
-﻿namespace PSDataverse;
+namespace PSDataverse;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using PSDataverse.Dataverse.Execute;
-using Polly;
-using Polly.Registry;
-using Polly.Timeout;
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Polly;
+using Polly.Registry;
+using Polly.Timeout;
+using System.Collections.Generic;
+
+
+
+using System.Text;
 using PSDataverse.Auth;
 
 internal class Startup(Uri baseUrl)
 {
-    public IServiceCollection ConfigureServices(IServiceCollection services) => services.AddSingleton<ILogger>(NullLogger.Instance)
-            .AddSingleton<IHttpClientFactory, HttpClientFactory>((provider) => new HttpClientFactory(baseUrl, "v9.2"))
-            .AddSingleton<IReadOnlyPolicyRegistry<string>>((s) => SetupRetryPolicies())
-            .AddSingleton<OperationProcessor>()
-            .AddSingleton<BatchProcessor>()
-            .AddSingleton<IAuthenticator, DelegatingAuthenticator>((provider) => new ClientAppAuthenticator
-            {
-                NextAuthenticator = new DeviceCodeAuthenticator()
-            })
-            .AddSingleton<AuthenticationService>();
+    public IServiceCollection ConfigureServices(IServiceCollection services) => services
+        .AddSingleton<ILogger>(NullLogger.Instance)
+        .AddSingleton<IHttpClientFactory, HttpClientFactory>((provider) => new HttpClientFactory(baseUrl, "v9.2"))
+        .AddSingleton<IReadOnlyPolicyRegistry<string>>((s) => SetupRetryPolicies())
+        .AddSingleton<OperationProcessor>()
+        .AddSingleton<BatchProcessor>()
+        .AddSingleton<IAuthenticator, DelegatingAuthenticator>((provider) => new ClientAppAuthenticator
+        {
+            NextAuthenticator = new DeviceCodeAuthenticator()
+        })
+        .AddSingleton<AuthenticationService>();
 
     public PolicyRegistry SetupRetryPolicies()
     {

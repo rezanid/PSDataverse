@@ -1,16 +1,15 @@
-﻿using PSDataverse.Dataverse.Model;
-using System;
+﻿namespace PSDataverse.Dataverse.Execute;
 
-namespace PSDataverse.Dataverse.Execute
+using System;
+using PSDataverse.Dataverse.Model;
+
+public class BatchResult
 {
-    public class BatchResult
+    public TimeSpan Elapsed { get; set; }
+    public BatchResponse Response { get; set; }
+    public BatchResult(TimeSpan elapsed, BatchResponse response)
     {
-        public TimeSpan Elapsed { get; set; }
-        public BatchResponse Response { get; set; }
-        public BatchResult(TimeSpan elapsed, BatchResponse response)
-        {
-            Elapsed = elapsed;
-            Response = response;
-        }
+        Elapsed = elapsed;
+        Response = response;
     }
 }

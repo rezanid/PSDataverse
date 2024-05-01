@@ -1,11 +1,5 @@
 namespace PSDataverse;
 
-using PSDataverse.Auth;
-using PSDataverse.Dataverse;
-using PSDataverse.Dataverse.Execute;
-using PSDataverse.Dataverse.Model;
-using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -15,12 +9,18 @@ using System.Linq;
 using System.Management.Automation;
 using System.Threading;
 using System.Threading.Tasks;
-using PSDataverse.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.PowerShell.Commands;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PSDataverse.Auth;
+using PSDataverse.Dataverse;
+using PSDataverse.Dataverse.Execute;
+using PSDataverse.Dataverse.Model;
+using PSDataverse.Extensions;
 
 [Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Object")]
-public class SendDataverseOperationCmdlet : DataverseCmdlet
+public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 {
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Operation", ValueFromPipeline = true)]
     public Operation<string> InputOperation { get; set; }
@@ -48,12 +48,16 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
     [Parameter(Position = 4, Mandatory = false)]
     public SwitchParameter OutputTable { get; set; }
 
+    [Parameter(Position = 5, Mandatory = false)]
+    public SwitchParameter AutoPaginate { get; set; }
+
     private bool isValidationFailed;
     private string accessToken;
     private AuthenticationParameters dataverseCnnStr;
     private AuthenticationService authenticationService;
     private DateTimeOffset? authExpiresOn;
     private OperationProcessor operationProcessor;
+    private OperationHandler operationHandler;
     private BatchProcessor batchProcessor;
     private int operationCounter;
     private int batchCounter;
@@ -74,7 +78,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         operationProcessor = serviceProvider.GetService<OperationProcessor>();
         batchProcessor = serviceProvider.GetService<BatchProcessor>();
         authenticationService = serviceProvider.GetService<AuthenticationService>();
-
+        operationHandler = new(operationProcessor, this);
         if (!VerifyConnection())
         {
             isValidationFailed = true;
@@ -95,21 +99,17 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         base.ProcessRecord();
 
         if (isValidationFailed || !VerifyConnection())
-        { return; }
-
-        if (!TryGetInputOperation(out var op))
         {
-            var errMessage = "No operation has been given. Please provide an operation using either of -InputOperation or -InputObject arguments.";
-            WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdMissingOperation, ErrorCategory.ConnectionError, null));
             return;
         }
 
-        if (!op.HasValue && op.Method is null)
-        { op.Method = "GET"; }
-        else if (op.Method is null)
-        { op.Method = "POST"; }
-        else
-        { /* no other possibility */ }
+        if (!TryGetInputOperation(out var op))
+        {
+            operationHandler.ReportMissingOperationError();
+            return;
+        }
+
+        OperationHandler.AssignDefaultHttpMethod(op); // This remains static, so called directly on the class
 
         ValidateOperation(op);
 
@@ -117,24 +117,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
 
         if (BatchSize <= 0)
         {
-            operationProcessor.AuthenticationToken = accessToken;
-            try
-            {
-                var response = operationProcessor.ExecuteAsync(op).Result;
-                var opResponse = OperationResponse.From(response);
-                if (string.IsNullOrEmpty(opResponse.ContentId))
-                { opResponse.ContentId = op.ContentId; }
-                WriteObject(opResponse);
-            }
-            catch (OperationException ex)
-            {
-                WriteError(new ErrorRecord(ex, Globals.ErrorIdOperationException, ErrorCategory.WriteError, null));
-            }
-            catch (AggregateException ex) when (ex.InnerException is OperationException)
-            {
-                WriteError(new ErrorRecord(ex.InnerException, Globals.ErrorIdOperationException, ErrorCategory.WriteError, null));
-            }
-            WriteInformation("Dataverse operation successfull.", ["dataverse"]);
+            operationHandler.ExecuteSingleOperation(op, accessToken, AutoPaginate.IsPresent);
             return;
         }
 
@@ -174,15 +157,6 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
             operation = InputOperation;
             return true;
         }
-        //TODO: Remove InputJson parameter
-        //if (InputJson is not null)
-        //{
-        //    string input = null;
-        //    // If the given string is not in JSON format, assume it's a URL.
-        //    if (!InputJson.StartsWith('{')) { input = $"{{\"Uri\":\"{InputJson}\"}}"; }
-        //    operation = JsonConvert.DeserializeObject<Operation<string>>(input ?? InputJson);
-        //    return true;
-        //}
         if (InputObject is not null)
         {
             if (InputObject.BaseObject is string str)
@@ -201,7 +175,6 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
                     Headers = jobject.TryGetValue("Headers", out var headers) ? headers.ToObject<Dictionary<string, string>>() : null,
                     Value = jobject.TryGetValue("Value", out var value) ? value.ToString(Formatting.None, Array.Empty<JsonConverter>()) : null
                 };
-                //operation = JsonConvert.DeserializeObject<Operation<JObject>>(input ?? str);
                 return true;
             }
             if (InputObject.BaseObject is IDictionary dictionary)
@@ -382,7 +355,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
             response = await batchProcessor.ExecuteBatchAsync(batch, CancellationToken);
             if (response is not null)
             {
-                WriteInformation($"Batch-{batch.Id} completed.", new string[] { "dataverse" });
+                WriteInformation($"Batch-{batch.Id} completed.", ["dataverse"]);
             }
             else
             {
@@ -413,4 +386,6 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet
         }
         base.Dispose(disposing);
     }
+
+    public void WriteInformation(string messageData, string[] tags) => base.WriteInformation(messageData, tags);
 }

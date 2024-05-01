@@ -1,0 +1,235 @@
+{{func contains(attribute)
+    ret ["Virtual"] | !array.contains attribute.AttributeType
+end
+func isLocal(picklist)
+    ret !picklist.IsGlobal
+end}}
+{{ classname = EntityDefinition.DisplayName.LocalizedLabels[0].Label | tokenize }}
+using Microsoft.Xrm.Sdk;
+using System.Collections.Generic;
+using System;
+
+public class {{ classname }} : Entity
+{
+    #region Local OptionSets
+    {{~ unique_enums = [] ~}}
+    {{~ for attribute in StatusAttributes | array.filter @isLocal~}}
+        {{ name = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize}}
+        {{~ if !array.contains unique_enums name ~}}
+            {{~ unique_enums = unique_enums | array.add name ~}}
+    public enum {{ name }}
+    {
+            {{~ for option in attribute.OptionSet.Options ~}}
+        {{ option.Label.LocalizedLabels[0].Label | tokenize }} = {{ option.Value }},
+            {{~ end ~}}
+    }
+        {{~ end ~}}
+    {{~ end ~}}
+
+    {{~ for attribute in PickListAttributes | array.filter @isLocal~}}
+        {{~ name = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize ~}}
+        {{~ if !array.contains unique_enums name ~}}
+            {{~ unique_enums = unique_enums | array.add name ~}}
+    public enum {{ name }}
+    {
+            {{~ for option in attribute.OptionSet.Options ~}}
+        {{ option.Label.LocalizedLabels[0].Label | tokenize }} = {{ option.Value }},
+            {{~ end ~}}
+    }
+        {{~ end ~}}
+    {{~ end ~}}
+    #endregion
+
+    public {{classname}}() : base("{{ EntityDefinition.LogicalName }}") { }
+
+    public {{classname}}(Entity entity) : base(entity.LogicalName)
+    {
+        Id = entity.Id;
+        Attributes.AddRange(entity.Attributes);
+    }
+
+    public {{classname}}(EntityReference entityReference) : base(entityReference.LogicalName)
+    {
+        Id = entityReference.Id;
+    }
+
+    public {{classname}} (string logicalName) : base(logicalName)
+    {
+    }
+
+    public {{classname}} (string logicalName, params KeyValuePair<string, object>[] attributes) : base(logicalName)
+    {
+        Attributes.AddRange(attributes);
+    }
+
+    public {{classname}} (string logicalName, Guid id) : base(logicalName)
+    {
+        Id = id;
+    }
+
+    public {{classname}} (string logicalName, Guid id, params KeyValuePair<string, object>[] attributes) : base(logicalName)
+    {
+        Id = id;
+        Attributes.AddRange(attributes);
+    }
+
+    public Guid Id
+    {
+        get => GetAttributeValue<Guid>("{{ EntityDefinition.PrimaryIdAttribute }}id");
+        set => this["{{ EntityDefinition.PrimaryIdAttribute }}id"] = value;
+    }
+
+    {{~ for attribute in StatusAttributes ~}}
+        {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+        {{~ enumName = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize ~}}
+    public virtual {{enumName}}? {{propertyName}}
+    {
+        get =>  ({{attribute.OptionSet.Name}}?)GetAttributeValue<OptionSetValue>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? new OptionSetValue((int)value) : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in PicklistAttributes ~}}
+        {{~ enumName = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize ~}}
+        {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual {{enumName}}? {{propertyName}}
+    {
+        get =>  ({{attribute.OptionSet.Name}}?)GetAttributeValue<OptionSetValue>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? new OptionSetValue((int)value) : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in MultiSelectPicklistAttributes ~}}
+        {{~ enumName = attribute.OptionSet.DisplayName.LocalizedLabels[0]?.Label ?? attribute.OptionSet.Name | tokenize ~}}
+        {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual {{enumName}}? {{propertyName}}
+    {
+        get
+        {
+            var optionSets = GetAttributeValue<OptionSetValueCollection>("{{ attribute.LogicalName }}");
+            if (optionSets == null)
+            {
+                return Enumerable.Empty<{{attribute.OptionSet.Name}}?>();
+            }
+            return optionsets.Select(opt => ({{attribute.OptionSet.Name}}?)(opt.Value)).ToList();
+        }
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? new OptionSetValue((int)value) : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in MoneyAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual decimal? {{propertyName}}
+    {
+        get =>  (decimal?)GetAttributeValue<Money>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? new Money(value) : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in DecimalAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual decimal? {{propertyName}}
+    {
+        get =>  GetAttributeValue<decimal?>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? value : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in BigIntAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual BigInteger? {{propertyName}}
+    {
+        get =>  GetAttributeValue<BigInteger>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? value : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in IntegerAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual int? {{propertyName}}
+    {
+        get =>  GetAttributeValue<int>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? value : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in DoubleAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual double? {{propertyName}}
+    {
+        get =>  GetAttributeValue<double>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? value : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in DateTimeAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual DateTime? {{propertyName}}
+    {
+        get =>  GetAttributeValue<DateTime>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? value : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in BooleanAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual bool? {{propertyName}}
+    {
+        get =>  GetAttributeValue<bool>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? value : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in UniqueIdentifierAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual Guid? {{propertyName}}
+    {
+        get =>  GetAttributeValue<Guid>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value.HasValue ? value : null;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in StringAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual string {{propertyName}}
+    {
+        get =>  GetAttributeValue<string>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+
+    {{~ for attribute in MemoAttributes ~}}
+    {{~ propertyName = attribute.DisplayName.LocalizedLabels[0]?.Label ?? attribute.SchemaName | tokenize ~}}
+    public virtual string {{propertyName}}
+    {
+        get =>  GetAttributeValue<string>("{{ attribute.LogicalName }}")?.Value;
+        {{~ if attribute.IsValidForUpdate == "True" ~}}
+        set => this["{{ attribute.LogicalName }}"] = value;
+        {{~ end ~}}
+    }
+    {{~ end ~}}
+}

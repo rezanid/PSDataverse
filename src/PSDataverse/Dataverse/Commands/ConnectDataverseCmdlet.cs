@@ -1,10 +1,10 @@
 namespace PSDataverse;
 
-using PSDataverse.Auth;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Identity.Client;
 using System;
 using System.Management.Automation;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Identity.Client;
+using PSDataverse.Auth;
 
 [Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = "AuthResult")]
 public class ConnectDataverseCmdlet : DataverseCmdlet
