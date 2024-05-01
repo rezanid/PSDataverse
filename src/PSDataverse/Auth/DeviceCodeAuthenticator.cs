@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client;
+using System.Linq;
 
 internal class DeviceCodeAuthenticator : DelegatingAuthenticator
 {

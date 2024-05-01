@@ -36,41 +36,40 @@ public static class HttpClientExtensions
         return await client.SendAsync(request, cancellationToken);
     }
 
-        public static async Task<HttpResponseMessage> SendAsync(
-            this HttpClient client, Operation operation, CancellationToken cancellationToken)
+    public static async Task<HttpResponseMessage> SendAsync(
+        this HttpClient client, Operation operation, CancellationToken cancellationToken)
+    {
+        var request = new HttpRequestMessage(new HttpMethod(operation.Method), operation.Uri);
+        if (operation?.HasValue is true)
         {
-            var request = new HttpRequestMessage(new HttpMethod(operation.Method), operation.Uri);
-            if (operation?.HasValue is true)
+            request.Content = new StringContent(operation?.GetValueAsJsonString());
+            request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
+        }
+        if (operation.Headers != null)
+        {
+            if (request.Content is null)
             {
-                request.Content = new StringContent(operation?.GetValueAsJsonString());
-                request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
-            }
-            if (operation.Headers != null)
-            {
-                if (request.Content is null)
+                foreach (var header in operation.Headers)
                 {
-                    foreach (var header in operation.Headers)
+                    request.Headers.Add(header.Key, header.Value);
+                }
+            }
+            else
+            {
+                foreach (var header in operation.Headers)
+                {
+                    if (request.Content != null &&
+                        header.Key.StartsWith("Content-", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        request.Content.Headers.Add(header.Key, header.Value);
+                    }
+                    else
                     {
                         request.Headers.Add(header.Key, header.Value);
                     }
                 }
-                else
-                {
-                    foreach (var header in operation.Headers)
-                    {
-                        if (request.Content != null &&
-                            header.Key.StartsWith("Content-", System.StringComparison.OrdinalIgnoreCase))
-                        {
-                            request.Content.Headers.Add(header.Key, header.Value);
-                        }
-                        else
-                        {
-                            request.Headers.Add(header.Key, header.Value);
-                        }
-                    }
-                }
             }
-            return await client.SendAsync(request, cancellationToken);
         }
+        return await client.SendAsync(request, cancellationToken);
     }
 }
