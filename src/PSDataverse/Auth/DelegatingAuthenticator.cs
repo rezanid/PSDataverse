@@ -12,18 +12,19 @@ internal abstract class DelegatingAuthenticator : IAuthenticator
 {
     public IAuthenticator NextAuthenticator { get; set; }
 
-    public virtual async Task<AuthenticationResult> AuthenticateAsync(
-        AuthenticationParameters parameters, Action<string> onMessageForUser = default, CancellationToken cancellationToken = default)
-    {
-        var app = GetClient(parameters);
+        public virtual async Task<AuthenticationResult> AuthenticateAsync(
+            AuthenticationParameters parameters, Action<string> onMessageForUser = default, CancellationToken cancellationToken = default)
+        {
+            var app = GetClient(parameters);
 
         var account = parameters.Account ?? (await app.GetAccountsAsync()).FirstOrDefault();
-        if (account == null)
-        { return null; }
+        if (account == null) { return null; }
 
         try
         {
-            return await app.AcquireTokenSilent(parameters.Scopes, account).ExecuteAsync().ConfigureAwait(false);
+            return await app.AcquireTokenSilent(parameters.Scopes, account)
+                .ExecuteAsync(CancellationToken.None)
+                .ConfigureAwait(false);
         }
         catch (MsalUiRequiredException)
         {
@@ -73,15 +74,15 @@ internal abstract class DelegatingAuthenticator : IAuthenticator
         return null;
     }
 
-    private static IConfidentialClientApplication CreateConfidentialClient(
-        string authority,
-        string clientId = null,
-        string clientSecret = null,
-        X509Certificate2 certificate = null,
-        string redirectUri = null,
-        string tenantId = null)
-    {
-        var builder = ConfidentialClientApplicationBuilder.Create(clientId);
+        private static IConfidentialClientApplication CreateConfidentialClient(
+            string authority,
+            string clientId = null,
+            string clientSecret = null,
+            X509Certificate2 certificate = null,
+            string redirectUri = null,
+            string tenantId = null)
+        {
+            var builder = ConfidentialClientApplicationBuilder.Create(clientId);
 
         builder = builder.WithAuthority(authority);
 

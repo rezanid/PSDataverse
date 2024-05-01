@@ -35,6 +35,10 @@
       <ResourceName>Resources</ResourceName>
     </JsonResource>
   </ItemGroup>
+  <!--<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="echo Copying the build output ($(ProjectDir)$(OutDir)) to the output ($(SolutionDir)..\..\test)" />
+    <Exec Command="copy /y $(ProjectDir)$(OutDir)*.* $(SolutionDir)output\PSDataverse\bin" />
+  </Target>-->
   <!--<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
     <Exec Command="rd &quot;..\..\output\PSDataverse\bin&quot; /S /Q&#xD;&#xA;xcopy &quot;$(TargetDir)&quot; &quot;..\..\output\PSDataverse\bin&quot; /E /Y /I" />
   </Target>-->

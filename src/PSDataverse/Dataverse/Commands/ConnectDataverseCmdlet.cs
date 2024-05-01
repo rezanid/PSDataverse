@@ -39,6 +39,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
             string.IsNullOrWhiteSpace(Endpoint) ?
             new Uri(authParams.Resource, UriKind.Absolute) :
             new Uri(Endpoint, UriKind.Absolute);
+
         serviceProvider ??= InitializeServiceProvider(endpointUrl);
 
         // if previously authented, extract the account. It will be required for silent authentication.
@@ -84,7 +85,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
         {
             WriteError(
                 new ErrorRecord(
-                    new InvalidOperationException("Authentication failed.", ex), Globals.ErrorIdAuthenticationFailed, ErrorCategory.AuthenticationError, this));
+                    new InvalidOperationException("Authentication failed. " + ex.ToString(), ex), Globals.ErrorIdAuthenticationFailed, ErrorCategory.AuthenticationError, this));
             return null;
         }
     }

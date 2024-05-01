@@ -12,22 +12,20 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Polly;
 using Polly.Registry;
 using Polly.Timeout;
+using System.Collections.Generic;
+using System.Text;
 using PSDataverse.Auth;
 using PSDataverse.Dataverse.Execute;
 
 internal class Startup(Uri baseUrl)
 {
-    private readonly Uri baseUri = baseUrl;
-
     public IServiceCollection ConfigureServices(IServiceCollection services) => services
         .AddSingleton<ILogger>(NullLogger.Instance)
-        .AddSingleton<IHttpClientFactory, HttpClientFactory>(
-            (provider) => new HttpClientFactory(baseUri, "v9.2"))
+        .AddSingleton<IHttpClientFactory, HttpClientFactory>((provider) => new HttpClientFactory(baseUrl, "v9.2"))
         .AddSingleton<IReadOnlyPolicyRegistry<string>>((s) => SetupRetryPolicies())
         .AddSingleton<OperationProcessor>()
         .AddSingleton<BatchProcessor>()
-        .AddSingleton<IAuthenticator, DelegatingAuthenticator>(
-        (provider) => new ClientAppAuthenticator
+        .AddSingleton<IAuthenticator, DelegatingAuthenticator>((provider) => new ClientAppAuthenticator
         {
             NextAuthenticator = new DeviceCodeAuthenticator()
         })
@@ -35,8 +33,7 @@ internal class Startup(Uri baseUrl)
 
     public PolicyRegistry SetupRetryPolicies()
     {
-        HttpStatusCode[] httpStatusCodesWorthRetrying =
-        [
+        HttpStatusCode[] httpStatusCodesWorthRetrying = [
             HttpStatusCode.RequestTimeout,       // 408
             HttpStatusCode.InternalServerError,  // 500
             HttpStatusCode.BadGateway,           // 502

@@ -58,7 +58,15 @@ public static class HttpClientExtensions
             {
                 foreach (var header in operation.Headers)
                 {
-                    request.Content.Headers.Add(header.Key, header.Value);
+                    if (request.Content != null &&
+                        header.Key.StartsWith("Content-", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        request.Content.Headers.Add(header.Key, header.Value);
+                    }
+                    else
+                    {
+                        request.Headers.Add(header.Key, header.Value);
+                    }
                 }
             }
         }

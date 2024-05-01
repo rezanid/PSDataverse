@@ -118,16 +118,15 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         if (BatchSize <= 0)
         {
             operationHandler.ExecuteSingleOperation(op, accessToken, AutoPaginate.IsPresent);
+            return;
         }
-        else
-        {
-            operations.Add(op);
 
-            if (IsNewBatchNeeded())
-            {
-                batchProcessor.AuthenticationToken = accessToken;
-                MakeAndSendBatchThenOutput(waitForAll: false);
-            }
+        operations.Add(op);
+
+        if (IsNewBatchNeeded())
+        {
+            batchProcessor.AuthenticationToken = accessToken;
+            MakeAndSendBatchThenOutput(waitForAll: false);
         }
     }
 
@@ -248,7 +247,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         return true;
     }
 
-    private void OnMessageForUser(string message) => WriteInformation(message, new string[] { "dataverse" });
+    private void OnMessageForUser(string message) => WriteInformation(message, ["dataverse"]);
 
     private bool IsNewBatchNeeded() => (BatchSize > 0 && operationCounter == 0) || operationCounter % BatchSize == 0;
 
