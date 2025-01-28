@@ -8,9 +8,9 @@ using Microsoft.Identity.Client;
 
 internal class AuthenticationService(
     IAuthenticator authenticator,
-    HttpClientFactory httpClientFactory)
+    IHttpClientFactory httpClientFactory)
 {
-    private HttpClientFactory HttpClientFactory { get; } = httpClientFactory;
+    private IHttpClientFactory HttpClientFactory { get; } = httpClientFactory;
 
     public IAuthenticator Authenticator { get; } = authenticator;
 
