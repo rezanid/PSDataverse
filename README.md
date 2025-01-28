@@ -64,7 +64,8 @@ To sign in, use a web browser to open the page https://microsoft.com/devicelogin
 ```
 This is the easiest way to log in, when your just need to do ad-hoc operations.
 
-> **ℹ NOTE**
+> [!NOTE]
+> 
 > For any of first two examples to work you need an application user in your Power Platform environment. To learn how to create an application user, please read the following article from the official documentation: [Manage application users in the Power Platform admin center](https://docs.microsoft.com/en-us/power-platform/admin/manage-application-users).
 
 The third one is using a wellknown client id, but if you want you can also use the client id of your own app registration. If you wish to use your own app registration for device authentication flow, you will need to enable "Allow public client flows" for your app registration. 
