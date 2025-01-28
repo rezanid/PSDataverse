@@ -15,13 +15,13 @@ using PSDataverse.Dataverse.Model;
 
 public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
 {
-    private readonly ILogger Log;
-    private readonly HttpClient HttpClient;
-    private readonly IAsyncPolicy<HttpResponseMessage> Policy;
+    private readonly ILogger log;
+    private readonly HttpClient httpClient;
+    private readonly IAsyncPolicy<HttpResponseMessage> policy;
     public string AuthenticationToken
     {
-        set => HttpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", value);
+        set => httpClient.DefaultRequestHeaders.Authorization =
+            string.IsNullOrEmpty(value) ? null : new AuthenticationHeaderValue("Bearer", value);
     }
 
     public OperationProcessor(
@@ -35,16 +35,15 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
         IHttpClientFactory httpClientFactory,
         IReadOnlyPolicyRegistry<string> policyRegistry)
     {
-        Log = log;
-        HttpClient = httpClientFactory.CreateClient("Dataverse");
-        Policy = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
+        this.log = log;
+        httpClient = httpClientFactory.CreateClient("Dataverse");
+        policy = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
     }
 
     public async IAsyncEnumerable<HttpResponseMessage> ProcessAsync(Batch<JObject> batch)
     {
         foreach (var operation in batch.ChangeSet.Operations)
         {
-
             //operation.Uri = (new Uri(ServiceUrl, operation.Uri)).ToString();
             //if (operation.Uri.EndsWith("$ref", StringComparison.OrdinalIgnoreCase))
             //{
@@ -64,12 +63,12 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
 
         if (!operation.Uri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
-            operation.Uri = new Uri(HttpClient.BaseAddress, operation.Uri).ToString();
+            operation.Uri = new Uri(httpClient.BaseAddress, operation.Uri).ToString();
         }
 
-        Log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
-        var response = await Policy.ExecuteAsync(() => HttpClient.SendAsync(operation, CancellationToken.None));
-        Log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
+        log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
+        var response = await policy.ExecuteAsync(() => httpClient.SendAsync(operation, CancellationToken.None));
+        log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
 
         if (response.IsSuccessStatusCode)
         { return response; }
@@ -85,12 +84,12 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
 
         if (!operation.Uri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
-            operation.Uri = new Uri(HttpClient.BaseAddress, operation.Uri).ToString();
+            operation.Uri = new Uri(httpClient.BaseAddress, operation.Uri).ToString();
         }
 
-        Log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
-        var response = await Policy.ExecuteAsync(() => HttpClient.SendAsync(operation, CancellationToken.None));
-        Log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
+        log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
+        var response = await policy.ExecuteAsync(() => httpClient.SendAsync(operation, CancellationToken.None));
+        log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
 
         if (response.IsSuccessStatusCode)
         { return response; }
@@ -129,7 +128,7 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
     {
         if (response.Content == null)
         {
-            Log.LogWarning("Dynamics 365 returned non-success without conntent!");
+            log.LogWarning("Dynamics 365 returned non-success without conntent!");
             return null;
         }
         var responseContent = await response.Content.ReadAsStringAsync();

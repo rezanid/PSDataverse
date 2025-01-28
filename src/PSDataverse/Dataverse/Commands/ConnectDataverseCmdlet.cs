@@ -12,20 +12,24 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthResult")]
     public AuthenticationResult AuthResult { get; set; }
 
+    [Parameter(Mandatory = true, ParameterSetName = "AuthResult")]
+    public string Url { get; set; }
+
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "String")]
     public string ConnectionString { get; set; }
 
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthParams")]
     public AuthenticationParameters ConnectionStringObject { get; set; }
 
+    [Parameter(Mandatory = false)]
+    public SwitchParameter OnPremise { get; set; }
+
     [Parameter(DontShow = true, ParameterSetName = "String")]
     [Parameter(DontShow = true, ParameterSetName = "AuthParams")]
     public int Retry { get; set; }
 
-    [Parameter(Mandatory = true, ParameterSetName = "AuthResult")]
-    public string Endpoint { get; set; }
 
-    private readonly object @lock = new();
+    private static readonly object Lock = new();
 
     protected override void ProcessRecord()
     {
@@ -36,11 +40,19 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
             AuthenticationParameters.Parse(ConnectionString));
 
         var endpointUrl =
-            string.IsNullOrWhiteSpace(Endpoint) ?
+            string.IsNullOrWhiteSpace(Url) ?
             new Uri(authParams.Resource, UriKind.Absolute) :
-            new Uri(Endpoint, UriKind.Absolute);
+            new Uri(Url, UriKind.Absolute);
 
         serviceProvider ??= InitializeServiceProvider(endpointUrl);
+
+        if (OnPremise)
+        {
+            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameConnectionString, "OnPremise", ScopedItemOptions.AllScope));
+            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, string.Empty, ScopedItemOptions.AllScope));
+            WriteInformation("Dynamics 365 (On-Prem) authenticated successfully.", ["dataverse"]);
+            return;
+        }
 
         // if previously authented, extract the account. It will be required for silent authentication.
         if (SessionState.PSVariable.GetValue(Globals.VariableNameAuthResult) is AuthenticationResult previouAuthResult)
@@ -61,8 +73,6 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
 
         WriteDebug("AccessToken: " + authResult.AccessToken);
         WriteInformation("Dataverse authenticated successfully.", ["dataverse"]);
-        // Check if '-InformationAction Continue' is given and if so omit the following
-        base.ProcessRecord();
     }
 
     private AuthenticationResult HandleAuthentication(
@@ -94,7 +104,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
 
     private IServiceProvider InitializeServiceProvider(Uri baseUrl)
     {
-        lock (@lock)
+        lock (Lock)
         {
             var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
             if (serviceProvider == null)
