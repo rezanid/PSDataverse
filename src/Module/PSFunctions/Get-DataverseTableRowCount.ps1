@@ -1,4 +1,4 @@
-function Get-DvTableRowCount {
+function Get-DataverseTableRowCount {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
