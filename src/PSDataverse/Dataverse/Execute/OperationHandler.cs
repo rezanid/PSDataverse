@@ -48,7 +48,7 @@ public class OperationHandler
         {
             reporter.WriteError(new ErrorRecord(ex.InnerException, Globals.ErrorIdOperationException, ErrorCategory.WriteError, null));
         }
-        reporter.WriteInformation("Dataverse operation successful.", new string[] { "dataverse" });
+        reporter.WriteInformation("Dataverse operation successful.", ["dataverse"]);
     }
 
     private void HandleResponsePagination(Operation<string> op, OperationResponse opResponse, bool autoPagination)

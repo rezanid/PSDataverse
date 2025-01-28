@@ -19,13 +19,14 @@ using PSDataverse.Dataverse.Model;
 
 public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
 {
-    private readonly ILogger Log;
-    private readonly HttpClient HttpClient;
-    private readonly IAsyncPolicy<HttpResponseMessage> Retry;
+    private readonly ILogger log;
+    private readonly HttpClient httpClient;
+    private readonly IAsyncPolicy<HttpResponseMessage> retry;
     private readonly bool canThrowOperationException;
     public string AuthenticationToken
     {
-        set => HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", value);
+        set => httpClient.DefaultRequestHeaders.Authorization =
+            string.IsNullOrEmpty(value) ? null : new AuthenticationHeaderValue("Bearer", value);
     }
     public BatchProcessor(
         ILogger log,
@@ -42,9 +43,9 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         IHttpClientFactory httpClientFactory,
         IReadOnlyPolicyRegistry<string> policyRegistry)
     {
-        Log = log;
-        HttpClient = httpClientFactory.CreateClient("Dataverse");
-        Retry = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
+        this.log = log;
+        httpClient = httpClientFactory.CreateClient("Dataverse");
+        retry = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
     }
 
     // public async IAsyncEnumerable<HttpResponseMessage> ProcessAsync(Batch<JObject> batch)
@@ -71,7 +72,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
     {
         // Make the request
         var response = await SendBatchAsync(batch, cancellationToken);
-        Log.LogDebug($"Dynamics 365: {(int)response.StatusCode} {response.ReasonPhrase}");
+        log.LogDebug($"Dynamics 365: {(int)response.StatusCode} {response.ReasonPhrase}");
 
         // Extract the response content
         string responseContent = null;
@@ -87,7 +88,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         {
             details = JsonConvert.DeserializeObject<WebApiFault>(responseContent);
         }
-        if (response.StatusCode == (HttpStatusCode)429)
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
             details.RetryAfter = response.Headers.RetryAfter?.Delta;
             throw new ThrottlingExceededException(details);
@@ -125,7 +126,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         }
         catch (Exception)
         {
-            Log.LogWarning("It is not possible to parse the CRM response!\r\n" + responseContent);
+            log.LogWarning("It is not possible to parse the CRM response!\r\n" + responseContent);
         }
 
         if (batchResponse.IsSuccessful)
@@ -133,12 +134,12 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
             return batchResponse;
         }
 
-        Log.LogDebug("Dynamics 365 response: " + responseContent);
+        log.LogDebug("Dynamics 365 response: " + responseContent);
 
         var failedOperationResponse = batchResponse.Operations.First();
         var failedOperation = batch.ChangeSet.Operations.FirstOrDefault(
             o => o.ContentId == failedOperationResponse.ContentId);
-        Log.LogWarning($"Failed operation: {failedOperation}.");
+        log.LogWarning($"Failed operation: {failedOperation}.");
         failedOperation.RunCount++;
 
         if (canThrowOperationException)
@@ -155,7 +156,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
     {
         // Make the request
         var response = await SendBatchAsync(batch, cancellationToken);
-        Log.LogDebug($"Dynamics 365: {(int)response.StatusCode} {response.ReasonPhrase}");
+        log.LogDebug($"Dynamics 365: {(int)response.StatusCode} {response.ReasonPhrase}");
 
         // Extract the response content
         string responseContent = null;
@@ -171,7 +172,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         {
             details = JsonConvert.DeserializeObject<WebApiFault>(responseContent);
         }
-        if (response.StatusCode == (HttpStatusCode)429)
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
             details.RetryAfter = response.Headers.RetryAfter?.Delta;
             throw new ThrottlingExceededException(details);
@@ -209,7 +210,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         }
         catch (Exception)
         {
-            Log.LogWarning("It is not possible to parse the CRM response!\r\n" + responseContent);
+            log.LogWarning("It is not possible to parse the CRM response!\r\n" + responseContent);
         }
 
         if (batchResponse.IsSuccessful)
@@ -217,12 +218,12 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
             return batchResponse;
         }
 
-        Log.LogDebug("Dynamics 365 response: " + responseContent);
+        log.LogDebug("Dynamics 365 response: " + responseContent);
 
         var failedOperationResponse = batchResponse.Operations.First();
         var failedOperation = batch.ChangeSet.Operations.FirstOrDefault(
             o => o.ContentId == failedOperationResponse.ContentId);
-        Log.LogWarning($"Failed operation: {failedOperation}.");
+        log.LogWarning($"Failed operation: {failedOperation}.");
         failedOperation.RunCount++;
 
         if (canThrowOperationException)
@@ -246,11 +247,11 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         if (batch.Id == null)
         { throw new ArgumentException("Batch.Id cannot be null."); }
 
-        Log.LogDebug($"Executing batch {batch.Id}...");
-        response = await Retry.ExecuteAsync(() => HttpClient.SendAsync(HttpMethod.Post, "$batch", batch, cancellationToken));
+        log.LogDebug($"Executing batch {batch.Id}...");
+        response = await retry.ExecuteAsync(() => httpClient.SendAsync(HttpMethod.Post, "$batch", batch, cancellationToken));
         if (response.IsSuccessStatusCode)
         {
-            Log.LogDebug($"Batch {batch.Id} succeeded.");
+            log.LogDebug($"Batch {batch.Id} succeeded.");
             return response;
         }
         if (response != null)
@@ -273,11 +274,11 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         if (batch.Id == null)
         { throw new ArgumentException("Batch.Id cannot be null."); }
 
-        Log.LogDebug($"Executing batch {batch.Id}...");
-        response = await Retry.ExecuteAsync(() => HttpClient.SendAsync(HttpMethod.Post, "$batch", batch, cancellationToken));
+        log.LogDebug($"Executing batch {batch.Id}...");
+        response = await retry.ExecuteAsync(() => httpClient.SendAsync(HttpMethod.Post, "$batch", batch, cancellationToken));
         if (response.IsSuccessStatusCode)
         {
-            Log.LogDebug($"Batch {batch.Id} succeeded.");
+            log.LogDebug($"Batch {batch.Id} succeeded.");
             return response;
         }
         if (response != null)
@@ -350,7 +351,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         }
 
         WebApiFault details;
-        if (response.StatusCode == (HttpStatusCode)429)
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
             details = JsonConvert.DeserializeObject<WebApiFault>(responseContent);
             details.RetryAfter = response.Headers.RetryAfter?.Delta;

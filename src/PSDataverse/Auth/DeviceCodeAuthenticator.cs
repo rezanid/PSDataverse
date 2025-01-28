@@ -1,10 +1,10 @@
 namespace PSDataverse.Auth;
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client;
-using System.Linq;
 
 internal class DeviceCodeAuthenticator : DelegatingAuthenticator
 {
@@ -13,13 +13,13 @@ internal class DeviceCodeAuthenticator : DelegatingAuthenticator
         Action<string> onMessageForUser = default,
         CancellationToken cancellationToken = default)
     {
-        var app = GetClient(parameters);
+        var app = await GetClientAppAsync(parameters, cancellationToken).ConfigureAwait(false);
 
         // Attempt to get a token silently from the cache
-        //TODO: Currently accounts returned from GetAccountAsync is always null.
+        //TODO: Check if accounts returned from GetAccountAsync is always null.
         var accounts = await app.GetAccountsAsync().ConfigureAwait(false);
         var account = accounts.FirstOrDefault();
-        if (account != null)
+        if (parameters.Account is not null)
         {
             try
             {
@@ -37,7 +37,7 @@ internal class DeviceCodeAuthenticator : DelegatingAuthenticator
             // Provide the user instructions
             onMessageForUser(callback.Message);
             return Task.CompletedTask;
-        }).ExecuteAsync(cancellationToken);
+        }).ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public override bool CanAuthenticate(AuthenticationParameters parameters) =>

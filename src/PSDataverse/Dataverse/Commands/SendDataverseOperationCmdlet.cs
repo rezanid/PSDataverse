@@ -66,7 +66,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
     private Stopwatch stopwatch;
     private SemaphoreSlim taskThrottler;
 
-    private static readonly string[] ValidMethodsWithoutPayload = { "GET", "DELETE" };
+    private static readonly string[] ValidMethodsWithoutPayload = ["GET", "DELETE"];
 
     protected override void BeginProcessing()
     {
@@ -87,8 +87,8 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
         if (BatchSize > 0)
         {
-            operations = new(new List<Operation<string>>(BatchSize));
-            tasks = new();
+            operations = [.. new List<Operation<string>>(BatchSize)];
+            tasks = [];
             taskThrottler = new SemaphoreSlim(MaxDop <= 0 ? 20 : MaxDop);
         }
         operationCounter = 0;
@@ -113,7 +113,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
         ValidateOperation(op);
 
-        Interlocked.Increment(ref operationCounter);
+        _ = Interlocked.Increment(ref operationCounter);
 
         if (BatchSize <= 0)
         {
@@ -139,13 +139,13 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         if (BatchSize == 0)
         {
             stopwatch.Stop();
-            WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", new string[] { "Dataverse" });
+            WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", ["Dataverse"]);
             return;
         }
         stopwatch.Stop();
-        taskThrottler.Release();
+        _ = taskThrottler.Release();
         taskThrottler.Dispose();
-        WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", new string[] { "Dataverse" });
+        WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", ["Dataverse"]);
 
         base.EndProcessing();
     }
@@ -173,7 +173,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
                     Method = jobject.TryGetValue("Method", out var method) ? method.ToString() : null,
                     Uri = jobject.TryGetValue("Uri", out var uri) ? uri.ToString() : null,
                     Headers = jobject.TryGetValue("Headers", out var headers) ? headers.ToObject<Dictionary<string, string>>() : null,
-                    Value = jobject.TryGetValue("Value", out var value) ? value.ToString(Formatting.None, Array.Empty<JsonConverter>()) : null
+                    Value = jobject.TryGetValue("Value", out var value) ? value.ToString(Formatting.None, []) : null
                 };
                 return true;
             }
@@ -232,18 +232,18 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
             WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdNotConnected, ErrorCategory.ConnectionError, null));
             return false;
         }
-        if (authExpiresOn <= DateTimeOffset.Now && dataverseCnnStr == null)
-        {
-            var errMessage = "Active connection has expired. Please authenticate again using Connect-Dataverse cmdlet.";
-            WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdConnectionExpired, ErrorCategory.ConnectionError, null));
-            return false;
-        }
-        if (dataverseCnnStr != null && authExpiresOn <= DateTimeOffset.Now)
-        {
-            var authResult = authenticationService.AuthenticateAsync(dataverseCnnStr, OnMessageForUser, CancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
-            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
-        }
+        // if (authExpiresOn <= DateTimeOffset.Now && dataverseCnnStr == null)
+        // {
+        //     var errMessage = "Active connection has expired. Please authenticate again using Connect-Dataverse cmdlet.";
+        //     WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdConnectionExpired, ErrorCategory.ConnectionError, null));
+        //     return false;
+        // }
+        // if (dataverseCnnStr != null && authExpiresOn <= DateTimeOffset.Now)
+        // {
+        var authResult = authenticationService.AuthenticateAsync(dataverseCnnStr, OnMessageForUser, CancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
+        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
+        // }
         return true;
     }
 
@@ -314,16 +314,16 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         else
         {
             var tbl = new System.Data.DataTable();
-            tbl.Columns.Add("Id", typeof(string));
-            tbl.Columns.Add("BatchId", typeof(Guid));
-            tbl.Columns.Add("Response", typeof(string));
-            tbl.Columns.Add("Succeeded", typeof(bool));
+            _ = tbl.Columns.Add("Id", typeof(string));
+            _ = tbl.Columns.Add("BatchId", typeof(Guid));
+            _ = tbl.Columns.Add("Response", typeof(string));
+            _ = tbl.Columns.Add("Succeeded", typeof(bool));
             if (batch.Response.IsSuccessful)
             {
                 foreach (var response in batch.Response.Operations)
                 {
                     var msg = response.Headers != null && response.Headers.TryGetValue("OData-EntityId", out var id) ? id : null;
-                    tbl.Rows.Add(response.ContentId, batch.Id, msg, true);
+                    _ = tbl.Rows.Add(response.ContentId, batch.Id, msg, true);
                 }
             }
             else
@@ -332,13 +332,13 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
                 var i = 0;
                 foreach (var response in batch.Response.Operations) // There will only be one op, when batch fails.
                 {
-                    tbl.Rows.Add(response.ContentId, batch.Id, response.Error.ToString(), false);
+                    _ = tbl.Rows.Add(response.ContentId, batch.Id, response.Error.ToString(), false);
                     failedOperationIds[i] = response.ContentId;
                     ++i;
                 }
                 foreach (var op in batch.ChangeSet.Operations.Where(op => !failedOperationIds.Contains(op.ContentId)))
                 {
-                    tbl.Rows.Add(op.ContentId, batch.Id, null, false);
+                    _ = tbl.Rows.Add(op.ContentId, batch.Id, null, false);
                 }
             }
             WriteObject(tbl);
@@ -347,7 +347,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
     private async Task<Batch<string>> SendBatchAsync(Batch<string> batch)
     {
-        WriteInformation($"Batch-{batch.Id}[total:{batch.ChangeSet.Operations.Count()}, starting: {batch.ChangeSet.Operations.First().ContentId}] being sent...", new string[] { "dataverse" });
+        WriteInformation($"Batch-{batch.Id}[total:{batch.ChangeSet.Operations.Count()}, starting: {batch.ChangeSet.Operations.First().ContentId}] being sent...", ["dataverse"]);
         BatchResponse response = null;
         try
         {
@@ -369,8 +369,8 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         }
         finally
         {
-            taskThrottler.Release();
-            Interlocked.Increment(ref batchCounter);
+            _ = taskThrottler.Release();
+            _ = Interlocked.Increment(ref batchCounter);
         }
         batch.Response = response;
         return batch;

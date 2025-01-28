@@ -1,7 +1,6 @@
 ﻿namespace PSDataverse;
 public static class Globals
 {
-    public const int TooManyRequests = 429;
     public const string VariableNameAuthResult = "Dataverse-AuthResult";
     public const string VariableNameAccessToken = "Dataverse-AuthToken";
     public const string VariableNameAccessTokenExpiresOn = "Dataverse-AuthTokenExpiresOn";

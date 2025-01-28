@@ -12,8 +12,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Polly;
 using Polly.Registry;
 using Polly.Timeout;
-using System.Collections.Generic;
-using System.Text;
 using PSDataverse.Auth;
 using PSDataverse.Dataverse.Execute;
 
@@ -27,7 +25,10 @@ internal class Startup(Uri baseUrl)
         .AddSingleton<BatchProcessor>()
         .AddSingleton<IAuthenticator, DelegatingAuthenticator>((provider) => new ClientAppAuthenticator
         {
-            NextAuthenticator = new DeviceCodeAuthenticator()
+            NextAuthenticator = new DeviceCodeAuthenticator
+            {
+                NextAuthenticator = new IntegratedAuthenticator()
+            }
         })
         .AddSingleton<AuthenticationService>();
 
