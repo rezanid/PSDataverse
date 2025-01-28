@@ -8,6 +8,7 @@ public static class Globals
     public const string VariableNameBatchProcessor = "Dataverse-BatchProcessor";
     public const string VariableNameServiceProvider = "Dataverse-ServiceProvider";
     public const string VariableNameConnectionString = "Dataverse-ConnectionString";
+    public const string VariableNameIsOnPremise = "Dataverse-IsOnPremise";
     public const string PolicyNameHttp = "httpPolicy";
     public const string ErrorIdAuthenticationFailed = "DVERR-901";
     public const string ErrorIdBatchFailure = "DVERR-1001";
