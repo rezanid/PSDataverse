@@ -13,6 +13,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
     public AuthenticationResult AuthResult { get; set; }
 
     [Parameter(Mandatory = true, ParameterSetName = "AuthResult")]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "OnPremise")]
     public string Url { get; set; }
 
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "String")]
@@ -21,11 +22,13 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthParams")]
     public AuthenticationParameters ConnectionStringObject { get; set; }
 
-    [Parameter(Mandatory = false)]
+    [Parameter(Mandatory = true, ParameterSetName = "OnPremise")]
     public SwitchParameter OnPremise { get; set; }
 
     [Parameter(DontShow = true, ParameterSetName = "String")]
     [Parameter(DontShow = true, ParameterSetName = "AuthParams")]
+    [Parameter(DontShow = true, ParameterSetName = "AuthResult")]
+    [Parameter(DontShow = true, ParameterSetName = "OnPremise")]
     public int Retry { get; set; }
 
 
