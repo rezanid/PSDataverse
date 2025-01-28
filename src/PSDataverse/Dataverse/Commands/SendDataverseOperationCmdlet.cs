@@ -51,6 +51,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
     [Parameter(Position = 5, Mandatory = false)]
     public SwitchParameter AutoPaginate { get; set; }
 
+    private bool IsOnPremise;
     private bool isValidationFailed;
     private string accessToken;
     private AuthenticationParameters dataverseCnnStr;
@@ -223,6 +224,8 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
     private bool VerifyConnection()
     {
+        IsOnPremise = (bool)GetVariableValue(Globals.VariableNameIsOnPremise);
+        if (IsOnPremise) { return true; }
         accessToken = (string)GetVariableValue(Globals.VariableNameAccessToken);
         authExpiresOn = (DateTimeOffset?)GetVariableValue(Globals.VariableNameAccessTokenExpiresOn);
         dataverseCnnStr = (AuthenticationParameters)GetVariableValue(Globals.VariableNameConnectionString);

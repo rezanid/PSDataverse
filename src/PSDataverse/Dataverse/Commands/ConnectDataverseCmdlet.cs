@@ -51,7 +51,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
 
         if (OnPremise)
         {
-            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameConnectionString, "OnPremise", ScopedItemOptions.AllScope));
+            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameIsOnPremise, true, ScopedItemOptions.AllScope));
             SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, string.Empty, ScopedItemOptions.AllScope));
             WriteInformation("Dynamics 365 (On-Prem) authenticated successfully.", ["dataverse"]);
             return;
@@ -112,7 +112,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
             var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
             if (serviceProvider == null)
             {
-                var startup = new Startup(baseUrl);
+                var startup = new Startup(baseUrl, OnPremise ? "v9.1" : "v9.2");
                 serviceProvider = startup.ConfigureServices(new ServiceCollection()).BuildServiceProvider();
                 SessionState.PSVariable.Set(
                     new PSVariable(Globals.VariableNameServiceProvider, serviceProvider, ScopedItemOptions.AllScope));

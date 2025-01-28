@@ -32,6 +32,7 @@ public class OperationHandler
 
     public void ExecuteSingleOperation(Operation<string> op, string accessToken, bool autoPagination)
     {
+        var noError = true;
         processor.AuthenticationToken = accessToken;
         try
         {
@@ -43,12 +44,14 @@ public class OperationHandler
         catch (OperationException ex)
         {
             reporter.WriteError(new ErrorRecord(ex, Globals.ErrorIdOperationException, ErrorCategory.WriteError, null));
+            noError = false;
         }
         catch (AggregateException ex) when (ex.InnerException is OperationException)
         {
             reporter.WriteError(new ErrorRecord(ex.InnerException, Globals.ErrorIdOperationException, ErrorCategory.WriteError, null));
+            noError = false;
         }
-        reporter.WriteInformation("Dataverse operation successful.", ["dataverse"]);
+        if (noError) { reporter.WriteInformation("Dataverse operation successful.", ["dataverse"]); }
     }
 
     private void HandleResponsePagination(Operation<string> op, OperationResponse opResponse, bool autoPagination)

@@ -15,11 +15,11 @@ using Polly.Timeout;
 using PSDataverse.Auth;
 using PSDataverse.Dataverse.Execute;
 
-internal class Startup(Uri baseUrl)
+internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
 {
     public IServiceCollection ConfigureServices(IServiceCollection services) => services
         .AddSingleton<ILogger>(NullLogger.Instance)
-        .AddSingleton<IHttpClientFactory, HttpClientFactory>((provider) => new HttpClientFactory(baseUrl, "v9.2"))
+        .AddSingleton<IHttpClientFactory, HttpClientFactory>((provider) => new HttpClientFactory(baseUrl, apiVersion))
         .AddSingleton<IReadOnlyPolicyRegistry<string>>((s) => SetupRetryPolicies())
         .AddSingleton<OperationProcessor>()
         .AddSingleton<BatchProcessor>()
