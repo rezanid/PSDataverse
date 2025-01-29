@@ -9,11 +9,14 @@ using System.Security.Cryptography.X509Certificates;
 public record AuthenticationParameters
 {
     private const string DefaultClientId = "51f81489-12ee-4a9e-aaae-a2591f45987d";
-    private const string DefaultRedirectUrl = "app://58145B91-0C36-4500-8554-080854F2AC97";
+
+    // Power Platform SDK uses "app://58145B91-0C36-4500-8554-080854F2AC97", but according to MSAL docs, localhost is safer
+    // Read more: https://learn.microsoft.com/en-us/entra/msal/dotnet/acquiring-tokens/using-web-browsers;
+    private const string DefaultRedirectUrl = "http://localhost";
 
     public string Authority { get; set; }
     public string Resource { get; set; }
-    public string ClientId { get; set; }
+    public string ClientId { get; set; } = DefaultClientId;
     public string ClientSecret { get; set; }
     public string CertificateThumbprint { get; set; }
     public StoreName CertificateStoreName { get; set; }
@@ -21,7 +24,7 @@ public record AuthenticationParameters
     public IEnumerable<string> Scopes { get; set; }
     public bool UseDeviceFlow { get; set; }
     public bool UseCurrentUser { get; set; }
-    public string RedirectUri { get; set; }
+    public string RedirectUri { get; set; } = DefaultRedirectUrl;
 
     public IAccount Account { get; set; }
 
@@ -107,6 +110,9 @@ public record AuthenticationParameters
         return StoreName.My;
     }
 
+    public bool IsValid() => !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(Resource) &&
+        (!string.IsNullOrWhiteSpace(Authority) || !string.IsNullOrWhiteSpace(Tenant));
+
     public bool IsUncertainAuthFlow()
-        => string.IsNullOrEmpty(ClientSecret) && !string.IsNullOrEmpty(CertificateThumbprint) && !UseDeviceFlow;
+        => string.IsNullOrWhiteSpace(ClientSecret) && string.IsNullOrWhiteSpace(CertificateThumbprint) && !UseDeviceFlow && IsValid();
 }
