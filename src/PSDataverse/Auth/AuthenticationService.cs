@@ -37,7 +37,7 @@ internal class AuthenticationService(
         if (string.IsNullOrEmpty(authParams.Tenant))
         {
             var url = authParams.Resource;
-            using var httpClient = HttpClientFactory.CreateClient("Dataverse");
+            using var httpClient = HttpClientFactory.CreateClient(Globals.DataverseHttpClientName);
             var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, url)).ConfigureAwait(false);
             var authUrl = response.Headers.Location;
             var tenantId = authUrl.AbsolutePath[1..authUrl.AbsolutePath.IndexOf('/', 1)];

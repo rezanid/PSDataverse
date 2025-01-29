@@ -49,15 +49,6 @@ internal class IntegratedAuthenticator : DelegatingAuthenticator
                 //TODO: Logging
             }
         }
-        // catch (Exception)
-        // {
-        //     //TODO: Logging.
-        // }
-        // if (result == null)
-        // {
-        //     return await app.AcquireTokenByIntegratedWindowsAuth(parameters.Scopes)
-        //         .ExecuteAsync(cancellationToken).ConfigureAwait(false);
-        // }
         return result;
     }
     public override bool CanAuthenticate(AuthenticationParameters parameters)

@@ -9,40 +9,24 @@ using PSDataverse.Auth;
 [Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = "AuthResult")]
 public class ConnectDataverseCmdlet : DataverseCmdlet
 {
-    // [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthResult")]
-    // public AuthenticationResult AuthResult { get; set; }
-
-    // [Parameter(Mandatory = true, ParameterSetName = "AuthResult")]
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Url")]
     public string Url { get; set; }
 
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "ConnectionString")]
     public string ConnectionString { get; set; }
 
-    // [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthParams")]
-    // public AuthenticationParameters ConnectionStringObject { get; set; }
-
-    //[Parameter(Mandatory = true, ParameterSetName = "OnPremise")]
     [Parameter(Mandatory = false, ParameterSetName = "Url")]
     public SwitchParameter OnPremise { get; set; }
 
     [Parameter(DontShow = true, ParameterSetName = "ConnectionString")]
     [Parameter(DontShow = true, ParameterSetName = "Url")]
-    // [Parameter(DontShow = true, ParameterSetName = "AuthParams")]
-    // [Parameter(DontShow = true, ParameterSetName = "AuthResult")]
-    //[Parameter(DontShow = true, ParameterSetName = "OnPremise")]
     public int Retry { get; set; }
-
 
     private static readonly object Lock = new();
 
     protected override void ProcessRecord()
     {
         var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
-        // var authParams = ConnectionStringObject ??
-        //     (string.IsNullOrWhiteSpace(ConnectionString) ?
-        //     new AuthenticationParameters() :
-        //     AuthenticationParameters.Parse(ConnectionString));
         var authParams = string.IsNullOrWhiteSpace(ConnectionString) ?
             new AuthenticationParameters
             {
@@ -72,7 +56,6 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
             authParams.Account = previouAuthResult.Account;
         }
 
-        // var authResult = AuthResult ?? HandleAuthentication(serviceProvider, authParams);
         var authResult = HandleAuthentication(serviceProvider, authParams);
         if (authResult == null)
         {
