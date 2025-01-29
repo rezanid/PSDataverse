@@ -1,6 +1,7 @@
 ﻿namespace PSDataverse;
 public static class Globals
 {
+    public const string DataverseHttpClientName = "Dataverse";
     public const string VariableNameAuthResult = "Dataverse-AuthResult";
     public const string VariableNameAccessToken = "Dataverse-AuthToken";
     public const string VariableNameAccessTokenExpiresOn = "Dataverse-AuthTokenExpiresOn";
