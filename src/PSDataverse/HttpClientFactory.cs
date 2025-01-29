@@ -3,28 +3,29 @@ using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 
-public class HttpClientFactory : IHttpClientFactory, IDisposable
+public class HttpClientFactory(Uri baseUrl, string apiVersion) : IHttpClientFactory, IDisposable
 {
-    private HttpClient _HttpClient;
-    private readonly object _Lock = new();
-    private readonly Uri _baseUrl;
-
-    public HttpClientFactory(Uri baseUrl, string apiVersion) => _baseUrl = new Uri(baseUrl, $"/api/data/{apiVersion}/");
+    private HttpClient httpClient;
+    private readonly object @lock = new();
+    private readonly Uri baseUrl = new(
+            baseUrl.AbsoluteUri.EndsWith("/", StringComparison.OrdinalIgnoreCase)
+            ? baseUrl.AbsoluteUri + $"api/data/{apiVersion}/"
+            : baseUrl.AbsoluteUri + $"/api/data/{apiVersion}/");
 
     public HttpClient GetHttpClientInstance()
     {
-        if (_HttpClient == null)
+        if (httpClient == null)
         {
-            lock (_Lock)
+            lock (@lock)
             {
-                if (_HttpClient == null)
+                if (httpClient == null)
                 {
-                    _HttpClient = new HttpClient(CreateHttpClientHandler());
-                    SetHttpClientDefaults(_HttpClient);
+                    httpClient = new HttpClient(CreateHttpClientHandler());
+                    SetHttpClientDefaults(httpClient);
                 }
             }
         }
-        return _HttpClient;
+        return httpClient;
     }
 
     #region Dispose Pattern
@@ -47,7 +48,7 @@ public class HttpClientFactory : IHttpClientFactory, IDisposable
     {
         if (disposing)
         {
-            ((IDisposable)_HttpClient).Dispose();
+            ((IDisposable)httpClient).Dispose();
         }
     }
     #endregion
@@ -66,7 +67,7 @@ public class HttpClientFactory : IHttpClientFactory, IDisposable
     /// </remarks>
     protected virtual void SetHttpClientDefaults(HttpClient client)
     {
-        client.BaseAddress = _baseUrl;
+        client.BaseAddress = baseUrl;
         client.Timeout = GetRequestTimeout();
         client.DefaultRequestHeaders.Add("OData-MaxVersion", "4.0");
         client.DefaultRequestHeaders.Add("OData-Version", "4.0");
@@ -88,7 +89,8 @@ public class HttpClientFactory : IHttpClientFactory, IDisposable
 
     public virtual HttpClientHandler CreateHttpClientHandler() => new()
     {
-        UseCookies = false
+        UseCookies = false,
+        UseDefaultCredentials = true
     };
 
     public HttpClient CreateClient(string name) => GetHttpClientInstance();

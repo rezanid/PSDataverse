@@ -22,7 +22,7 @@ internal class IntegratedAuthenticator : DelegatingAuthenticator
             parameters, 
             async (k, ct) => (await GetClientAppAsync(k, ct)).AsPublicClient(),
             cancellationToken);
-        var accounts = await app.GetAccountsAsync();
+        var accounts = await app.GetAccountsAsync().ConfigureAwait(false);
         var firstAccount = accounts.FirstOrDefault();
         try
         {
@@ -39,13 +39,13 @@ internal class IntegratedAuthenticator : DelegatingAuthenticator
                 var phwnd = WindowHelper.GetConsoleOrTerminalWindow();
                 result = await app.AcquireTokenInteractive(parameters.Scopes)
                     .WithAccount(accounts.FirstOrDefault())
-                    .WithPrompt(Prompt.SelectAccount)
                     .WithParentActivityOrWindow(phwnd)
                     .ExecuteAsync(cancellationToken)
                     .ConfigureAwait(false);
             }
-            catch (MsalException)
+            catch (MsalException ex)
             {
+                onMessageForUser?.Invoke(ex.Message);
                 //TODO: Logging
             }
         }

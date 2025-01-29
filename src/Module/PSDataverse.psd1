@@ -10,7 +10,7 @@
 RootModule = 'PSDataverse.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.0.8'
+ModuleVersion = '0.0.13'
 
 # Supported PSEditions
 CompatiblePSEditions = @("Core")
@@ -21,7 +21,7 @@ GUID = '081185a0-92be-4624-85e8-4903acb07e03'
 # Author of this module
 Author = 'Reza Niroomand'
 
-# Company or vendor of this module
+# Company or vendor of this moduled
 CompanyName = 'Novovio'
 
 # Copyright statement for this module

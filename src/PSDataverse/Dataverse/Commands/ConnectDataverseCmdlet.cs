@@ -9,26 +9,28 @@ using PSDataverse.Auth;
 [Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = "AuthResult")]
 public class ConnectDataverseCmdlet : DataverseCmdlet
 {
-    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthResult")]
-    public AuthenticationResult AuthResult { get; set; }
+    // [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthResult")]
+    // public AuthenticationResult AuthResult { get; set; }
 
-    [Parameter(Mandatory = true, ParameterSetName = "AuthResult")]
-    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "OnPremise")]
+    // [Parameter(Mandatory = true, ParameterSetName = "AuthResult")]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Url")]
     public string Url { get; set; }
 
-    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "String")]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "ConnectionString")]
     public string ConnectionString { get; set; }
 
-    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthParams")]
-    public AuthenticationParameters ConnectionStringObject { get; set; }
+    // [Parameter(Position = 0, Mandatory = true, ParameterSetName = "AuthParams")]
+    // public AuthenticationParameters ConnectionStringObject { get; set; }
 
-    [Parameter(Mandatory = true, ParameterSetName = "OnPremise")]
+    //[Parameter(Mandatory = true, ParameterSetName = "OnPremise")]
+    [Parameter(Mandatory = false, ParameterSetName = "Url")]
     public SwitchParameter OnPremise { get; set; }
 
-    [Parameter(DontShow = true, ParameterSetName = "String")]
-    [Parameter(DontShow = true, ParameterSetName = "AuthParams")]
-    [Parameter(DontShow = true, ParameterSetName = "AuthResult")]
-    [Parameter(DontShow = true, ParameterSetName = "OnPremise")]
+    [Parameter(DontShow = true, ParameterSetName = "ConnectionString")]
+    [Parameter(DontShow = true, ParameterSetName = "Url")]
+    // [Parameter(DontShow = true, ParameterSetName = "AuthParams")]
+    // [Parameter(DontShow = true, ParameterSetName = "AuthResult")]
+    //[Parameter(DontShow = true, ParameterSetName = "OnPremise")]
     public int Retry { get; set; }
 
 
@@ -37,10 +39,16 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
     protected override void ProcessRecord()
     {
         var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
-        var authParams = ConnectionStringObject ??
-            (string.IsNullOrWhiteSpace(ConnectionString) ?
-            new AuthenticationParameters() :
-            AuthenticationParameters.Parse(ConnectionString));
+        // var authParams = ConnectionStringObject ??
+        //     (string.IsNullOrWhiteSpace(ConnectionString) ?
+        //     new AuthenticationParameters() :
+        //     AuthenticationParameters.Parse(ConnectionString));
+        var authParams = string.IsNullOrWhiteSpace(ConnectionString) ?
+            new AuthenticationParameters
+            {
+                Resource = Url
+            } :
+            AuthenticationParameters.Parse(ConnectionString);
 
         var endpointUrl =
             string.IsNullOrWhiteSpace(Url) ?
@@ -51,11 +59,12 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
 
         if (OnPremise)
         {
-            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameConnectionString, "OnPremise", ScopedItemOptions.AllScope));
+            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameIsOnPremise, true, ScopedItemOptions.AllScope));
             SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, string.Empty, ScopedItemOptions.AllScope));
             WriteInformation("Dynamics 365 (On-Prem) authenticated successfully.", ["dataverse"]);
             return;
         }
+        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameIsOnPremise, false, ScopedItemOptions.AllScope));
 
         // if previously authented, extract the account. It will be required for silent authentication.
         if (SessionState.PSVariable.GetValue(Globals.VariableNameAuthResult) is AuthenticationResult previouAuthResult)
@@ -63,7 +72,8 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
             authParams.Account = previouAuthResult.Account;
         }
 
-        var authResult = AuthResult ?? HandleAuthentication(serviceProvider, authParams);
+        // var authResult = AuthResult ?? HandleAuthentication(serviceProvider, authParams);
+        var authResult = HandleAuthentication(serviceProvider, authParams);
         if (authResult == null)
         {
             return;
@@ -112,7 +122,7 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
             var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
             if (serviceProvider == null)
             {
-                var startup = new Startup(baseUrl);
+                var startup = new Startup(baseUrl, OnPremise ? "v9.1" : "v9.2");
                 serviceProvider = startup.ConfigureServices(new ServiceCollection()).BuildServiceProvider();
                 SessionState.PSVariable.Set(
                     new PSVariable(Globals.VariableNameServiceProvider, serviceProvider, ScopedItemOptions.AllScope));

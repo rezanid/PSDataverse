@@ -15,11 +15,13 @@ using Polly.Timeout;
 using PSDataverse.Auth;
 using PSDataverse.Dataverse.Execute;
 
-internal class Startup(Uri baseUrl)
+internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
 {
-    public IServiceCollection ConfigureServices(IServiceCollection services) => services
+    public IServiceCollection ConfigureServices(IServiceCollection services)
+    {
+        _ = services
         .AddSingleton<ILogger>(NullLogger.Instance)
-        .AddSingleton<IHttpClientFactory, HttpClientFactory>((provider) => new HttpClientFactory(baseUrl, "v9.2"))
+        //***.AddSingleton<IHttpClientFactory, HttpClientFactory>((provider) => new HttpClientFactory(baseUrl, apiVersion))
         .AddSingleton<IReadOnlyPolicyRegistry<string>>((s) => SetupRetryPolicies())
         .AddSingleton<OperationProcessor>()
         .AddSingleton<BatchProcessor>()
@@ -30,7 +32,28 @@ internal class Startup(Uri baseUrl)
                 NextAuthenticator = new IntegratedAuthenticator()
             }
         })
-        .AddSingleton<AuthenticationService>();
+        .AddSingleton<AuthenticationService>()
+        .AddHttpClient(Globals.DataverseHttpClientName, (provider, client) =>
+        {
+            client.BaseAddress = new(
+                baseUrl.AbsoluteUri.EndsWith("/", StringComparison.OrdinalIgnoreCase)
+                ? baseUrl.AbsoluteUri + $"api/data/{apiVersion}/"
+                : baseUrl.AbsoluteUri + $"/api/data/{apiVersion}/"
+            );
+            client.Timeout = GetDefaultRequestTimeout();
+            client.DefaultRequestHeaders.Add("OData-MaxVersion", "4.0");
+            client.DefaultRequestHeaders.Add("OData-Version", "4.0");
+            client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+        })
+        .ConfigureHttpMessageHandlerBuilder(builder => builder.PrimaryHandler = new HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+            UseCookies = false,
+            UseDefaultCredentials = true,
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+        });
+        return services;
+    }
 
     public PolicyRegistry SetupRetryPolicies()
     {
@@ -68,5 +91,15 @@ internal class Startup(Uri baseUrl)
     {
         Debug.WriteLine($"Retry delegate invoked. Attempt {retryAttempt}");
         return Task.CompletedTask;
+    }
+
+    private static TimeSpan GetDefaultRequestTimeout()
+    {
+        var requestTimeout = Environment.GetEnvironmentVariable("Request_Timeout", EnvironmentVariableTarget.Process);
+        if (!string.IsNullOrEmpty(requestTimeout) && TimeSpan.TryParse(requestTimeout, out var timeout))
+        {
+            return timeout;
+        }
+        return TimeSpan.FromMinutes(10);
     }
 }

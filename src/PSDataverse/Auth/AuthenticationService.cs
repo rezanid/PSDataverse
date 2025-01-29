@@ -19,6 +19,7 @@ internal class AuthenticationService(
         Action<string> onMessageForUser = default,
         CancellationToken cancellationToken = default)
     {
+        authParams = await EnsureTenantAsync(authParams);
         var current = Authenticator;
         while (current != null && !current.CanAuthenticate(authParams))
         {
@@ -28,7 +29,6 @@ internal class AuthenticationService(
         {
             throw new InvalidOperationException("Unable to detect required authentication flow. Please check the input parameters and try again.");
         }
-        authParams = await EnsureTenantAsync(authParams);
         return await current?.AuthenticateAsync(authParams, onMessageForUser, cancellationToken);
     }
 
