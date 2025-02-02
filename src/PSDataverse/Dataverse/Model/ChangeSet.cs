@@ -39,12 +39,10 @@ public class ChangeSet<T>
     {
         var sb = new StringBuilder();
         var i = 0;
-        // var ToJson =
-        //     typeof(T).Name.Equals("JObject", StringComparison.Ordinal) ?
-        //     new Func<object, string>(ConvertJObjectToJson) :
-        //     new Func<object, string>(ConvertToJson);
-        var ToJson = Operations is IEnumerable<Operation<JObject>> ?
+        var toJson = Operations is IEnumerable<Operation<JObject>> ?
             new Func<object, string>(ConvertJObjectToJson) :
+            Operations is IEnumerable<Operation<string>> ?
+            new Func<object, string>((a) => (string)a) :
             new Func<object, string>(ConvertToJson);
 
         if (string.IsNullOrEmpty(Id))
@@ -73,7 +71,7 @@ public class ChangeSet<T>
             }
             sb.AppendLine();
             if (operation.HasValue)
-            { sb.AppendLine(ToJson(operation.Value)); }
+            { sb.AppendLine(toJson(operation.Value)); }
         }
 
         // Terminator
