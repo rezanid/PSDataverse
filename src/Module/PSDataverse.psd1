@@ -10,7 +10,7 @@
 RootModule = 'PSDataverse.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.0.15'
+ModuleVersion = '0.0.16'
 
 # Supported PSEditions
 CompatiblePSEditions = @("Core")
