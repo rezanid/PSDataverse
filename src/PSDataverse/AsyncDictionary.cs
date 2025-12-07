@@ -4,41 +4,35 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using AsyncKeyedLock;
 
 //TODO: Implement IDictionary<TKey, TValue>.
 public class AsyncDictionary<TKey, TValue> : IDisposable
 {
     private readonly ConcurrentDictionary<TKey, TValue> dictionary = new();
-    private readonly ConcurrentDictionary<TKey, SemaphoreSlim> locks = new();
+    private readonly AsyncKeyedLocker<TKey> locks = new();
     private bool disposedValue;
 
     public async Task<TValue> GetOrAddAsync(TKey key, Func<TKey, Task<TValue>> valueFactory)
     {
-        var semaphore = locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        if (dictionary.TryGetValue(key, out var existingValue))
+        {
+            return existingValue;
+        }
 
-        await semaphore.WaitAsync();
-        try
+        using (await locks.LockAsync(key))
         {
             // Check if the value has been added by another thread
-            if (dictionary.TryGetValue(key, out TValue existingValue))
+            if (dictionary.TryGetValue(key, out existingValue))
             {
                 return existingValue;
             }
 
             // Create and store the value if successful
-            TValue value = await valueFactory(key);
+            var value = await valueFactory(key);
             dictionary[key] = value;
 
             return value;
-        }
-        finally
-        {
-            semaphore.Release();
-            // Avoid removing a semaphore that another thread may need
-            if (locks.TryGetValue(key, out var existingSemaphore) && existingSemaphore.CurrentCount == 1)
-            {
-                locks.TryRemove(key, out _);
-            }
         }
     }
 
@@ -47,43 +41,36 @@ public class AsyncDictionary<TKey, TValue> : IDisposable
         Func<TKey, CancellationToken, Task<TValue>> valueFactory,
         CancellationToken cancellationToken)
     {
-        var semaphore = locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
-
-        await semaphore.WaitAsync(cancellationToken);
-        try
+        if (dictionary.TryGetValue(key, out var existingValue))
         {
-            if (dictionary.TryGetValue(key, out TValue existingValue))
+            return existingValue;
+        }
+
+        using (await locks.LockAsync(key, cancellationToken))
+        {
+            // Check if the value has been added by another thread
+            if (dictionary.TryGetValue(key, out existingValue))
             {
                 return existingValue;
             }
 
-            TValue value = await valueFactory(key, cancellationToken);
+            // Create and store the value if successful
+            var value = await valueFactory(key, cancellationToken);
             dictionary[key] = value;
 
             return value;
-        }
-        finally
-        {
-            semaphore.Release();
-            // Avoid removing a semaphore that another thread may need
-            if (locks.TryGetValue(key, out var existingSemaphore) && existingSemaphore.CurrentCount == 1)
-            {
-                locks.TryRemove(key, out _);
-            }
         }
     }
 
     public bool TryRemove(TKey key, out TValue value)
     {
-        bool removed = dictionary.TryRemove(key, out value);
-        if (removed)
-        {
-            if (locks.TryRemove(key, out var semaphore))
-            {
-                semaphore.Dispose();
-            }
+        using var lockAcquired = locks.LockOrNull(key, 0);
+        if (lockAcquired is null)
+        { // another thread is adding to the dictionary, we want to avoid a race condition
+            value = default;
+            return false;
         }
-        return removed;
+        return dictionary.TryRemove(key, out value);
     }
 
     #region Disposable
@@ -93,10 +80,7 @@ public class AsyncDictionary<TKey, TValue> : IDisposable
         {
             if (disposing)
             {
-                foreach (var semaphore in locks.Values)
-                {
-                    semaphore.Dispose();
-                }
+                locks.Dispose();
             }
             disposedValue = true;
         }
