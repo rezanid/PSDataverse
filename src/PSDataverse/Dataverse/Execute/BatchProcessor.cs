@@ -1,8 +1,7 @@
-﻿namespace PSDataverse.Dataverse.Execute;
+namespace PSDataverse.Dataverse.Execute;
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -19,24 +18,23 @@ using PSDataverse.Dataverse.Model;
 
 public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
 {
+    private const int MaxErrorBodyLength = 2048;
     private readonly ILogger log;
     private readonly HttpClient httpClient;
     private readonly IAsyncPolicy<HttpResponseMessage> retry;
-    private readonly bool canThrowOperationException;
+
     public string AuthenticationToken
     {
         set => httpClient.DefaultRequestHeaders.Authorization =
             string.IsNullOrEmpty(value) ? null : new AuthenticationHeaderValue("Bearer", value);
     }
+
     public BatchProcessor(
         ILogger log,
         IHttpClientFactory httpClientFactory,
         IReadOnlyPolicyRegistry<string> policyRegistry,
         string authenticationToken) : this(log, httpClientFactory, policyRegistry)
-    {
-        canThrowOperationException = false;
-        AuthenticationToken = authenticationToken;
-    }
+        => AuthenticationToken = authenticationToken;
 
     public BatchProcessor(
         ILogger log,
@@ -44,333 +42,129 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         IReadOnlyPolicyRegistry<string> policyRegistry)
     {
         this.log = log;
-        httpClient = httpClientFactory.CreateClient("Dataverse");
+        httpClient = httpClientFactory.CreateClient(Globals.DataverseHttpClientName);
         retry = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
     }
 
-    // public async IAsyncEnumerable<HttpResponseMessage> ProcessAsync(Batch<JObject> batch)
     public async IAsyncEnumerable<BatchResponse> ProcessAsync(Batch<JObject> batch)
     {
-        //foreach (var operation in batch.ChangeSet.Operations)
-        //{
-        //    operation.Uri = new Uri(ServiceUrl, operation.Uri).ToString();
-        //    if (operation.Uri.EndsWith("$ref", StringComparison.OrdinalIgnoreCase))
-        //    {
-        //        if (operation.Value["@odata.id"] != null)
-        //        {
-        //            operation.Value["@odata.id"] = new Uri(ServiceUrl, operation.Value["@odata.id"].ToString());
-        //        }
-        //    }
-        //}
-        //TODO: Parse all messages in the response and yield-return them separately.
-        yield return await ExecuteBatchAsync(batch);
+        yield return await ExecuteBatchAsync(batch, CancellationToken.None).ConfigureAwait(false);
     }
 
-    public Task<BatchResponse> ExecuteBatchAsync(Batch<JObject> batch) => ExecuteBatchAsync(batch, CancellationToken.None);
-    public Task<BatchResponse> ExecuteBatchAsync(Batch<string> batch) => ExecuteBatchAsync(batch, CancellationToken.None);
-    public async Task<BatchResponse> ExecuteBatchAsync(Batch<JObject> batch, CancellationToken cancellationToken)
+    public Task<BatchResponse> ExecuteBatchAsync(Batch<JObject> batch)
+        => ExecuteBatchAsync(batch, CancellationToken.None);
+
+    public Task<BatchResponse> ExecuteBatchAsync(Batch<string> batch)
+        => ExecuteBatchAsync(batch, CancellationToken.None);
+
+    public Task<BatchResponse> ExecuteBatchAsync(Batch<JObject> batch, CancellationToken cancellationToken)
+        => ExecuteBatchCoreAsync(batch, cancellationToken);
+
+    public Task<BatchResponse> ExecuteBatchAsync(Batch<string> batch, CancellationToken cancellationToken)
+        => ExecuteBatchCoreAsync(batch, cancellationToken);
+
+    private async Task<BatchResponse> ExecuteBatchCoreAsync<T>(Batch<T> batch, CancellationToken cancellationToken)
     {
-        // Make the request
-        var response = await SendBatchAsync(batch, cancellationToken);
-        log.LogDebug($"Dynamics 365: {(int)response.StatusCode} {response.ReasonPhrase}");
-
-        // Extract the response content
-        string responseContent = null;
-        if (response.Content != null)
+        ArgumentNullException.ThrowIfNull(batch);
+        if (string.IsNullOrWhiteSpace(batch.Id))
         {
-            responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            response.Content.Dispose();
+            throw new ArgumentException("Batch.Id cannot be null or empty.", nameof(batch));
         }
 
-        // Catch throtelling exceptions
-        WebApiFault details = null;
-        if (!response.IsSuccessStatusCode && response.Content.Headers.ContentType?.MediaType == MediaTypeNames.Application.Json)
-        {
-            details = JsonConvert.DeserializeObject<WebApiFault>(responseContent);
-        }
+        using var response = await retry.ExecuteAsync(
+            ct => httpClient.SendAsync(HttpMethod.Post, "$batch", batch, ct),
+            cancellationToken).ConfigureAwait(false);
+
+        log.LogDebug("Dataverse batch {BatchId} returned {StatusCode} {ReasonPhrase}.",
+            batch.Id, (int)response.StatusCode, response.ReasonPhrase);
+
+        var mediaType = response.Content?.Headers.ContentType?.MediaType;
+        var responseContent = response.Content is null
+            ? string.Empty
+            : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
+            WebApiFault details = null;
+            if (string.Equals(mediaType, MediaTypeNames.Application.Json, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(responseContent))
+            {
+                try
+                {
+                    details = JsonConvert.DeserializeObject<WebApiFault>(responseContent);
+                }
+                catch (JsonException)
+                {
+                    // Preserve the original status and body in the fallback fault below.
+                }
+            }
+
+            details ??= CreateFault(response, responseContent);
             details.RetryAfter = response.Headers.RetryAfter?.Delta;
             throw new ThrottlingExceededException(details);
         }
-        if (response.Headers.RetryAfter != null)
+
+        if (!response.IsSuccessStatusCode)
         {
-            details = new WebApiFault
+            if (response.Headers.RetryAfter is not null)
             {
-                Message = $"Response status code does not indicate success: " +
-                    $"{response.StatusCode} ({response.ReasonPhrase}) content: {responseContent}.",
-                ErrorCode = (int)response.StatusCode,
-                RetryAfter = response.Headers.RetryAfter.Delta
-            };
-            throw new ThrottlingExceededException(details);
-        }
+                throw new ThrottlingExceededException(CreateFault(response, responseContent));
+            }
 
-        if (response.Content.Headers.ContentType != null && !string.Equals("multipart/mixed", response.Content.Headers.ContentType.MediaType, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ParseException($"Unsupported response media type received from Dataverse. Expected: multipart/mixed, Actual: " + response.Content.Headers.ContentType.MediaType);
-        }
-
-        if (!response.IsSuccessStatusCode && response.Content.Headers.ContentLength == 0)
-        {
-            throw new BatchException<JObject>($"{(int)response.StatusCode} {response.ReasonPhrase}")
+            if (string.IsNullOrWhiteSpace(responseContent))
             {
-                Batch = batch
-            };
+                throw new BatchException<T>($"Dataverse returned {(int)response.StatusCode} {response.ReasonPhrase} with an empty response body.")
+                {
+                    Batch = batch
+                };
+            }
         }
 
-        BatchResponse batchResponse = null;
+        if (!string.Equals(mediaType, "multipart/mixed", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ParseException(
+                $"Unsupported Dataverse batch response media type '{mediaType ?? "<none>"}'. " +
+                $"Expected 'multipart/mixed'. Body: {Limit(responseContent)}");
+        }
+
         try
         {
-            // Try to parse the response content like a batch response
-            batchResponse = BatchResponse.Parse(responseContent);
-        }
-        catch (Exception)
-        {
-            log.LogWarning("It is not possible to parse the CRM response!\r\n" + responseContent);
-        }
-
-        if (batchResponse.IsSuccessful)
-        {
-            return batchResponse;
-        }
-
-        log.LogDebug("Dynamics 365 response: " + responseContent);
-
-        var failedOperationResponse = batchResponse.Operations.First();
-        var failedOperation = batch.ChangeSet.Operations.FirstOrDefault(
-            o => o.ContentId == failedOperationResponse.ContentId);
-        log.LogWarning($"Failed operation: {failedOperation}.");
-        failedOperation.RunCount++;
-
-        if (canThrowOperationException)
-        {
-            throw CreateOperationException(batch.Id, failedOperation, failedOperationResponse);
-        }
-        else
-        {
-            return batchResponse;
-        }
-    }
-
-    public async Task<BatchResponse> ExecuteBatchAsync(Batch<string> batch, CancellationToken cancellationToken)
-    {
-        // Make the request
-        var response = await SendBatchAsync(batch, cancellationToken);
-        log.LogDebug($"Dynamics 365: {(int)response.StatusCode} {response.ReasonPhrase}");
-
-        // Extract the response content
-        string responseContent = null;
-        if (response.Content != null)
-        {
-            responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            response.Content.Dispose();
-        }
-
-        // Catch throtelling exceptions
-        WebApiFault details = null;
-        if (!response.IsSuccessStatusCode && response.Content.Headers.ContentType?.MediaType == MediaTypeNames.Application.Json)
-        {
-            details = JsonConvert.DeserializeObject<WebApiFault>(responseContent);
-        }
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
-        {
-            details.RetryAfter = response.Headers.RetryAfter?.Delta;
-            throw new ThrottlingExceededException(details);
-        }
-        if (response.Headers.RetryAfter != null)
-        {
-            details = new WebApiFault
+            var batchResponse = BatchResponse.Parse(responseContent);
+            if (!batchResponse.IsSuccessful)
             {
-                Message = $"Response status code does not indicate success: " +
-                    $"{response.StatusCode} ({response.ReasonPhrase}) content: {responseContent}.",
-                ErrorCode = (int)response.StatusCode,
-                RetryAfter = response.Headers.RetryAfter.Delta
-            };
-            throw new ThrottlingExceededException(details);
-        }
-
-        if (response.Content.Headers.ContentType != null && !string.Equals("multipart/mixed", response.Content.Headers.ContentType.MediaType, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ParseException($"Unsupported response media type received from Dataverse. Expected: multipart/mixed, Actual: " + response.Content.Headers.ContentType.MediaType);
-        }
-
-        if (!response.IsSuccessStatusCode && response.Content.Headers.ContentLength == 0)
-        {
-            throw new BatchException<string>($"{(int)response.StatusCode} {response.ReasonPhrase}")
-            {
-                Batch = batch
-            };
-        }
-
-        BatchResponse batchResponse = null;
-        try
-        {
-            // Try to parse the response content like a batch response
-            batchResponse = BatchResponse.Parse(responseContent);
-        }
-        catch (Exception)
-        {
-            log.LogWarning("It is not possible to parse the CRM response!\r\n" + responseContent);
-        }
-
-        if (batchResponse.IsSuccessful)
-        {
+                var failedResponse = batchResponse.Operations.FirstOrDefault();
+                var failedOperation = batch.ChangeSet?.Operations?.FirstOrDefault(
+                    operation => operation.ContentId == failedResponse?.ContentId);
+                if (failedOperation is not null)
+                {
+                    failedOperation.RunCount++;
+                    log.LogWarning("Dataverse batch {BatchId} failed at operation {Operation}.", batch.Id, failedOperation);
+                }
+            }
             return batchResponse;
         }
-
-        log.LogDebug("Dynamics 365 response: " + responseContent);
-
-        var failedOperationResponse = batchResponse.Operations.First();
-        var failedOperation = batch.ChangeSet.Operations.FirstOrDefault(
-            o => o.ContentId == failedOperationResponse.ContentId);
-        log.LogWarning($"Failed operation: {failedOperation}.");
-        failedOperation.RunCount++;
-
-        if (canThrowOperationException)
+        catch (ParseException)
         {
-            throw CreateOperationException(batch.Id, failedOperation, failedOperationResponse);
+            throw;
         }
-        else
+        catch (Exception ex)
         {
-            return batchResponse;
+            throw new ParseException(
+                $"Unable to parse the Dataverse batch response. Body: {Limit(responseContent)}",
+                ex);
         }
     }
 
-    private Task<HttpResponseMessage> SendBatchAsync(Batch<string> batch) => SendBatchAsync(batch, CancellationToken.None);
-    private Task<HttpResponseMessage> SendBatchAsync(Batch<JObject> batch) => SendBatchAsync(batch, CancellationToken.None);
-
-    private async Task<HttpResponseMessage> SendBatchAsync(Batch<JObject> batch, CancellationToken cancellationToken)
-    {
-        HttpResponseMessage response = null;
-        if (batch is null)
-        { throw new ArgumentNullException(nameof(batch)); }
-        if (batch.Id == null)
-        { throw new ArgumentException("Batch.Id cannot be null."); }
-
-        log.LogDebug($"Executing batch {batch.Id}...");
-        response = await retry.ExecuteAsync(() => httpClient.SendAsync(HttpMethod.Post, "$batch", batch, cancellationToken));
-        if (response.IsSuccessStatusCode)
+    private static WebApiFault CreateFault(HttpResponseMessage response, string responseContent)
+        => new()
         {
-            log.LogDebug($"Batch {batch.Id} succeeded.");
-            return response;
-        }
-        if (response != null)
-        {
-            return response;
-        }
-        throw new HttpRequestException(
-            string.Format(
-                CultureInfo.InvariantCulture,
-                "Response status code does not indicate success: {0} ({1}) and the response contains no content.",
-                response.StatusCode,
-                response.ReasonPhrase));
-    }
-
-    private async Task<HttpResponseMessage> SendBatchAsync(Batch<string> batch, CancellationToken cancellationToken)
-    {
-        HttpResponseMessage response = null;
-        if (batch is null)
-        { throw new ArgumentNullException(nameof(batch)); }
-        if (batch.Id == null)
-        { throw new ArgumentException("Batch.Id cannot be null."); }
-
-        log.LogDebug($"Executing batch {batch.Id}...");
-        response = await retry.ExecuteAsync(() => httpClient.SendAsync(HttpMethod.Post, "$batch", batch, cancellationToken));
-        if (response.IsSuccessStatusCode)
-        {
-            log.LogDebug($"Batch {batch.Id} succeeded.");
-            return response;
-        }
-        if (response != null)
-        {
-            return response;
-        }
-        throw new HttpRequestException(
-            string.Format(
-                CultureInfo.InvariantCulture,
-                "Response status code does not indicate success: {0} ({1}) and the response contains no content.",
-                response.StatusCode,
-                response.ReasonPhrase));
-    }
-
-    private OperationException CreateOperationException(
-        string batchId,
-        Operation<JObject> operation,
-        OperationResponse response)
-    {
-        var entityName = ExtractEntityName(operation);
-        var errorMessage = response.Error.Message;
-        //if (operationExceptions.TryGetValue(entityName, out OperationException exception))
-        //{
-        //    exception.Message = errorMessage;
-        //    exception.BatchId = batchId;
-        //    exception.Operation = operation;
-        //    exception.Error = response.Error;
-        //    return exception;
-        //}
-        return new OperationException<JObject>(errorMessage)
-        {
-            BatchId = batchId,
-            Operation = operation,
-            Error = response.Error,
-            EntityName = entityName,
+            Message = $"Dataverse returned {(int)response.StatusCode} {response.ReasonPhrase}. Body: {Limit(responseContent)}",
+            ErrorCode = (int)response.StatusCode,
+            RetryAfter = response.Headers.RetryAfter?.Delta
         };
-    }
 
-    private OperationException CreateOperationException(
-        string batchId,
-        Operation<string> operation,
-        OperationResponse response)
-    {
-        var entityName = ExtractEntityName(operation);
-        var errorMessage = response.Error.Message;
-        //if (operationExceptions.TryGetValue(entityName, out OperationException exception))
-        //{
-        //    exception.Message = errorMessage;
-        //    exception.BatchId = batchId;
-        //    exception.Operation = operation;
-        //    exception.Error = response.Error;
-        //    return exception;
-        //}
-        return new OperationException<string>(errorMessage)
-        {
-            BatchId = batchId,
-            Operation = operation,
-            Error = response.Error,
-            EntityName = entityName,
-        };
-    }
-
-    private static void ThrowGeneralException(HttpResponseMessage response)
-    {
-        string responseContent = null;
-        if (response.Content != null)
-        {
-            responseContent = response.Content.ReadAsStringAsync().Result;
-            response.Content.Dispose();
-        }
-
-        WebApiFault details;
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
-        {
-            details = JsonConvert.DeserializeObject<WebApiFault>(responseContent);
-            details.RetryAfter = response.Headers.RetryAfter?.Delta;
-            throw new ThrottlingExceededException(details);
-        }
-        if (response.Headers.RetryAfter != null)
-        {
-            details = new WebApiFault
-            {
-                Message = $"Response status code does not indicate success: " +
-                    $"{response.StatusCode} ({response.ReasonPhrase}) content: {responseContent}.",
-                ErrorCode = (int)response.StatusCode,
-                RetryAfter = response.Headers.RetryAfter.Delta
-            };
-            throw new ThrottlingExceededException(details);
-        }
-
-        throw new HttpRequestException(
-            $"Response status code does not indicate success: " +
-            $"{(int)response.StatusCode} ({response.ReasonPhrase}) content: {responseContent}.");
-    }
+    private static string Limit(string value)
+        => string.IsNullOrEmpty(value)
+            ? "<empty>"
+            : value.Length <= MaxErrorBodyLength ? value : value[..MaxErrorBodyLength] + "…";
 }

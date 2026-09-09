@@ -13,6 +13,8 @@ public class DisconnectDataverseCmdlet : PSCmdlet
         SessionState.PSVariable.Remove(Globals.VariableNameAccessTokenExpiresOn);
         SessionState.PSVariable.Remove(Globals.VariableNameConnectionString);
         var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
+        (serviceProvider as IDisposable)?.Dispose();
+        SessionState.PSVariable.Remove(Globals.VariableNameServiceProvider);
         WriteInformation("Dataverse disconnected successfully.", ["dataverse"]);
     }
 }

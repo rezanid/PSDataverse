@@ -25,7 +25,7 @@ public class ChangeSet<T>
 
     public void RemoveOperation(string contentId)
     {
-        var operation = _Operations.Find(o => Equals(o.ContentId == contentId, StringComparison.Ordinal));
+        var operation = _Operations.Find(o => string.Equals(o.ContentId, contentId, StringComparison.Ordinal));
         if (operation == null)
         {
             throw new ArgumentOutOfRangeException(nameof(contentId), $"No operation has been found with the given {nameof(contentId)}.");

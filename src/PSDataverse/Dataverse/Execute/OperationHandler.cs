@@ -1,6 +1,7 @@
 namespace PSDataverse.Dataverse.Execute;
 using System;
 using System.Management.Automation;
+using System.Threading;
 using PSDataverse.Dataverse.Model;
 
 public class OperationHandler
@@ -30,16 +31,16 @@ public class OperationHandler
         }
     }
 
-    public void ExecuteSingleOperation(Operation<string> op, string accessToken, bool autoPagination)
+    public void ExecuteSingleOperation(Operation<string> op, string accessToken, bool autoPagination, CancellationToken cancellationToken)
     {
         var noError = true;
         processor.AuthenticationToken = accessToken;
         try
         {
-            var response = processor.ExecuteAsync(op).Result;
+            using var response = processor.ExecuteAsync(op, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
             var opResponse = OperationResponse.From(response);
 
-            HandleResponsePagination(op, opResponse, autoPagination);
+            HandleResponsePagination(op, opResponse, autoPagination, cancellationToken);
         }
         catch (OperationException ex)
         {
@@ -54,7 +55,7 @@ public class OperationHandler
         if (noError) { reporter.WriteInformation("Dataverse operation successful.", ["dataverse"]); }
     }
 
-    private void HandleResponsePagination(Operation<string> op, OperationResponse opResponse, bool autoPagination)
+    private void HandleResponsePagination(Operation<string> op, OperationResponse opResponse, bool autoPagination, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(opResponse.ContentId))
         {
@@ -62,7 +63,7 @@ public class OperationHandler
         }
         if (autoPagination)
         {
-            ProcessPaginatedResults(op, opResponse);
+            ProcessPaginatedResults(op, opResponse, cancellationToken);
         }
         else
         {
@@ -70,10 +71,11 @@ public class OperationHandler
         }
     }
 
-    private void ProcessPaginatedResults(Operation<string> op, OperationResponse opResponse)
+    private void ProcessPaginatedResults(Operation<string> op, OperationResponse opResponse, CancellationToken cancellationToken)
     {
         do
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var result = jsonConverter.FromODataJsonString(opResponse.Content);
             reporter.WriteObject(result);
             var nextPage = result.Properties["@odata.nextLink"]?.Value as string;
@@ -81,7 +83,7 @@ public class OperationHandler
             if (!string.IsNullOrEmpty(nextPage))
             {
                 op.Uri = nextPage;
-                var response = processor.ExecuteAsync(op).Result;
+                using var response = processor.ExecuteAsync(op, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
                 opResponse = OperationResponse.From(response);
             }
             else

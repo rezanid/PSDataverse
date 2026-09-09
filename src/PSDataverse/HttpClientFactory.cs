@@ -48,7 +48,7 @@ public class HttpClientFactory(Uri baseUrl, string apiVersion) : IHttpClientFact
     {
         if (disposing)
         {
-            ((IDisposable)httpClient).Dispose();
+            httpClient?.Dispose();
         }
     }
     #endregion

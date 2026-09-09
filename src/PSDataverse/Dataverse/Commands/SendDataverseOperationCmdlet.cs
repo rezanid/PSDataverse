@@ -42,13 +42,9 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
     public int MaxDop { get; set; } = 0;
 
     [Parameter(Position = 3, Mandatory = false)]
-    [ValidateRange(0, 50)]
-    public int Retry { get; set; }
-
-    [Parameter(Position = 4, Mandatory = false)]
     public SwitchParameter OutputTable { get; set; }
 
-    [Parameter(Position = 5, Mandatory = false)]
+    [Parameter(Position = 4, Mandatory = false)]
     public SwitchParameter AutoPaginate { get; set; }
 
     private bool IsOnPremise;
@@ -66,7 +62,9 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
     private List<Task<Batch<string>>> tasks;
     private Stopwatch stopwatch;
     private SemaphoreSlim taskThrottler;
+    private int effectiveMaxDop;
 
+    private const int DefaultMaxDop = 20;
     private static readonly string[] ValidMethodsWithoutPayload = ["GET", "DELETE"];
 
     protected override void BeginProcessing()
@@ -76,6 +74,16 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         stopwatch = Stopwatch.StartNew();
 
         var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
+        if (serviceProvider is null)
+        {
+            WriteError(new ErrorRecord(
+                new InvalidOperationException("No active connection detected. Run Connect-Dataverse first."),
+                Globals.ErrorIdNotConnected,
+                ErrorCategory.ConnectionError,
+                null));
+            isValidationFailed = true;
+            return;
+        }
         operationProcessor = serviceProvider.GetService<OperationProcessor>();
         batchProcessor = serviceProvider.GetService<BatchProcessor>();
         authenticationService = serviceProvider.GetService<AuthenticationService>();
@@ -90,7 +98,8 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         {
             operations = [.. new List<Operation<string>>(BatchSize)];
             tasks = [];
-            taskThrottler = new SemaphoreSlim(MaxDop <= 0 ? 20 : MaxDop);
+            effectiveMaxDop = ResolveMaxDop(MaxDop);
+            taskThrottler = new SemaphoreSlim(effectiveMaxDop);
         }
         operationCounter = 0;
     }
@@ -118,7 +127,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
         if (BatchSize <= 0)
         {
-            operationHandler.ExecuteSingleOperation(op, accessToken, AutoPaginate.IsPresent);
+            operationHandler.ExecuteSingleOperation(op, accessToken, AutoPaginate.IsPresent, CancellationToken);
             return;
         }
 
@@ -144,7 +153,6 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
             return;
         }
         stopwatch.Stop();
-        _ = taskThrottler.Release();
         taskThrottler.Dispose();
         WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", ["Dataverse"]);
 
@@ -165,7 +173,8 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
                 // If the given string is not in JSON format, assume it's a URL.
                 if (!str.StartsWith('{'))
                 {
-                    str = $"{{\"Uri\":\"{str}\"}}";
+                    operation = new Operation<string> { Uri = str };
+                    return true;
                 }
                 var jobject = JObject.Parse(str);
                 operation = new Operation<string>
@@ -224,35 +233,49 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
     private bool VerifyConnection()
     {
-        IsOnPremise = (bool)GetVariableValue(Globals.VariableNameIsOnPremise);
+        IsOnPremise = GetVariableValue(Globals.VariableNameIsOnPremise) is true;
         if (IsOnPremise) { return true; }
         accessToken = (string)GetVariableValue(Globals.VariableNameAccessToken);
         authExpiresOn = (DateTimeOffset?)GetVariableValue(Globals.VariableNameAccessTokenExpiresOn);
         dataverseCnnStr = (AuthenticationParameters)GetVariableValue(Globals.VariableNameConnectionString);
         if (string.IsNullOrEmpty(accessToken))
         {
-            var errMessage = "No active connection detect. Please first authenticate using Connect-Dataverse cmdlet.";
+            var errMessage = "No active connection detected. Run Connect-Dataverse first.";
             WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdNotConnected, ErrorCategory.ConnectionError, null));
             return false;
         }
-        // if (authExpiresOn <= DateTimeOffset.Now && dataverseCnnStr == null)
-        // {
-        //     var errMessage = "Active connection has expired. Please authenticate again using Connect-Dataverse cmdlet.";
-        //     WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdConnectionExpired, ErrorCategory.ConnectionError, null));
-        //     return false;
-        // }
-        // if (dataverseCnnStr != null && authExpiresOn <= DateTimeOffset.Now)
-        // {
+        if (authExpiresOn is null || authExpiresOn > DateTimeOffset.UtcNow.AddMinutes(5))
+        {
+            return true;
+        }
+        if (dataverseCnnStr is null)
+        {
+            var errMessage = "The active connection has expired and cannot be refreshed. Run Connect-Dataverse again.";
+            WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdConnectionExpired, ErrorCategory.ConnectionError, null));
+            return false;
+        }
         var authResult = authenticationService.AuthenticateAsync(dataverseCnnStr, OnMessageForUser, CancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+        if (authResult is null)
+        {
+            WriteError(new ErrorRecord(
+                new InvalidOperationException("The active connection could not refresh its access token."),
+                Globals.ErrorIdConnectionExpired,
+                ErrorCategory.AuthenticationError,
+                null));
+            return false;
+        }
+        accessToken = authResult.AccessToken;
+        authExpiresOn = authResult.ExpiresOn;
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
-        // }
         return true;
     }
 
     private void OnMessageForUser(string message) => WriteInformation(message, ["dataverse"]);
 
     private bool IsNewBatchNeeded() => (BatchSize > 0 && operationCounter == 0) || operationCounter % BatchSize == 0;
+
+    internal static int ResolveMaxDop(int maxDop) => maxDop <= 0 ? DefaultMaxDop : maxDop;
 
     private void MakeAndSendBatchThenOutput(bool waitForAll)
     {
@@ -285,7 +308,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         }
         else
         {
-            while (tasks.Count != 0 && tasks.Count >= MaxDop)
+            while (tasks.Count != 0 && tasks.Count >= effectiveMaxDop)
             {
                 Thread.Sleep(100);
                 var completedTasks = tasks.Where(t => t.IsCompleted).ToArray();
@@ -352,27 +375,27 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
     {
         WriteInformation($"Batch-{batch.Id}[total:{batch.ChangeSet.Operations.Count()}, starting: {batch.ChangeSet.Operations.First().ContentId}] being sent...", ["dataverse"]);
         BatchResponse response = null;
+        var lockAcquired = false;
         try
         {
-            await taskThrottler.WaitAsync();
+            await taskThrottler.WaitAsync(CancellationToken).ConfigureAwait(false);
+            lockAcquired = true;
             response = await batchProcessor.ExecuteBatchAsync(batch, CancellationToken);
-            if (response is not null)
-            {
-                WriteInformation($"Batch-{batch.Id} completed.", ["dataverse"]);
-            }
-            else
-            {
-                WriteWarning($"Batch-{batch.Id} has been cancelled.");
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            throw new BatchException<string>($"Batch has been faild due to: {ex.Message}", ex) { Batch = batch };
-            //WriteError(new ErrorRecord(exception, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
+            throw new BatchException<string>($"Batch failed: {ex.Message}", ex) { Batch = batch };
         }
         finally
         {
-            _ = taskThrottler.Release();
+            if (lockAcquired)
+            {
+                _ = taskThrottler.Release();
+            }
             _ = Interlocked.Increment(ref batchCounter);
         }
         batch.Response = response;

@@ -2,50 +2,67 @@ name: Build and Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
-    
+    branches: [main]
+
+permissions:
+  contents: read
+
 env:
-  DOTNET_VERSION: '8.0.x'
-  BINARY_MODULE_PATH: '.'
-  MODULE_NAME: 'PSDataverse'
+  DOTNET_VERSION: 8.0.x
 
 jobs:
-  build:
-    
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    
-    - name: Setup .NET ${{ env.DOTNET_VERSION }}
-      uses: actions/setup-dotnet@v2
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Restore dependencies
-      run: |
-        pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet restore
-        popd
-      
-    - name: Build
-      run: |
-        pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet build --no-restore --configuration Release --output ./output/bin
-        popd
-      
-    - name: Test (.NET)
-      run: |
-        pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet test --no-build --verbosity normal --output ./output/bin
-        popd
-        
-    - name: Prepare package
-      shell: pwsh
-      run: |
-        pushd '${{ env.BINARY_MODULE_PATH}}'
-        Copy-Item "./src/Module/*" ./output
-        popd
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Test
+        run: dotnet test PSDataverse.sln --configuration Release --verbosity normal
+
+      - name: Build module package
+        shell: pwsh
+        run: |
+          Import-Module ./build.psm1 -Force
+          Start-PSDataverseBuild -Output ./output/PSDataverse
+
+      - name: Smoke-test packaged module
+        shell: pwsh
+        run: |
+          ./tests/SmokeTest-Module.ps1 -ModulePath ./output/PSDataverse/PSDataverse.psd1
+
+      - name: Install minimum PowerShell host
+        run: dotnet tool install --tool-path ./output/pwsh74 PowerShell --version 7.4.19
+
+      - name: Smoke-test minimum PowerShell host
+        shell: pwsh
+        run: |
+          $executable = if ($IsWindows) { './output/pwsh74/pwsh.exe' } else { './output/pwsh74/pwsh' }
+          & $executable -NoLogo -NoProfile -File ./tests/SmokeTest-Module.ps1 -ModulePath ./output/PSDataverse/PSDataverse.psd1
+          if ($LASTEXITCODE -ne 0) {
+            throw "PowerShell 7.4 module smoke test failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Audit NuGet dependencies
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: |
+          $audit = dotnet list PSDataverse.sln package --vulnerable --include-transitive
+          if ($LASTEXITCODE -ne 0) {
+            throw "The NuGet vulnerability audit failed to run: $audit"
+          }
+          if ($audit -match 'has the following vulnerable packages') {
+            throw "The NuGet vulnerability audit found vulnerable packages: $audit"
+          }

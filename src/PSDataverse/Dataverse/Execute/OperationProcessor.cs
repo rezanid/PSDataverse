@@ -52,11 +52,14 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
             //        operation.Value["@odata.id"] = new Uri(ServiceUrl, operation.Value["@odata.id"].ToString());
             //    }
             //}
-            yield return await ExecuteAsync(operation);
+            yield return await ExecuteAsync(operation, CancellationToken.None);
         }
     }
 
-    public async Task<HttpResponseMessage> ExecuteAsync(Operation<JObject> operation)
+    public Task<HttpResponseMessage> ExecuteAsync(Operation<JObject> operation)
+        => ExecuteAsync(operation, CancellationToken.None);
+
+    public async Task<HttpResponseMessage> ExecuteAsync(Operation<JObject> operation, CancellationToken cancellationToken)
     {
         if (operation is null)
         { throw new ArgumentNullException(nameof(operation)); }
@@ -67,17 +70,23 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
         }
 
         log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
-        var response = await policy.ExecuteAsync(() => httpClient.SendAsync(operation, CancellationToken.None));
+        var response = await policy.ExecuteAsync(ct => httpClient.SendAsync(operation, ct), cancellationToken);
         log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
 
         if (response.IsSuccessStatusCode)
         { return response; }
 
-        await ThrowOperationExceptionAsync(operation, response);
+        using (response)
+        {
+            await ThrowOperationExceptionAsync(operation, response, cancellationToken).ConfigureAwait(false);
+        }
         return null;
     }
 
-    public async Task<HttpResponseMessage> ExecuteAsync(Operation<string> operation)
+    public Task<HttpResponseMessage> ExecuteAsync(Operation<string> operation)
+        => ExecuteAsync(operation, CancellationToken.None);
+
+    public async Task<HttpResponseMessage> ExecuteAsync(Operation<string> operation, CancellationToken cancellationToken)
     {
         if (operation is null)
         { throw new ArgumentNullException(nameof(operation)); }
@@ -88,20 +97,26 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
         }
 
         log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
-        var response = await policy.ExecuteAsync(() => httpClient.SendAsync(operation, CancellationToken.None));
+        var response = await policy.ExecuteAsync(ct => httpClient.SendAsync(operation, ct), cancellationToken);
         log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
 
         if (response.IsSuccessStatusCode)
         { return response; }
 
-        await ThrowOperationExceptionAsync(operation, response);
+        using (response)
+        {
+            await ThrowOperationExceptionAsync(operation, response, cancellationToken).ConfigureAwait(false);
+        }
         return null;
     }
 
-    private async Task ThrowOperationExceptionAsync(Operation<JObject> operation, HttpResponseMessage response)
+    private async Task ThrowOperationExceptionAsync(
+        Operation<JObject> operation,
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
     {
         operation.RunCount++;
-        var error = await ExtractError(response);
+        var error = await ExtractError(response, cancellationToken).ConfigureAwait(false);
         throw CreateOperationException(
             "operationerror",
             operation,
@@ -111,10 +126,13 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
                 error));
     }
 
-    private async Task ThrowOperationExceptionAsync(Operation<string> operation, HttpResponseMessage response)
+    private async Task ThrowOperationExceptionAsync(
+        Operation<string> operation,
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
     {
         operation.RunCount++;
-        var error = await ExtractError(response);
+        var error = await ExtractError(response, cancellationToken).ConfigureAwait(false);
         throw CreateOperationException(
             "operationerror",
             operation,
@@ -124,31 +142,43 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
                 error));
     }
 
-    private async Task<OperationError> ExtractError(HttpResponseMessage response)
+    private async Task<OperationError> ExtractError(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
     {
         if (response.Content == null)
         {
             log.LogWarning("Dynamics 365 returned non-success without conntent!");
             return null;
         }
-        var responseContent = await response.Content.ReadAsStringAsync();
-        response.Content.Dispose();
-        if (!string.IsNullOrEmpty(responseContent) && response.Content.Headers.ContentType?.MediaType == "application/json")
+        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (!string.IsNullOrEmpty(responseContent) &&
+            response.Content.Headers.ContentType?.MediaType == "application/json")
         {
-            var responseJson = JObject.Parse(responseContent);
-            var errorJson = responseJson.SelectToken("error");
-            if (errorJson == null)
+            try
             {
-                return new OperationError
+                var responseJson = JObject.Parse(responseContent);
+                var errorJson = responseJson.SelectToken("error");
+                if (errorJson is not null)
                 {
-                    Code = responseJson["ErrorCode"].ToString(),
-                    // Ignore ErrorMessage because it is always the same as Message.
-                    Message = responseJson["Message"].ToString(),
-                    Type = responseJson["ExceptionType"].ToString(),
-                    StackTrace = responseJson["StackTrace"].ToString()
-                };
+                    return errorJson.ToObject<OperationError>();
+                }
+
+                if (responseJson["ErrorCode"] is not null || responseJson["Message"] is not null)
+                {
+                    return new OperationError
+                    {
+                        Code = responseJson["ErrorCode"]?.ToString(),
+                        Message = responseJson["Message"]?.ToString(),
+                        Type = responseJson["ExceptionType"]?.ToString(),
+                        StackTrace = responseJson["StackTrace"]?.ToString()
+                    };
+                }
             }
-            return errorJson.ToObject<OperationError>();
+            catch (Newtonsoft.Json.JsonException)
+            {
+                // Fall through and preserve the status and unparsed response body.
+            }
         }
         return new OperationError
         {

@@ -53,12 +53,32 @@ public class OperationResponse
         { throw new ArgumentNullException(nameof(message)); }
         if (message.Content == null)
         { throw new InvalidOperationException($"{nameof(message)}'s Content cannot be null"); }
+        var content = message.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+        var headers = message.Headers
+            .Concat(message.Content.Headers)
+            .ToDictionary(h => h.Key, h => string.Join(',', h.Value), StringComparer.OrdinalIgnoreCase);
+        OperationError? error = null;
+        if (!message.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(content))
+        {
+            try
+            {
+                error = JObject.Parse(content).SelectToken("error")?.ToObject<OperationError>();
+            }
+            catch
+            {
+                error = new OperationError
+                {
+                    Code = ((int)message.StatusCode).ToString(CultureInfo.InvariantCulture),
+                    Message = content
+                };
+            }
+        }
         return new OperationResponse(
             statusCode: message.StatusCode,
             contentId: message.Headers.TryGetValues("Content-ID", out var values) ? string.Join(',', values) : "",
-            error: (int)message.StatusCode >= 400 ? System.Text.Json.JsonSerializer.Deserialize<OperationError>(message!.Content!.ToString() ?? "") : null,
-            content: message.StatusCode == HttpStatusCode.OK ? message!.Content!.ReadAsStringAsync().Result : null,
-            headers: message.Headers.ToDictionary(h => h.Key, h => string.Join(',', h.Value)));
+            error: error,
+            content: string.IsNullOrEmpty(content) ? null : content,
+            headers: headers);
     }
 
     public static OperationResponse? Parse(StringReader reader)

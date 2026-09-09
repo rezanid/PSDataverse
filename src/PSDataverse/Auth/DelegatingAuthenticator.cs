@@ -9,10 +9,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
 
-internal abstract class DelegatingAuthenticator : IAuthenticator
+internal abstract class DelegatingAuthenticator : IAuthenticator, IDisposable
 {
     private AuthenticationParameters lastParameters;
     private IClientApplicationBase lastClientApp;
+    private bool disposed;
 
     public IAuthenticator NextAuthenticator { get; set; }
 
@@ -226,5 +227,16 @@ internal abstract class DelegatingAuthenticator : IAuthenticator
         {
             store?.Close();
         }
+    }
+
+    public virtual void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        (NextAuthenticator as IDisposable)?.Dispose();
+        disposed = true;
     }
 }

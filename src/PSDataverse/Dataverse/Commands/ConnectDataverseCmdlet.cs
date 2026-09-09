@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Client;
 using PSDataverse.Auth;
 
-[Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = "AuthResult")]
+[Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = "ConnectionString")]
 public class ConnectDataverseCmdlet : DataverseCmdlet
 {
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Url")]
@@ -18,15 +18,10 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
     [Parameter(Mandatory = false, ParameterSetName = "Url")]
     public SwitchParameter OnPremise { get; set; }
 
-    [Parameter(DontShow = true, ParameterSetName = "ConnectionString")]
-    [Parameter(DontShow = true, ParameterSetName = "Url")]
-    public int Retry { get; set; }
-
     private static readonly object Lock = new();
 
     protected override void ProcessRecord()
     {
-        var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
         var authParams = string.IsNullOrWhiteSpace(ConnectionString) ?
             new AuthenticationParameters
             {
@@ -39,10 +34,11 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
             new Uri(authParams.Resource, UriKind.Absolute) :
             new Uri(Url, UriKind.Absolute);
 
-        serviceProvider ??= InitializeServiceProvider(endpointUrl);
+        var serviceProvider = CreateServiceProvider(endpointUrl);
 
         if (OnPremise)
         {
+            ReplaceServiceProvider(serviceProvider);
             SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameIsOnPremise, true, ScopedItemOptions.AllScope));
             SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, string.Empty, ScopedItemOptions.AllScope));
             WriteInformation("Dynamics 365 (On-Prem) authenticated successfully.", ["dataverse"]);
@@ -59,15 +55,17 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
         var authResult = HandleAuthentication(serviceProvider, authParams);
         if (authResult == null)
         {
+            (serviceProvider as IDisposable)?.Dispose();
             return;
         }
 
+        ReplaceServiceProvider(serviceProvider);
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAuthResult, authResult, ScopedItemOptions.AllScope));
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
         SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameConnectionString, authParams, ScopedItemOptions.AllScope));
 
-        WriteDebug("AccessToken: " + authResult.AccessToken);
+        WriteDebug($"Authenticated account '{authResult.Account?.Username ?? "application"}' until {authResult.ExpiresOn:u}.");
         WriteInformation("Dataverse authenticated successfully.", ["dataverse"]);
     }
 
@@ -98,19 +96,20 @@ public class ConnectDataverseCmdlet : DataverseCmdlet
 
     private void OnMessageForUser(string message) => WriteInformation(message, ["dataverse"]);
 
-    private IServiceProvider InitializeServiceProvider(Uri baseUrl)
+    private IServiceProvider CreateServiceProvider(Uri baseUrl)
+    {
+        var startup = new Startup(baseUrl, OnPremise ? "v9.1" : "v9.2");
+        return startup.ConfigureServices(new ServiceCollection()).BuildServiceProvider();
+    }
+
+    private void ReplaceServiceProvider(IServiceProvider serviceProvider)
     {
         lock (Lock)
         {
-            var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
-            if (serviceProvider == null)
-            {
-                var startup = new Startup(baseUrl, OnPremise ? "v9.1" : "v9.2");
-                serviceProvider = startup.ConfigureServices(new ServiceCollection()).BuildServiceProvider();
-                SessionState.PSVariable.Set(
-                    new PSVariable(Globals.VariableNameServiceProvider, serviceProvider, ScopedItemOptions.AllScope));
-            }
-            return serviceProvider;
+            var previousServiceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
+            SessionState.PSVariable.Set(
+                new PSVariable(Globals.VariableNameServiceProvider, serviceProvider, ScopedItemOptions.AllScope));
+            (previousServiceProvider as IDisposable)?.Dispose();
         }
     }
 }

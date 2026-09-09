@@ -19,10 +19,10 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Setup .NET ${{ env.DOTNET_VERSION }}
-      uses: actions/setup-dotnet@v2
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
@@ -32,24 +32,19 @@ jobs:
         dotnet restore
         popd
       
-    - name: Build
-      run: |
-        pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet build --no-restore --configuration Release --output ./output/${{ env.MODULE_NAME }}/bin
-        popd
-      
     - name: Test (.NET)
-      run: |
-        pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet test --no-build --verbosity normal --output ./output/${{ env.MODULE_NAME }}/bin
-        popd
+      run: dotnet test --no-restore --configuration Release --verbosity normal
         
-    - name: Prepare package
+    - name: Build package
       shell: pwsh
       run: |
-        pushd '${{ env.BINARY_MODULE_PATH}}'
-        Copy-Item "./src/Module/*" ./output/${{ env.MODULE_NAME }} -Recurse
-        popd
+        Import-Module ./build.psm1 -Force
+        Start-PSDataverseBuild -Output ./output/${{ env.MODULE_NAME }}
+
+    - name: Smoke-test package
+      shell: pwsh
+      run: |
+        ./tests/SmokeTest-Module.ps1 -ModulePath ./output/${{ env.MODULE_NAME }}/PSDataverse.psd1
         
     - name: Publish
       shell: pwsh

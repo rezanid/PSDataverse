@@ -7,25 +7,13 @@ function Get-DataverseTableRowCount {
         [string]$Filter = ""
     )
     Write-Progress -Activity "Counting rows"
-    $meta = Send-DataverseOperation '{"Uri":"EntityDefinitions(LogicalName=''be_filing'')?$select=LogicalCollectionName,PrimaryIdAttribute"}' | Select-Object -ExpandProperty Content | ConvertFrom-Json
+    $meta = Send-DataverseOperation "EntityDefinitions(LogicalName='$TableName')?`$select=LogicalCollectionName,PrimaryIdAttribute" | Select-Object -ExpandProperty Content | ConvertFrom-Json
     $uri = $meta | Select-Object -ExpandProperty LogicalCollectionName
     $primaryAttr = $meta | Select-Object -ExpandProperty PrimaryIdAttribute
-    $uri += "?`$count=true&`$select=$($primaryAttr)"""
+    $uri += "?`$count=true&`$top=1&`$select=$primaryAttr"
     if ($Filter -ne "") { $uri += "&`$filter=$($Filter)" }
-    $resp = Send-DataverseOperation "{""Uri"":""$uri""}" | Select-Object -ExpandProperty Content | ConvertFrom-Json
-    $next = $resp | Select-Object -ExpandProperty "@odata.nextLink"
+    $resp = Send-DataverseOperation $uri | Select-Object -ExpandProperty Content | ConvertFrom-Json
     $count = $resp | Select-Object -ExpandProperty "@odata.count"
-    while ($next -ne "") {
-        Write-Progress -Activity "Counting rows" -Status "Rows counted: $count"
-        $resp = Send-DataverseOperation "{""Uri"":""$next""}" | Select-Object -ExpandProperty Content | ConvertFrom-Json
-        if (Get-Member "@odata.nextLink" -InputObject $resp) {
-            $next = $resp | Select-Object -ExpandProperty "@odata.nextLink"
-            $count += $resp | Select-Object -ExpandProperty "@odata.count"
-        } else {
-            $next = ""
-            $count += ($resp | Select-Object -ExpandProperty value).Count
-        }
-    }
     Write-Progress -Activity "Counting rows" -Completed
     return $count
 }
