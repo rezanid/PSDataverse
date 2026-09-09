@@ -53,6 +53,7 @@ public class Batch<T> : Batch
 
     public override string ToString()
     {
+        const string crlf = "\r\n";
         var sb = new StringBuilder();
 
         if (string.IsNullOrEmpty(Id))
@@ -65,14 +66,14 @@ public class Batch<T> : Batch
         }
 
         // Batch Header
-        sb.Append("--batch_").AppendLine(Id);
-        sb.Append("Content-Type: multipart/mixed;boundary=changeset_").AppendLine(ChangeSet.Id).AppendLine();
+        sb.Append("--batch_").Append(Id).Append(crlf);
+        sb.Append("Content-Type: multipart/mixed;boundary=changeset_").Append(ChangeSet.Id).Append(crlf).Append(crlf);
 
         // Change Set
         sb.Append(ChangeSet.ToString());
 
         // Batch Terminator
-        sb.AppendLine().Append("--batch_").Append(Id).AppendLine("--");
+        sb.Append(crlf).Append("--batch_").Append(Id).Append("--").Append(crlf);
 
         return sb.ToString();
     }

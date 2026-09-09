@@ -5,8 +5,6 @@ using System.Net.Http.Headers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
-using Polly;
-using Polly.Registry;
 using PSDataverse.Dataverse;
 using PSDataverse.Dataverse.Execute;
 using PSDataverse.Dataverse.Model;
@@ -68,7 +66,9 @@ public class CoreRegressionTests
     [Fact]
     public async Task BatchProcessorReportsEmptyServerErrorWithoutNullReference()
     {
-        var processor = CreateProcessor(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        var handler = new TestHttpMessageHandler()
+            .Enqueue(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        var processor = CreateProcessor(handler);
         var batch = CreateBatch();
 
         var action = () => processor.ExecuteBatchAsync(batch);
@@ -81,15 +81,16 @@ public class CoreRegressionTests
     [Fact]
     public async Task BatchProcessorPreservesThrottleStatusForNonJsonResponse()
     {
-        var processor = CreateProcessor(_ =>
+        var handler = new TestHttpMessageHandler().Enqueue((_, _) =>
         {
             var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests)
             {
                 Content = new StringContent("service is busy")
             };
             response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(5));
-            return response;
+            return Task.FromResult(response);
         });
+        var processor = CreateProcessor(handler);
 
         var action = () => processor.ExecuteBatchAsync(CreateBatch());
 
@@ -102,19 +103,20 @@ public class CoreRegressionTests
     [Fact]
     public async Task OperationProcessorPreservesMalformedJsonErrorBody()
     {
-        var client = CreateClient(_ =>
+        var handler = new TestHttpMessageHandler().Enqueue((_, _) =>
         {
             var response = new HttpResponseMessage(HttpStatusCode.BadGateway)
             {
                 Content = new StringContent("{not-json")
             };
             response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            return response;
+            return Task.FromResult(response);
         });
+        var client = TestHttpInfrastructure.CreateClient(handler);
         var processor = new OperationProcessor(
             NullLogger.Instance,
-            new StubHttpClientFactory(client),
-            CreatePolicies());
+            new TestHttpClientFactory(client),
+            TestHttpInfrastructure.CreateNoOpPolicies());
 
         var action = () => processor.ExecuteAsync(
             new Operation<string> { Method = "GET", Uri = "accounts" });
@@ -139,34 +141,12 @@ public class CoreRegressionTests
     private static Batch<string> CreateBatch()
         => new([new Operation<string> { ContentId = "1", Method = "DELETE", Uri = "accounts(1)" }]);
 
-    private static BatchProcessor CreateProcessor(Func<HttpRequestMessage, HttpResponseMessage> responder)
+    private static BatchProcessor CreateProcessor(TestHttpMessageHandler handler)
     {
-        var client = CreateClient(responder);
-        return new BatchProcessor(NullLogger.Instance, new StubHttpClientFactory(client), CreatePolicies());
-    }
-
-    private static HttpClient CreateClient(Func<HttpRequestMessage, HttpResponseMessage> responder)
-        => new(new StubHandler(responder))
-        {
-            BaseAddress = new Uri("https://example.crm.dynamics.com/api/data/v9.2/")
-        };
-
-    private static PolicyRegistry CreatePolicies()
-        => new()
-        {
-            { Globals.PolicyNameHttp, Policy.NoOpAsync<HttpResponseMessage>() }
-        };
-
-    private sealed class StubHttpClientFactory(HttpClient client) : IHttpClientFactory
-    {
-        public HttpClient CreateClient(string name) => client;
-    }
-
-    private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-            => Task.FromResult(responder(request));
+        var client = TestHttpInfrastructure.CreateClient(handler);
+        return new BatchProcessor(
+            NullLogger.Instance,
+            new TestHttpClientFactory(client),
+            TestHttpInfrastructure.CreateNoOpPolicies());
     }
 }

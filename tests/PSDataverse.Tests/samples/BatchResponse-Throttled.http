@@ -1,0 +1,14 @@
+--batchresponse_batch-throttled
+Content-Type: multipart/mixed; boundary=changesetresponse_changeset-throttled
+
+--changesetresponse_changeset-throttled
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+Content-ID: 3
+
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+
+{"ErrorCode":429,"Message":"Rate limit exceeded.","ExceptionType":"Microsoft.PowerPlatform.Dataverse.Client.Utils.DataverseOperationException"}
+--changesetresponse_changeset-throttled--
+--batchresponse_batch-throttled--

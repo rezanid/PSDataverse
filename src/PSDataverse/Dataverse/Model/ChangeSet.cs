@@ -37,6 +37,7 @@ public class ChangeSet<T>
 
     public override string ToString()
     {
+        const string crlf = "\r\n";
         var sb = new StringBuilder();
         var i = 0;
         var toJson = Operations is IEnumerable<Operation<JObject>> ?
@@ -55,27 +56,27 @@ public class ChangeSet<T>
             //if (!operation.ContentId.HasValue) { operation.ContentId = ++i; };
             if (string.IsNullOrEmpty(operation.ContentId))
             { operation.ContentId = (++i).ToString(CultureInfo.InvariantCulture); }
-            sb.Append("--changeset_").AppendLine(Id);
-            sb.AppendLine("Content-Type:application/http");
-            sb.AppendLine("Content-Transfer-Encoding:binary");
-            sb.Append("Content-ID:").AppendLine(operation.ContentId.ToString()).AppendLine();
-            sb.Append(operation.Method).Append(' ').Append(operation.Uri).Append(' ').AppendLine("HTTP/1.1");
+            sb.Append("--changeset_").Append(Id).Append(crlf);
+            sb.Append("Content-Type: application/http").Append(crlf);
+            sb.Append("Content-Transfer-Encoding: binary").Append(crlf);
+            sb.Append("Content-ID: ").Append(operation.ContentId).Append(crlf).Append(crlf);
+            sb.Append(operation.Method).Append(' ').Append(operation.Uri).Append(" HTTP/1.1").Append(crlf);
             if (operation.HasValue)
-            { sb.AppendLine("Content-Type:application/json;type=entry"); }
+            { sb.Append("Content-Type: application/json;type=entry").Append(crlf); }
             if (operation.Headers != null)
             {
                 foreach (var header in operation.Headers)
                 {
-                    sb.AppendLine(header.Key + ":" + header.Value);
+                    sb.Append(header.Key).Append(": ").Append(header.Value).Append(crlf);
                 }
             }
-            sb.AppendLine();
+            sb.Append(crlf);
             if (operation.HasValue)
-            { sb.AppendLine(toJson(operation.Value)); }
+            { sb.Append(toJson(operation.Value)).Append(crlf); }
         }
 
         // Terminator
-        sb.Append("--changeset_").Append(Id).AppendLine("--");
+        sb.Append("--changeset_").Append(Id).Append("--").Append(crlf);
 
         return sb.ToString();
     }

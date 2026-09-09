@@ -1,0 +1,24 @@
+--batchresponse_batch-1
+Content-Type: multipart/mixed; boundary="changesetresponse_changeset-1"
+
+--changesetresponse_changeset-1
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+Content-ID: 1
+
+HTTP/1.1 204 No Content
+OData-Version: 4.0
+OData-Version: 4.01
+OData-EntityId: https://example.crm.dynamics.com/api/data/v9.2/accounts(1)
+
+--changesetresponse_changeset-1
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+Content-ID: 2
+
+HTTP/1.1 201 Created
+Content-Type: application/json; odata.metadata=minimal
+
+{"accountid":"2","name":"Contoso"}
+--changesetresponse_changeset-1--
+--batchresponse_batch-1--
