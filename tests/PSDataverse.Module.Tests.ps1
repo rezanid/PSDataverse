@@ -12,8 +12,10 @@ BeforeAll {
         'Disconnect-Dataverse'
         'Export-DataverseOptionSet'
         'Get-DataverseAttributes'
+        'Get-DataverseConnection'
         'Get-DataverseTableRowCount'
         'Send-DataverseOperation'
+        'Set-DataverseDefaultConnection'
     )
     Import-Module $ModulePath -Force
 }
@@ -30,11 +32,24 @@ Describe 'PSDataverse packaged module contract' {
         $actual | Should -Be $expectedCommands
     }
 
-    It 'exposes the URL and connection-string parameter sets' {
+    It 'exposes every supported authentication parameter set' {
         $sets = (Get-Command Connect-Dataverse).ParameterSets
-        $sets.Name | Should -Contain 'Url'
-        $sets.Name | Should -Contain 'ConnectionString'
+        @($sets.Name | Sort-Object) | Should -Be @(
+            'AccessToken'
+            'Certificate'
+            'ClientSecret'
+            'ClientSecretProvider'
+            'ConnectionString'
+            'DeviceCode'
+            'IntegratedWindows'
+            'Interactive'
+            'TokenProvider'
+            'Url'
+        )
         ($sets | Where-Object Name -EQ 'Url').Parameters.Name | Should -Contain 'OnPremise'
+        ($sets | Where-Object Name -EQ 'ClientSecret').Parameters.Name | Should -Contain 'ClientId'
+        ($sets | Where-Object Name -EQ 'Certificate').Parameters.Name | Should -Contain 'CertificateThumbprint'
+        ($sets | Where-Object Name -EQ 'AccessToken').Parameters.Name | Should -Contain 'ExpiresOn'
     }
 
     It 'accepts operations and objects from the pipeline' {
@@ -52,6 +67,28 @@ Describe 'PSDataverse packaged module contract' {
         $command.Parameters.MaxDop.Aliases | Should -Contain 'ThrottleLimit'
     }
 
+    It 'manages named access-token connections without exposing the token' {
+        $token = ConvertTo-SecureString 'not-a-real-token' -AsPlainText -Force
+        try {
+            $primary = Connect-Dataverse https://primary.crm.dynamics.com `
+                -AccessToken $token -ExpiresOn (Get-Date).AddHours(1) -Name primary
+            $secondary = Connect-Dataverse https://secondary.crm.dynamics.com `
+                -AccessToken $token -ExpiresOn (Get-Date).AddHours(1) -Name secondary -NoDefault
+
+            @(Get-DataverseConnection).Name | Should -Be @('primary', 'secondary')
+            $primary.IsDefault | Should -BeTrue
+            $secondary.IsDefault | Should -BeFalse
+            Disconnect-Dataverse -All -WhatIf
+            @(Get-DataverseConnection) | Should -HaveCount 2
+            (Set-DataverseDefaultConnection secondary -PassThru).Name | Should -Be 'secondary'
+            (Get-DataverseConnection secondary).IsDefault | Should -BeTrue
+            $primary.PSObject.Properties.Name | Should -Not -Contain 'AccessToken'
+        }
+        finally {
+            Disconnect-Dataverse -All -Confirm:$false -InformationAction Ignore
+        }
+    }
+
     It 'supports WhatIf on commands that mutate or export data' -ForEach @(
         'Clear-DataverseTable'
         'Export-DataverseOptionSet'
@@ -61,12 +98,22 @@ Describe 'PSDataverse packaged module contract' {
     }
 
     It 'returns a stable connection error when invoked while disconnected' {
-        Disconnect-Dataverse -InformationAction Ignore
+        Disconnect-Dataverse -All -Confirm:$false -InformationAction Ignore
         $errors = @()
         Send-DataverseOperation 'accounts' -ErrorAction SilentlyContinue -ErrorVariable errors
 
         $errors | Should -HaveCount 1
         $errors[0].FullyQualifiedErrorId | Should -Match '^DVERR-1001'
+        $errors[0].CategoryInfo.Category | Should -Be 'ConnectionError'
+    }
+
+    It 'distinguishes a missing named connection from no default connection' {
+        $errors = @()
+        Send-DataverseOperation 'accounts' -ConnectionName missing `
+            -ErrorAction SilentlyContinue -ErrorVariable errors
+
+        $errors | Should -HaveCount 1
+        $errors[0].FullyQualifiedErrorId | Should -Match '^DVERR-1004'
         $errors[0].CategoryInfo.Category | Should -Be 'ConnectionError'
     }
 }

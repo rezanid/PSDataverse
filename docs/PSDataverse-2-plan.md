@@ -49,11 +49,13 @@ Milestone 1 is complete when the C# and Pester suites pass, two clean builds pro
 
 ## Milestone 2: connections and authentication
 
-- Introduce an explicit `DataverseConnection` object and a session-scoped registry with default and named connections.
-- Add PowerShell-native parameter sets for interactive, device code, client secret, certificate, access token, and token-provider authentication.
-- Prefer WAM on supported Windows systems and the system browser elsewhere. Passkeys are provided by the interactive identity experience, not modeled as a separate OAuth grant.
-- Keep connection-string input as a migration path and adopt familiar XRM tooling aliases.
-- Add optional secret resolvers without coupling the core to one secret store.
+- [x] Introduce an explicit `DataverseConnection` object and a session-scoped registry with default and named connections.
+- [x] Add PowerShell-native parameter sets for interactive, Integrated Windows Authentication, device code, client secret, certificate, access token, and token-provider authentication.
+- [x] Prefer WAM on supported Windows systems and the system browser elsewhere. Passkeys are provided by the interactive identity experience, not modeled as a separate OAuth grant.
+- [x] Keep connection-string input as a migration path and adopt familiar XRM tooling aliases.
+- [x] Add optional secret resolvers without coupling the core to one secret store.
+
+Milestone 2 is complete when named connections can be created, enumerated, selected by name or object, switched as the default, refreshed without duplicate concurrent token acquisition, and deterministically disposed; the packaged command metadata exposes every authentication flow; secrets and access tokens are absent from public connection properties; and the migration guide contains runnable examples.
 
 ## Milestone 3: request engine and convenient commands
 
@@ -61,6 +63,7 @@ Milestone 1 is complete when the C# and Pester suites pass, two clean builds pro
 - Honor Dataverse DOP hints, `Retry-After`, cancellation, ordering mode, and idempotency-aware replay rules.
 - Introduce `Invoke-DataverseRequest` and keep `Send-DataverseOperation` as a compatibility alias for at least one major release.
 - Add connection inspection, WhoAmI/test, CRUD, metadata, action/function, and bulk import/export commands.
+- Generate and publish command-reference help for the expanded command surface.
 - Benchmark parallel individual requests, small `$batch` payloads, and Dataverse bulk APIs before selecting defaults.
 
 ## Compatibility policy

@@ -190,13 +190,17 @@ internal abstract class DelegatingAuthenticator : IAuthenticator, IDisposable
             return null;
         }
 
-        var source = new StoreLocation[2] { StoreLocation.CurrentUser, StoreLocation.LocalMachine };
-        X509Certificate2 certificate = null;
-        if (source.Any(storeLocation => TryFindCertificatesInStore(thumbprint, storeLocation, storeName, out certificate)))
+        var sources = new[] { StoreLocation.CurrentUser, StoreLocation.LocalMachine };
+        foreach (var storeLocation in sources)
         {
-            return certificate;
+            if (TryFindCertificatesInStore(thumbprint, storeLocation, storeName, out var certificate))
+            {
+                return certificate;
+            }
         }
-        return null;
+        throw new ArgumentException(
+            $"Certificate with thumbprint '{thumbprint}' was not found in the CurrentUser or LocalMachine '{storeName}' store.",
+            nameof(thumbprint));
     }
 
     private static bool TryFindCertificatesInStore(string thumbprint, StoreLocation location, StoreName storeName, out X509Certificate2 certificate)
@@ -217,11 +221,7 @@ internal abstract class DelegatingAuthenticator : IAuthenticator, IDisposable
                 .OfType<X509Certificate2>()
                 .FirstOrDefault();
 
-            if (certificate == null)
-            {
-                throw new ArgumentException($"Certificate with thumbprint {thumbprint} not found.");
-            }
-            return true;
+            return certificate is not null;
         }
         finally
         {

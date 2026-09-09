@@ -27,7 +27,13 @@ internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
         {
             NextAuthenticator = new DeviceCodeAuthenticator
             {
-                NextAuthenticator = new IntegratedAuthenticator()
+                NextAuthenticator = new IntegratedWindowsAuthenticator
+                {
+                    NextAuthenticator = new WamAuthenticator
+                    {
+                        NextAuthenticator = new IntegratedAuthenticator()
+                    }
+                }
             }
         })
         .AddSingleton<AuthenticationService>()

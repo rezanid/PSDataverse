@@ -58,6 +58,10 @@ internal class AuthenticationService(
 
             var tenantId = authUrl.AbsolutePath[1..secondSlash];
             authParams.Tenant = tenantId;
+            if (string.IsNullOrWhiteSpace(authParams.Authority))
+            {
+                authParams.Authority = $"https://login.microsoftonline.com/{tenantId}";
+            }
         }
         return authParams;
     }
