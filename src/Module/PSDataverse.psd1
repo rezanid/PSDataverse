@@ -31,13 +31,13 @@ Copyright = 'Copyright (c) Novovio.'
 Description = 'Bring Dataverse''s Web API to PowerShell.'
 
 # Minimum version of the PowerShell engine required by this module
-PowerShellVersion = '5.1'
+PowerShellVersion = '7.4'
 
 # Minimum version of Microsoft .NET Framework required by this module. This prerequisite is valid for the PowerShell Desktop edition only.
-DotNetFrameworkVersion = '6.0'
+# DotNetFrameworkVersion doesn't apply to PowerShell Core modules.
 
 # Minimum version of the common language runtime (CLR) required by this module. This prerequisite is valid for the PowerShell Desktop edition only.
-ClrVersion = '6.0'
+# ClrVersion doesn't apply to PowerShell Core modules.
 
 # Modules that must be imported into the global environment prior to importing this module
 # RequiredModules = @()
@@ -58,10 +58,10 @@ ClrVersion = '6.0'
 NestedModules = @('./bin/PSDataverse.dll')
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @('Clear-DataverseTable')
+FunctionsToExport = @('Clear-DataverseTable', 'Export-DataverseOptionSet', 'Get-DataverseAttributes', 'Get-DataverseTableRowCount')
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
-CmdletsToExport = @('Connect-Dataverse', 'Send-DataverseOperation')
+CmdletsToExport = @('Connect-Dataverse', 'Disconnect-Dataverse', 'Send-DataverseOperation')
 
 # Variables to export from this module
 VariablesToExport = @()

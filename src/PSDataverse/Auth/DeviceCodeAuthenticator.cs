@@ -16,10 +16,9 @@ internal class DeviceCodeAuthenticator : DelegatingAuthenticator
         var app = await GetClientAppAsync(parameters, cancellationToken).ConfigureAwait(false);
 
         // Attempt to get a token silently from the cache
-        //TODO: Check if accounts returned from GetAccountAsync is always null.
         var accounts = await app.GetAccountsAsync().ConfigureAwait(false);
-        var account = accounts.FirstOrDefault();
-        if (parameters.Account is not null)
+        var account = parameters.Account ?? accounts.FirstOrDefault();
+        if (account is not null)
         {
             try
             {
@@ -35,7 +34,7 @@ internal class DeviceCodeAuthenticator : DelegatingAuthenticator
         return await app.AsPublicClient().AcquireTokenWithDeviceCode(parameters.Scopes, callback =>
         {
             // Provide the user instructions
-            onMessageForUser(callback.Message);
+            onMessageForUser?.Invoke(callback.Message);
             return Task.CompletedTask;
         }).ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }

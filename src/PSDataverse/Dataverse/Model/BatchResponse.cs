@@ -24,6 +24,7 @@ public class BatchResponse
 
     public static BatchResponse Parse(string response)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(response);
         var reader = new StringReader(response);
         var batchResponse = ParseBatchResponseHeader(reader);
         var operationResponse = OperationResponse.Parse(reader);
@@ -32,8 +33,11 @@ public class BatchResponse
             batchResponse.Operations.Add(operationResponse);
             operationResponse = OperationResponse.Parse(reader);
         }
-        batchResponse.IsSuccessful =
-            batchResponse.Operations.Count > 1 || batchResponse.Operations[0].Error == null;
+        if (batchResponse.Operations.Count == 0)
+        {
+            throw new ParseException("The Dataverse batch response did not contain any operation responses.");
+        }
+        batchResponse.IsSuccessful = batchResponse.Operations.TrueForAll(operation => operation.Error == null);
         return batchResponse;
     }
 
@@ -43,33 +47,31 @@ public class BatchResponse
     {
         //--batchresponse_0ece16b0-e21d-4eb1-8805-feb2a61b887e
         var buffer = reader.ReadLine();
-        if (!buffer.StartsWith("--batchresponse_", StringComparison.OrdinalIgnoreCase))
+        if (buffer is null || !buffer.StartsWith("--batchresponse_", StringComparison.OrdinalIgnoreCase))
         {
-            var length = Math.Min(buffer.Length, 16);
+            var found = buffer ?? "<end of response>";
+            var length = Math.Min(found.Length, 16);
             throw new ParseException(
-                string.Format(CultureInfo.InvariantCulture, "Line 1: Expected \"--batchresponse_\" but found\"{0}\".", buffer[..length]));
+                string.Format(CultureInfo.InvariantCulture, "Line 1: Expected \"--batchresponse_\" but found \"{0}\".", found[..length]));
         }
         var batchResponseId = buffer[16..];
         //Content-Type: multipart/mixed; boundary=changesetresponse_66ffbfa0-8e37-4eb1-b843-1b4260b0235e
         buffer = reader.ReadLine();
-        if (!buffer.StartsWith("Content-Type:", StringComparison.OrdinalIgnoreCase))
+        if (buffer is null || !buffer.StartsWith("Content-Type:", StringComparison.OrdinalIgnoreCase))
         {
             throw new ParseException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    "Line 2: Expected \"Content-Type:\", but found \"{0}\".", buffer[..13]));
+                "Line 2: Expected a Content-Type header for the batch response.");
         }
         var segments = buffer[13..].Trim().Split(new string[] { "; ", ";" }, StringSplitOptions.None);
-        if (!segments[1].StartsWith("boundary=changesetresponse_", StringComparison.OrdinalIgnoreCase))
+        var boundary = Array.Find(segments, segment =>
+            segment.Trim().StartsWith("boundary=changesetresponse_", StringComparison.OrdinalIgnoreCase))?.Trim();
+        if (boundary is null)
         {
             throw new ParseException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    "Line 2: Expected \"boundary=changesetresponse_\" as the second part of content type, but found \"{0}\".",
-                    segments[1][..27]));
+                "Line 2: Expected a boundary=changesetresponse_ parameter in the Content-Type header.");
         }
         reader.ReadLine();
-        return new BatchResponse(batchResponseId, segments[1][27..]);
+        return new BatchResponse(batchResponseId, boundary[27..]);
     }
 
     #endregion

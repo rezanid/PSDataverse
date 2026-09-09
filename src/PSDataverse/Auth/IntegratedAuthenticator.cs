@@ -6,11 +6,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-//TODO: Implement IDisposable.
 internal class IntegratedAuthenticator : DelegatingAuthenticator
 {
-    //TODO: The following dictionary is IDisposable.
-    private AsyncDictionary<AuthenticationParameters, IPublicClientApplication> apps = new();
+    private readonly AsyncDictionary<AuthenticationParameters, IPublicClientApplication> apps = new();
 
     public override async Task<AuthenticationResult> AuthenticateAsync(
         AuthenticationParameters parameters,
@@ -53,4 +51,10 @@ internal class IntegratedAuthenticator : DelegatingAuthenticator
     }
     public override bool CanAuthenticate(AuthenticationParameters parameters)
         => parameters.UseCurrentUser || parameters.IsUncertainAuthFlow();
+
+    public override void Dispose()
+    {
+        apps.Dispose();
+        base.Dispose();
+    }
 }

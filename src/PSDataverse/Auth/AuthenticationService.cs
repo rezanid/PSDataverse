@@ -19,7 +19,7 @@ internal class AuthenticationService(
         Action<string> onMessageForUser = default,
         CancellationToken cancellationToken = default)
     {
-        authParams = await EnsureTenantAsync(authParams);
+        authParams = await EnsureTenantAsync(authParams, cancellationToken).ConfigureAwait(false);
         var current = Authenticator;
         while (current != null && !current.CanAuthenticate(authParams))
         {
@@ -29,18 +29,34 @@ internal class AuthenticationService(
         {
             throw new InvalidOperationException("Unable to detect required authentication flow. Please check the input parameters and try again.");
         }
-        return await current?.AuthenticateAsync(authParams, onMessageForUser, cancellationToken);
+        return await current.AuthenticateAsync(authParams, onMessageForUser, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<AuthenticationParameters> EnsureTenantAsync(AuthenticationParameters authParams)
+    private async Task<AuthenticationParameters> EnsureTenantAsync(
+        AuthenticationParameters authParams,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(authParams.Tenant))
         {
             var url = authParams.Resource;
             using var httpClient = HttpClientFactory.CreateClient(Globals.DataverseHttpClientName);
-            var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, url)).ConfigureAwait(false);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
             var authUrl = response.Headers.Location;
-            var tenantId = authUrl.AbsolutePath[1..authUrl.AbsolutePath.IndexOf('/', 1)];
+            if (authUrl is null)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to discover the tenant for '{url}': the response did not contain a redirect location.");
+            }
+
+            var secondSlash = authUrl.AbsolutePath.IndexOf('/', 1);
+            if (secondSlash <= 1)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to discover the tenant from redirect location '{authUrl}'.");
+            }
+
+            var tenantId = authUrl.AbsolutePath[1..secondSlash];
             authParams.Tenant = tenantId;
         }
         return authParams;

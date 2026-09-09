@@ -11,7 +11,7 @@ function Export-DataverseOptionSet {
 		foreach ($name in $OptionSet) {
             if(!$PSCmdlet.ShouldProcess($name)) { continue }
 			
-			Send-DataverseOperation "GlobalOptionSetDefinitions(Name='$OptionSet')" `
+			Send-DataverseOperation "GlobalOptionSetDefinitions(Name='$name')" `
 				| Select-Object -ExpandProperty Content `
 				| ConvertFrom-Json `
 				| Select-Object -ExpandProperty Options

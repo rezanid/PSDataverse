@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Polly;
 using Polly.Registry;
-using Polly.Timeout;
 using PSDataverse.Auth;
 using PSDataverse.Dataverse.Execute;
 
@@ -69,7 +68,7 @@ internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
 
         var httpPolicy = Policy
             .HandleResult<HttpResponseMessage>(r => httpStatusCodesWorthRetrying.Contains(r.StatusCode))
-            .Or<TimeoutRejectedException>()
+            .Or<HttpRequestException>()
             .WaitAndRetryAsync(5, WaitTimeProvider, OnRetryAsync);
 
         registry.Add(Globals.PolicyNameHttp, httpPolicy);
@@ -78,16 +77,22 @@ internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
 
     private TimeSpan WaitTimeProvider(int retryAttempt, DelegateResult<HttpResponseMessage> response, Context context)
     {
-        var retryAfter = response.Result.Headers.RetryAfter;
-        if (retryAfter != null)
+        var retryAfter = response.Result?.Headers.RetryAfter;
+        if (retryAfter?.Delta is TimeSpan delta)
         {
-            return retryAfter.Delta.Value;
+            return delta;
+        }
+        if (retryAfter?.Date is DateTimeOffset date)
+        {
+            var delay = date - DateTimeOffset.UtcNow;
+            return delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
         }
         return TimeSpan.FromSeconds(3 * Math.Pow(2, retryAttempt));
     }
 
     private Task OnRetryAsync(DelegateResult<HttpResponseMessage> response, TimeSpan wait, int retryAttempt, Context context)
     {
+        response.Result?.Dispose();
         Debug.WriteLine($"Retry delegate invoked. Attempt {retryAttempt}");
         return Task.CompletedTask;
     }
