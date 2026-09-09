@@ -75,7 +75,16 @@ internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
         return registry;
     }
 
-    private TimeSpan WaitTimeProvider(int retryAttempt, DelegateResult<HttpResponseMessage> response, Context context)
+    private static TimeSpan WaitTimeProvider(
+        int retryAttempt,
+        DelegateResult<HttpResponseMessage> response,
+        Context context)
+        => GetRetryDelay(retryAttempt, response, DateTimeOffset.UtcNow);
+
+    internal static TimeSpan GetRetryDelay(
+        int retryAttempt,
+        DelegateResult<HttpResponseMessage> response,
+        DateTimeOffset utcNow)
     {
         var retryAfter = response.Result?.Headers.RetryAfter;
         if (retryAfter?.Delta is TimeSpan delta)
@@ -84,13 +93,13 @@ internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
         }
         if (retryAfter?.Date is DateTimeOffset date)
         {
-            var delay = date - DateTimeOffset.UtcNow;
+            var delay = date - utcNow;
             return delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
         }
         return TimeSpan.FromSeconds(3 * Math.Pow(2, retryAttempt));
     }
 
-    private Task OnRetryAsync(DelegateResult<HttpResponseMessage> response, TimeSpan wait, int retryAttempt, Context context)
+    private static Task OnRetryAsync(DelegateResult<HttpResponseMessage> response, TimeSpan wait, int retryAttempt, Context context)
     {
         response.Result?.Dispose();
         Debug.WriteLine($"Retry delegate invoked. Attempt {retryAttempt}");

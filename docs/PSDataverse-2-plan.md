@@ -40,10 +40,12 @@ The transition build targets .NET 8 and requires PowerShell 7.4. Before the firs
 
 ## Milestone 1: executable specification
 
-- Add golden MIME tests for successful and failed multi-operation batch responses, malformed boundaries, duplicate headers, CRLF/LF variants, 429 responses, and unexpected proxy bodies.
-- Add a reusable fake HTTP transport for token refresh, retry timing, cross-environment isolation, pagination, and cancellation tests.
-- Add Pester tests for packaged-module imports, parameter sets, pipeline input, output modes, command exports, and error categories.
-- Add Windows/Linux/macOS CI for every supported PowerShell host, dependency audit, static analysis, and deterministic package creation.
+- [x] Add golden MIME tests for successful and failed multi-operation batch responses, malformed boundaries, duplicate headers, CRLF/LF variants, 429 responses, and unexpected proxy bodies.
+- [x] Add a reusable fake HTTP transport and use it for authorization headers, retry timing, cross-environment isolation, pagination, and cancellation tests. The same harness is ready for the Milestone 2 token-refresh and Milestone 3 DOP-discovery scenarios when those seams exist.
+- [x] Add Pester tests for packaged-module imports, parameter sets, pipeline input, output modes, command exports, and error categories.
+- [x] Add Windows/Linux/macOS CI for the current and minimum supported PowerShell hosts, dependency audit, static analysis, and deterministic package creation.
+
+Milestone 1 is complete when the C# and Pester suites pass, two clean builds produce identical file hashes, the package imports in PowerShell 7.4 and the current host, static analysis reports no errors, and the dependency audit reports no known vulnerabilities.
 
 ## Milestone 2: connections and authentication
 

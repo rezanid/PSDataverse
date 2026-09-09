@@ -26,4 +26,8 @@
     <ProjectReference Include="..\..\src\PSDataverse\PSDataverse.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="samples\*.http" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

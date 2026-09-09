@@ -1,0 +1,14 @@
+--batchresponse_batch-error
+Content-Type: multipart/mixed; boundary=changesetresponse_changeset-error
+
+--changesetresponse_changeset-error
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+Content-ID: 9
+
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"error":{"code":"0x80040216","message":"A record with this name already exists.","innererror":{"message":"duplicate"}}}
+--changesetresponse_changeset-error--
+--batchresponse_batch-error--
