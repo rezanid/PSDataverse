@@ -11,6 +11,41 @@ public abstract class DataverseCmdlet : PSCmdlet, IDisposable
     protected CancellationToken CancellationToken => cancellationSource.Token;
     protected bool Disposed { get; set; }
 
+    protected DataverseConnectionRegistry GetConnectionRegistry(bool create = true)
+    {
+        var registry = GetVariableValue(Globals.VariableNameConnectionRegistry) as DataverseConnectionRegistry;
+        if (registry is null && create)
+        {
+            registry = new DataverseConnectionRegistry();
+            SessionState.PSVariable.Set(
+                new PSVariable(Globals.VariableNameConnectionRegistry, registry, ScopedItemOptions.AllScope));
+        }
+        return registry;
+    }
+
+    protected DataverseConnection ResolveConnection(
+        DataverseConnection connection = null,
+        string connectionName = null)
+    {
+        if (connection is not null && !string.IsNullOrWhiteSpace(connectionName))
+        {
+            throw new PSArgumentException("Specify either -Connection or -ConnectionName, not both.");
+        }
+        var resolved = connection ?? GetConnectionRegistry(create: false)?.Get(connectionName);
+        if (resolved is null)
+        {
+            var message = string.IsNullOrWhiteSpace(connectionName)
+                ? "No active connection detected. Run Connect-Dataverse first."
+                : $"No Dataverse connection named '{connectionName}' exists.";
+            ThrowTerminatingError(new ErrorRecord(
+                new InvalidOperationException(message),
+                string.IsNullOrWhiteSpace(connectionName) ? Globals.ErrorIdNotConnected : Globals.ErrorIdConnectionNotFound,
+                ErrorCategory.ConnectionError,
+                connectionName));
+        }
+        return resolved;
+    }
+
     protected override void BeginProcessing()
     {
         cancellationSource ??= new CancellationTokenSource();

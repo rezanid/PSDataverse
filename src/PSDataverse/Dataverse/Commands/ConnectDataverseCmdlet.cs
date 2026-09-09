@@ -2,114 +2,294 @@ namespace PSDataverse;
 
 using System;
 using System.Management.Automation;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Identity.Client;
-using PSDataverse.Auth;
+using System.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 
-[Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = "ConnectionString")]
-public class ConnectDataverseCmdlet : DataverseCmdlet
+[Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = ConnectionStringSet)]
+[OutputType(typeof(DataverseConnection))]
+public sealed class ConnectDataverseCmdlet : DataverseCmdlet
 {
-    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Url")]
+    private const string ConnectionStringSet = "ConnectionString";
+    private const string UrlSet = "Url";
+    private const string InteractiveSet = "Interactive";
+    private const string IntegratedWindowsSet = "IntegratedWindows";
+    private const string DeviceCodeSet = "DeviceCode";
+    private const string ClientSecretSet = "ClientSecret";
+    private const string ClientSecretProviderSet = "ClientSecretProvider";
+    private const string CertificateSet = "Certificate";
+    private const string AccessTokenSet = "AccessToken";
+    private const string TokenProviderSet = "TokenProvider";
+
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = UrlSet)]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = InteractiveSet)]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = IntegratedWindowsSet)]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = DeviceCodeSet)]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = ClientSecretSet)]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = ClientSecretProviderSet)]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = CertificateSet)]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = AccessTokenSet)]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = TokenProviderSet)]
+    [Alias("ServiceUrl", "EnvironmentUrl")]
     public string Url { get; set; }
 
-    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "ConnectionString")]
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = ConnectionStringSet)]
+    [Alias("CdsConnectionString", "DataverseConnectionString")]
     public string ConnectionString { get; set; }
 
-    [Parameter(Mandatory = false, ParameterSetName = "Url")]
+    [Parameter(Mandatory = true, ParameterSetName = InteractiveSet)]
+    public SwitchParameter Interactive { get; set; }
+
+    [Parameter(Mandatory = true, ParameterSetName = IntegratedWindowsSet)]
+    [Alias("IntegratedSecurity")]
+    public SwitchParameter IntegratedWindowsAuthentication { get; set; }
+
+    [Parameter(Mandatory = true, ParameterSetName = DeviceCodeSet)]
+    public SwitchParameter DeviceCode { get; set; }
+
+    [Parameter(Mandatory = true, ParameterSetName = ClientSecretSet)]
+    public SecureString ClientSecret { get; set; }
+
+    [Parameter(Mandatory = true, ParameterSetName = ClientSecretProviderSet)]
+    public ScriptBlock ClientSecretProvider { get; set; }
+
+    [Parameter(Mandatory = true, ParameterSetName = CertificateSet)]
+    [Alias("Thumbprint")]
+    public string CertificateThumbprint { get; set; }
+
+    [Parameter(Mandatory = true, ParameterSetName = AccessTokenSet)]
+    public SecureString AccessToken { get; set; }
+
+    [Parameter(Mandatory = true, ParameterSetName = TokenProviderSet)]
+    public ScriptBlock TokenProvider { get; set; }
+
+    [Parameter(ParameterSetName = UrlSet)]
+    [Alias("OnPremises")]
     public SwitchParameter OnPremise { get; set; }
 
-    private static readonly object Lock = new();
+    [Parameter(ParameterSetName = InteractiveSet)]
+    [Parameter(ParameterSetName = IntegratedWindowsSet)]
+    [Parameter(ParameterSetName = DeviceCodeSet)]
+    [Parameter(Mandatory = true, ParameterSetName = ClientSecretSet)]
+    [Parameter(Mandatory = true, ParameterSetName = ClientSecretProviderSet)]
+    [Parameter(Mandatory = true, ParameterSetName = CertificateSet)]
+    public string ClientId { get; set; } = AuthenticationParameters.DefaultClientId;
+
+    [Parameter(ParameterSetName = InteractiveSet)]
+    [Parameter(ParameterSetName = IntegratedWindowsSet)]
+    [Parameter(ParameterSetName = DeviceCodeSet)]
+    [Parameter(Mandatory = true, ParameterSetName = ClientSecretSet)]
+    [Parameter(Mandatory = true, ParameterSetName = ClientSecretProviderSet)]
+    [Parameter(Mandatory = true, ParameterSetName = CertificateSet)]
+    [Alias("Tenant")]
+    public string TenantId { get; set; }
+
+    [Parameter(ParameterSetName = InteractiveSet)]
+    [Parameter(ParameterSetName = UrlSet)]
+    public SwitchParameter UseSystemBrowser { get; set; }
+
+    [Parameter(ParameterSetName = InteractiveSet)]
+    [Parameter(ParameterSetName = DeviceCodeSet)]
+    public string RedirectUri { get; set; } = AuthenticationParameters.DefaultRedirectUrl;
+
+    [Parameter(ParameterSetName = IntegratedWindowsSet)]
+    public string Username { get; set; }
+
+    [Parameter(ParameterSetName = InteractiveSet)]
+    [Parameter(ParameterSetName = IntegratedWindowsSet)]
+    [Parameter(ParameterSetName = DeviceCodeSet)]
+    [Parameter(ParameterSetName = ClientSecretSet)]
+    [Parameter(ParameterSetName = ClientSecretProviderSet)]
+    [Parameter(ParameterSetName = CertificateSet)]
+    public string[] Scopes { get; set; }
+
+    [Parameter(ParameterSetName = CertificateSet)]
+    public StoreName CertificateStoreName { get; set; } = StoreName.My;
+
+    [Parameter(ParameterSetName = AccessTokenSet)]
+    public DateTimeOffset ExpiresOn { get; set; } = DateTimeOffset.UtcNow.AddMinutes(50);
+
+    [Parameter]
+    [ValidateNotNullOrEmpty]
+    public string Name { get; set; } = "default";
+
+    [Parameter]
+    [ValidatePattern(@"^v[0-9]+\.[0-9]+$")]
+    public string ApiVersion { get; set; } = "v9.2";
+
+    [Parameter]
+    public SwitchParameter NoDefault { get; set; }
 
     protected override void ProcessRecord()
     {
-        var authParams = string.IsNullOrWhiteSpace(ConnectionString) ?
-            new AuthenticationParameters
-            {
-                Resource = Url
-            } :
-            AuthenticationParameters.Parse(ConnectionString);
-
-        var endpointUrl =
-            string.IsNullOrWhiteSpace(Url) ?
-            new Uri(authParams.Resource, UriKind.Absolute) :
-            new Uri(Url, UriKind.Absolute);
-
-        var serviceProvider = CreateServiceProvider(endpointUrl);
-
-        if (OnPremise)
-        {
-            ReplaceServiceProvider(serviceProvider);
-            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameIsOnPremise, true, ScopedItemOptions.AllScope));
-            SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, string.Empty, ScopedItemOptions.AllScope));
-            WriteInformation("Dynamics 365 (On-Prem) authenticated successfully.", ["dataverse"]);
-            return;
-        }
-        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameIsOnPremise, false, ScopedItemOptions.AllScope));
-
-        // if previously authented, extract the account. It will be required for silent authentication.
-        if (SessionState.PSVariable.GetValue(Globals.VariableNameAuthResult) is AuthenticationResult previouAuthResult)
-        {
-            authParams.Account = previouAuthResult.Account;
-        }
-
-        var authResult = HandleAuthentication(serviceProvider, authParams);
-        if (authResult == null)
-        {
-            (serviceProvider as IDisposable)?.Dispose();
-            return;
-        }
-
-        ReplaceServiceProvider(serviceProvider);
-        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAuthResult, authResult, ScopedItemOptions.AllScope));
-        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
-        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
-        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameConnectionString, authParams, ScopedItemOptions.AllScope));
-
-        WriteDebug($"Authenticated account '{authResult.Account?.Username ?? "application"}' until {authResult.ExpiresOn:u}.");
-        WriteInformation("Dataverse authenticated successfully.", ["dataverse"]);
-    }
-
-    private AuthenticationResult HandleAuthentication(
-        IServiceProvider serviceProvider,
-        AuthenticationParameters parameters)
-    {
-        var service = serviceProvider.GetService<AuthenticationService>();
+        base.ProcessRecord();
+        DataverseConnection connection = null;
         try
         {
-            return service?.AuthenticateAsync(parameters, OnMessageForUser, CancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+            connection = CreateConnectionAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            DisposeLegacyConnection();
+            GetConnectionRegistry().Add(connection, setDefault: !NoDefault);
+            WriteInformation(
+                $"Dataverse connection '{connection.Name}' authenticated using {connection.AuthenticationKind}.",
+                ["dataverse"]);
+            WriteObject(connection);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException exception)
         {
-            WriteError(
-                new ErrorRecord(
-                    new InvalidOperationException("Dataverse authentication cancelled."), Globals.ErrorIdAuthenticationFailed, ErrorCategory.AuthenticationError, this));
+            connection?.Dispose();
+            ThrowTerminatingError(new ErrorRecord(
+                new InvalidOperationException("Dataverse authentication cancelled.", exception),
+                Globals.ErrorIdAuthenticationFailed,
+                ErrorCategory.OperationStopped,
+                Url));
+        }
+        catch (Exception exception)
+        {
+            connection?.Dispose();
+            ThrowTerminatingError(new ErrorRecord(
+                new InvalidOperationException($"Dataverse connection failed: {exception.Message}", exception),
+                Globals.ErrorIdAuthenticationFailed,
+                ErrorCategory.AuthenticationError,
+                Url ?? ConnectionString));
+        }
+    }
+
+    private async Task<DataverseConnection> CreateConnectionAsync()
+    {
+        if (ParameterSetName == ConnectionStringSet)
+        {
+            var connectionParameters = AuthenticationParameters.Parse(ConnectionString);
+            var connectionKind = ResolveAuthenticationKind(connectionParameters);
+            if (!connectionParameters.BrokerPreferenceSpecified)
+            {
+                connectionParameters.UseBroker = OperatingSystem.IsWindows() &&
+                    connectionKind == DataverseAuthenticationKind.Interactive;
+            }
+            return await DataverseConnectionFactory.CreateMsalAsync(
+                Name, new Uri(connectionParameters.Resource), ApiVersion, connectionKind, connectionParameters, OnMessageForUser, CancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var serviceUrl = NormalizeServiceUrl(Url);
+        if (ParameterSetName == IntegratedWindowsSet && !OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException(
+                "Integrated Windows Authentication is only supported on Windows. Use -Interactive or -DeviceCode on this platform.");
+        }
+        if (ParameterSetName == UrlSet && OnPremise)
+        {
+            var onPremisesApiVersion = MyInvocation.BoundParameters.ContainsKey(nameof(ApiVersion))
+                ? ApiVersion
+                : "v9.1";
+            return DataverseConnectionFactory.CreateOnPremises(Name, serviceUrl, onPremisesApiVersion);
+        }
+        if (ParameterSetName == AccessTokenSet)
+        {
+            return DataverseConnectionFactory.CreateAccessToken(Name, serviceUrl, ApiVersion, AccessToken, ExpiresOn);
+        }
+        if (ParameterSetName == TokenProviderSet)
+        {
+            return await DataverseConnectionFactory.CreateTokenProviderAsync(
+                Name, serviceUrl, ApiVersion, TokenProvider, CancellationToken).ConfigureAwait(false);
+        }
+
+        var parameters = new AuthenticationParameters
+        {
+            Resource = serviceUrl.AbsoluteUri,
+            Tenant = TenantId,
+            ClientId = ClientId,
+            RedirectUri = RedirectUri,
+            UseDeviceFlow = ParameterSetName == DeviceCodeSet,
+            UseCurrentUser = ParameterSetName is UrlSet or InteractiveSet,
+            UseIntegratedWindowsAuthentication = ParameterSetName == IntegratedWindowsSet,
+            UseBroker = (ParameterSetName is UrlSet or InteractiveSet) && OperatingSystem.IsWindows() && !UseSystemBrowser,
+            Username = Username,
+            ClientSecret = ResolveClientSecret(),
+            CertificateThumbprint = CertificateThumbprint,
+            CertificateStoreName = CertificateStoreName,
+            Scopes = Scopes is { Length: > 0 } ? Scopes : [new Uri(serviceUrl, ".default").AbsoluteUri]
+        };
+        if (!string.IsNullOrWhiteSpace(TenantId))
+        {
+            parameters.Authority = $"https://login.microsoftonline.com/{TenantId}";
+        }
+        var kind = ParameterSetName switch
+        {
+            DeviceCodeSet => DataverseAuthenticationKind.DeviceCode,
+            IntegratedWindowsSet => DataverseAuthenticationKind.IntegratedWindows,
+            ClientSecretSet or ClientSecretProviderSet => DataverseAuthenticationKind.ClientSecret,
+            CertificateSet => DataverseAuthenticationKind.Certificate,
+            _ => DataverseAuthenticationKind.Interactive
+        };
+        return await DataverseConnectionFactory.CreateMsalAsync(
+            Name, serviceUrl, ApiVersion, kind, parameters, OnMessageForUser, CancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static DataverseAuthenticationKind ResolveAuthenticationKind(AuthenticationParameters parameters)
+    {
+        if (parameters.UseIntegratedWindowsAuthentication)
+        {
+            return DataverseAuthenticationKind.IntegratedWindows;
+        }
+        if (!string.IsNullOrWhiteSpace(parameters.ClientSecret))
+        {
+            return DataverseAuthenticationKind.ClientSecret;
+        }
+        if (!string.IsNullOrWhiteSpace(parameters.CertificateThumbprint))
+        {
+            return DataverseAuthenticationKind.Certificate;
+        }
+        return parameters.UseDeviceFlow
+            ? DataverseAuthenticationKind.DeviceCode
+            : DataverseAuthenticationKind.Interactive;
+    }
+
+    private string ResolveClientSecret()
+    {
+        if (ClientSecret is not null)
+        {
+            return DataverseConnectionFactory.Unprotect(ClientSecret);
+        }
+        if (ClientSecretProvider is null)
+        {
             return null;
         }
-        catch (Exception ex)
+        var output = ClientSecretProvider.Invoke();
+        if (output.Count != 1)
         {
-            WriteError(
-                new ErrorRecord(
-                    new InvalidOperationException("Authentication failed. " + ex.ToString(), ex), Globals.ErrorIdAuthenticationFailed, ErrorCategory.AuthenticationError, this));
-            return null;
+            throw new InvalidOperationException("A client-secret provider must return exactly one value.");
         }
+        return output[0].BaseObject switch
+        {
+            SecureString secure => DataverseConnectionFactory.Unprotect(secure),
+            string value when !string.IsNullOrWhiteSpace(value) => value,
+            PSCredential credential => DataverseConnectionFactory.Unprotect(credential.Password),
+            _ => throw new InvalidOperationException(
+                "A client-secret provider must return a SecureString, PSCredential, or non-empty string.")
+        };
+    }
+
+    private static Uri NormalizeServiceUrl(string value)
+    {
+        var uri = new Uri(value, UriKind.Absolute);
+        if (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp)
+        {
+            throw new ArgumentException("Dataverse URL must use HTTP or HTTPS.", nameof(value));
+        }
+        return new Uri(uri.AbsoluteUri.TrimEnd('/') + "/");
     }
 
     private void OnMessageForUser(string message) => WriteInformation(message, ["dataverse"]);
 
-    private IServiceProvider CreateServiceProvider(Uri baseUrl)
+    private void DisposeLegacyConnection()
     {
-        var startup = new Startup(baseUrl, OnPremise ? "v9.1" : "v9.2");
-        return startup.ConfigureServices(new ServiceCollection()).BuildServiceProvider();
-    }
-
-    private void ReplaceServiceProvider(IServiceProvider serviceProvider)
-    {
-        lock (Lock)
-        {
-            var previousServiceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
-            SessionState.PSVariable.Set(
-                new PSVariable(Globals.VariableNameServiceProvider, serviceProvider, ScopedItemOptions.AllScope));
-            (previousServiceProvider as IDisposable)?.Dispose();
-        }
+        (GetVariableValue(Globals.VariableNameServiceProvider) as IDisposable)?.Dispose();
+        SessionState.PSVariable.Remove(Globals.VariableNameServiceProvider);
+        SessionState.PSVariable.Remove(Globals.VariableNameAccessToken);
+        SessionState.PSVariable.Remove(Globals.VariableNameAccessTokenExpiresOn);
+        SessionState.PSVariable.Remove(Globals.VariableNameAuthResult);
+        SessionState.PSVariable.Remove(Globals.VariableNameConnectionString);
+        SessionState.PSVariable.Remove(Globals.VariableNameIsOnPremise);
     }
 }

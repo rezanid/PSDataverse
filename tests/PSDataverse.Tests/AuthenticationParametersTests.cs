@@ -1,5 +1,7 @@
 namespace PSDataverse.Tests;
 
+using FluentAssertions;
+
 public class AuthenticationParametersTests
 {
     [Fact]
@@ -33,5 +35,37 @@ public class AuthenticationParametersTests
         Assert.Equal(expected: "client-id", cnnString.ClientId);
         Assert.True(cnnString.UseDeviceFlow);
         Assert.Equal(expected: "https://environment-name.crm4.dynamics.com/", cnnString.Resource);
+    }
+
+    [Fact]
+    public void SupportsXrmToolingStyleAliases()
+    {
+        var value = AuthenticationParameters.Parse(
+            "AuthType=ClientSecret;Url=https://example.crm.dynamics.com;" +
+            "ApplicationId=app-id;Secret=secret;TenantId=tenant-id");
+
+        value.Resource.Should().Be("https://example.crm.dynamics.com/");
+        value.ClientId.Should().Be("app-id");
+        value.ClientSecret.Should().Be("secret");
+        value.Tenant.Should().Be("tenant-id");
+    }
+
+    [Fact]
+    public void RejectsDuplicateConnectionStringKeys()
+    {
+        var action = () => AuthenticationParameters.Parse(
+            "Url=https://one.crm.dynamics.com;URL=https://two.crm.dynamics.com");
+
+        action.Should().Throw<ArgumentException>().WithMessage("*specified more than once*");
+    }
+
+    [Theory]
+    [InlineData("AuthType=ClientSecret;Url=https://example.crm.dynamics.com;ClientId=id;TenantId=tenant", "requires ClientSecret")]
+    [InlineData("AuthType=Office365;Url=https://example.crm.dynamics.com", "is not supported")]
+    public void RejectsIncompleteOrUnsupportedXrmAuthenticationTypes(string value, string message)
+    {
+        var action = () => AuthenticationParameters.Parse(value);
+
+        action.Should().Throw<ArgumentException>().WithMessage($"*{message}*");
     }
 }

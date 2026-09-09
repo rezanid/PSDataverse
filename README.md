@@ -40,40 +40,50 @@ if (-not (Get-Module -Name PSDataverse)) {
 > PSDataverse is a hybrid module that is a mix of PSDataverse.dll and PSDataverse.psd1 module definition. Only the commands that made more sense to be implemented as binary are included in the dll, and the rest of the implementation is done using PowerShell language.
 
 # How to use
-The first thing to do is to connect to your Dataverse environment using `Connect-Dataverse` cmdlet. Currently there are three ways that you can connect: 
-* Using a Client ID (aka Application ID) and a Client Password
-* Using a Client ID and a certificate that you have installed in OS's certificate store
-* Using a device authentication flow (interactive login)
+Start by connecting to a Dataverse environment with `Connect-Dataverse`. PSDataverse supports browser or broker interaction, Integrated Windows Authentication, device code, application credentials, supplied tokens, token providers, and legacy connection strings.
 
 ## Connecting to Dataverse
 
-**Example 1 - Connecting to Dataverse using a client ID and a client certificate installed in certificate store.**
+**Interactive authentication** uses Windows Web Account Manager when available and the system browser on other platforms. Passkeys and other passwordless methods are presented by that sign-in experience.
+
 ```powershell
-Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;thumbprint=<thumbprint-of-your-certificate>;resource=https://<your-environment-name>.crm4.dynamics.com/"
+$connection = Connect-Dataverse https://<environment>.crm.dynamics.com -Interactive
 ```
 
-**Example 2 - Connecting to Dataverse using a client ID and a client secret.**
+**Device-code authentication** is convenient for remote terminals and hosts without a browser.
+
 ```powershell
-Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=<your-client-id>;clientsecret=<your-client-secret>;resource=https://<your-environment-name>.crm4.dynamics.com/"
+Connect-Dataverse https://<environment>.crm.dynamics.com -DeviceCode -InformationAction Continue
 ```
 
-**Example 3 - Connecting to Dataverse using device authentication flow.**
+**Application authentication** accepts a secure client secret or a certificate from the operating-system certificate store.
+
 ```powershell
-Connect-Dataverse "authority=https://login.microsoftonline.com/<your-tenant-id>/oauth2/authorize;clientid=1950a258-227b-4e31-a9cf-717495945fc2;device=true;resource=https://<your-environment-name>.crm4.dynamics.com/" -InformationAction Continue
+Connect-Dataverse https://<environment>.crm.dynamics.com `
+  -ClientId <application-id> -TenantId <tenant-id> `
+  -ClientSecret (Read-Host 'Client secret' -AsSecureString)
+
+Connect-Dataverse https://<environment>.crm.dynamics.com `
+  -ClientId <application-id> -TenantId <tenant-id> `
+  -CertificateThumbprint <certificate-thumbprint>
 ```
-When you run the above command, a message like the following will be printed in the console, and you just need to do what is asked. After that, you will be prompted to use your credentials and that's it.
-```
-To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code CSPUJ9S7K to authenticate.
-```
-This is the easiest way to log in, when your just need to do ad-hoc operations.
 
 > [!NOTE]
-> 
-> For any of first two examples to work you need an application user in your Power Platform environment. To learn how to create an application user, please read the following article from the official documentation: [Manage application users in the Power Platform admin center](https://docs.microsoft.com/en-us/power-platform/admin/manage-application-users).
+> Application authentication requires an application user in the Power Platform environment. See [Manage application users in the Power Platform admin center](https://learn.microsoft.com/en-us/power-platform/admin/manage-application-users).
 
-The third one is using a wellknown client id, but if you want you can also use the client id of your own app registration. If you wish to use your own app registration for device authentication flow, you will need to enable "Allow public client flows" for your app registration. 
+Connections can be named when a script works with multiple environments:
 
-After connecting to the Dataverse, you can send any number of operations to your Dataverse environment. If the authentication expires, PSDataverse will automatically reauthenticate behind the scene. 
+```powershell
+$dev = Connect-Dataverse $devUrl -Interactive -Name dev
+Connect-Dataverse $testUrl -Interactive -Name test -NoDefault
+
+Get-DataverseConnection
+Send-DataverseOperation WhoAmI -ConnectionName test
+Set-DataverseDefaultConnection test
+Disconnect-Dataverse -All
+```
+
+The latest default connection is used when `-Connection` and `-ConnectionName` are omitted. PSDataverse refreshes renewable credentials shortly before expiry and serializes concurrent refresh attempts. Legacy connection strings remain available for migration; see [Migrating from PSDataverse 0.x](MIGRATION.md) for every parameter set and compatibility alias.
 
 ## Sending operations to Dataverse
 

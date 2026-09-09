@@ -49,14 +49,66 @@ Scripts do not need to dot-source helper files to access those commands. If a sc
 - `Export-DataverseOptionSet` now uses each pipeline name when multiple names are supplied.
 - `ChangeSet.RemoveOperation(string)` now removes the exact matching content ID.
 
+## Milestone 2 connection and authentication changes
+
+`Connect-Dataverse` now returns a `DataverseConnection`. The connection owns its HTTP, authentication, and token-refresh resources but does not publicly expose its access token or client secret. The most recently connected environment remains the default, so concise existing calls to `Send-DataverseOperation` continue to work.
+
+Connections can be named and selected explicitly:
+
+```powershell
+$development = Connect-Dataverse https://dev.crm.dynamics.com -Interactive -Name dev
+$production = Connect-Dataverse https://prod.crm.dynamics.com -DeviceCode -Name prod -NoDefault
+
+Get-DataverseConnection
+Set-DataverseDefaultConnection prod
+Send-DataverseOperation accounts -ConnectionName dev
+Send-DataverseOperation accounts -Connection $production
+Disconnect-Dataverse dev
+Disconnect-Dataverse -All
+```
+
+The supported authentication forms are:
+
+```powershell
+# WAM on Windows; system browser on other platforms
+Connect-Dataverse $url -Interactive -TenantId $tenantId
+
+# Force the system browser on Windows
+Connect-Dataverse $url -Interactive -UseSystemBrowser
+
+Connect-Dataverse $url -DeviceCode -TenantId $tenantId
+
+# Windows-only IWA (subject to tenant policy, federation, and MFA constraints)
+Connect-Dataverse $url -IntegratedWindowsAuthentication -TenantId $tenantId
+
+Connect-Dataverse $url -ClientId $appId -TenantId $tenantId `
+    -ClientSecret (Read-Host -AsSecureString)
+
+Connect-Dataverse $url -ClientId $appId -TenantId $tenantId `
+    -CertificateThumbprint $thumbprint
+
+Connect-Dataverse $url -AccessToken $secureToken -ExpiresOn $expiry
+
+Connect-Dataverse $url -TokenProvider {
+    param($cancellationToken)
+    [DataverseAccessToken]::new((Get-Token), (Get-Date).AddMinutes(50))
+}
+```
+
+Secret stores remain optional. A provider can resolve a secret without PSDataverse depending on a particular vault module:
+
+```powershell
+Connect-Dataverse $url -ClientId $appId -TenantId $tenantId `
+    -ClientSecretProvider { Get-Secret DataverseAppSecret }
+```
+
+Legacy connection strings remain supported. Familiar XRM tooling names such as `Url`, `AuthType`, `ApplicationId`, `Secret`, `TenantId`, and `CertificateThumbprint` are accepted alongside the original PSDataverse spellings. Duplicate keys now fail with a targeted error rather than being interpreted ambiguously.
+
+`Disconnect-Dataverse` disconnects the default connection when no name is supplied. Use `-All` to dispose every connection. The old `Dataverse-*` global token/service-provider variables are no longer the source of truth; scripts that read those undocumented variables should migrate to `Get-DataverseConnection`.
+
+Passkeys are available through the operating system or browser interactive sign-in experience. There is intentionally no separate “passkey OAuth flow.”
+
 ## Planned PSDataverse 2 migration
 
-The following design is planned but not implemented in Milestone 0:
-
-- `Connect-Dataverse` will accept both PowerShell-native parameters and legacy connection strings.
-- Connections will become explicit objects and may be selected by object or name. A default connection will preserve concise scripts.
-- `Invoke-DataverseRequest` will become the preferred low-level verb-noun name. `Send-DataverseOperation` is expected to remain as a compatibility alias during migration.
-- WAM/system-browser interactive authentication, device code, application credentials, supplied access tokens, and token-provider callbacks will use explicit parameter sets.
+- `Invoke-DataverseRequest` will become the preferred low-level verb-noun name. `Send-DataverseOperation` will remain as a compatibility alias during migration.
 - Convenience CRUD, metadata, action/function, and bulk commands will layer on the same transparent request engine.
-
-Migration examples and deprecation periods will be added when those surfaces are implemented.

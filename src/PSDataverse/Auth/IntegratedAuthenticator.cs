@@ -38,8 +38,17 @@ internal class IntegratedAuthenticator : DelegatingAuthenticator
                 result = await app.AcquireTokenInteractive(parameters.Scopes)
                     .WithAccount(accounts.FirstOrDefault())
                     .WithParentActivityOrWindow(phwnd)
+                    .WithPrompt(Prompt.SelectAccount)
+                    .WithUseEmbeddedWebView(false)
                     .ExecuteAsync(cancellationToken)
                     .ConfigureAwait(false);
+            }
+            catch (MsalException ex) when (
+                ex.ErrorCode == "authentication_canceled" ||
+                ex.ErrorCode == "access_denied" ||
+                ex.ErrorCode == "user_canceled")
+            {
+                throw new OperationCanceledException("User cancelled Dataverse authentication.", ex, cancellationToken);
             }
             catch (MsalException ex)
             {
@@ -50,7 +59,7 @@ internal class IntegratedAuthenticator : DelegatingAuthenticator
         return result;
     }
     public override bool CanAuthenticate(AuthenticationParameters parameters)
-        => parameters.UseCurrentUser || parameters.IsUncertainAuthFlow();
+        => !parameters.UseBroker && (parameters.UseCurrentUser || parameters.IsUncertainAuthFlow());
 
     public override void Dispose()
     {

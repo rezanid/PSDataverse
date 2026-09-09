@@ -61,7 +61,13 @@ NestedModules = @('./bin/PSDataverse.dll')
 FunctionsToExport = @('Clear-DataverseTable', 'Export-DataverseOptionSet', 'Get-DataverseAttributes', 'Get-DataverseTableRowCount')
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
-CmdletsToExport = @('Connect-Dataverse', 'Disconnect-Dataverse', 'Send-DataverseOperation')
+CmdletsToExport = @(
+    'Connect-Dataverse',
+    'Disconnect-Dataverse',
+    'Get-DataverseConnection',
+    'Send-DataverseOperation',
+    'Set-DataverseDefaultConnection'
+)
 
 # Variables to export from this module
 VariablesToExport = @()

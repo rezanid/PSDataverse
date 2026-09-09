@@ -8,11 +8,11 @@ using System.Security.Cryptography.X509Certificates;
 
 public record AuthenticationParameters
 {
-    private const string DefaultClientId = "51f81489-12ee-4a9e-aaae-a2591f45987d";
+    public const string DefaultClientId = "51f81489-12ee-4a9e-aaae-a2591f45987d";
 
     // Power Platform SDK uses "app://58145B91-0C36-4500-8554-080854F2AC97", but according to MSAL docs, localhost is safer
     // Read more: https://learn.microsoft.com/en-us/entra/msal/dotnet/acquiring-tokens/using-web-browsers;
-    private const string DefaultRedirectUrl = "http://localhost";
+    public const string DefaultRedirectUrl = "http://localhost";
 
     public string Authority { get; set; }
     public string Resource { get; set; }
@@ -24,7 +24,11 @@ public record AuthenticationParameters
     public IEnumerable<string> Scopes { get; set; }
     public bool UseDeviceFlow { get; set; }
     public bool UseCurrentUser { get; set; }
+    public bool UseIntegratedWindowsAuthentication { get; set; }
+    public bool UseBroker { get; set; }
+    internal bool BrokerPreferenceSpecified { get; set; }
     public string RedirectUri { get; set; } = DefaultRedirectUrl;
+    public string Username { get; set; }
 
     public IAccount Account { get; set; }
 
@@ -43,17 +47,26 @@ public record AuthenticationParameters
             }
             else
             {
-                throw new InvalidOperationException("Connection string is invalid. Please check your environment setting in Tools > Options > Xrm Tools");
+                throw new InvalidOperationException(
+                    "Connection string must be an HTTPS Dataverse URL or contain key=value pairs including Url or Resource.");
             }
         }
         else
         {
-            dictionary =
-                connectionString.Split([';'], StringSplitOptions.RemoveEmptyEntries)
-                .ToDictionary(
-                    s => s[..s.IndexOf('=')].Trim(),
-                    s => s[(s.IndexOf('=') + 1)..].Trim(),
-                    StringComparer.OrdinalIgnoreCase);
+            dictionary = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var segment in connectionString.Split([';'], StringSplitOptions.RemoveEmptyEntries))
+            {
+                var separator = segment.IndexOf('=');
+                if (separator <= 0)
+                {
+                    throw new ArgumentException($"Invalid connection-string segment '{segment.Trim()}'.");
+                }
+                var key = segment[..separator].Trim();
+                if (!dictionary.TryAdd(key, segment[(separator + 1)..].Trim()))
+                {
+                    throw new ArgumentException($"Connection-string key '{key}' was specified more than once.");
+                }
+            }
             resource =
                 dictionary.TryGetValue("resource", out var url)
                 ? url
@@ -69,26 +82,26 @@ public record AuthenticationParameters
 
         var parameters = new AuthenticationParameters
         {
-            Authority = dictionary.TryGetValue("authority", out var authority) ? authority : null,
-            ClientId = dictionary.TryGetValue("clientid", out var clientid) ? clientid : DefaultClientId,
+            Authority = GetValue(dictionary, "authority"),
+            ClientId = GetValue(dictionary, "clientid", "applicationid", "appid") ?? DefaultClientId,
             RedirectUri = dictionary.TryGetValue("redirecturi", out var redirecturi) ? redirecturi : DefaultRedirectUrl,
             Resource = resource,
-            ClientSecret = dictionary.TryGetValue("clientsecret", out var secret) ? secret : null,
-            CertificateThumbprint = dictionary.TryGetValue("thumbprint", out var thumbprint) ? thumbprint : null,
-            Tenant = dictionary.TryGetValue("tenantid", out var tenant)
-            ? tenant
-            : dictionary.TryGetValue("tenant", out tenant)
-            ? tenant
-            : null,
+            ClientSecret = GetValue(dictionary, "clientsecret", "secret"),
+            CertificateThumbprint = GetValue(dictionary, "thumbprint", "certificatethumbprint"),
+            Tenant = GetValue(dictionary, "tenantid", "tenant"),
             Scopes = dictionary.TryGetValue("scopes", out var scopes) ? scopes.Split(',') : [new Uri(new Uri(resource, UriKind.Absolute), ".default").ToString()],
-            UseDeviceFlow = dictionary.TryGetValue("device", out var device) && bool.Parse(device),
-            UseCurrentUser = dictionary.TryGetValue("integrated security", out var defaultcreds) && bool.Parse(defaultcreds)
+            UseDeviceFlow = GetBoolean(dictionary, "device") || IsAuthType(dictionary, "devicecode"),
+            UseCurrentUser = GetBoolean(dictionary, "integrated security") || IsAuthType(dictionary, "oauth", "interactive"),
+            UseIntegratedWindowsAuthentication = IsAuthType(dictionary, "ad", "integratedwindows"),
+            UseBroker = GetBoolean(dictionary, "usebroker")
         };
+        parameters.BrokerPreferenceSpecified = dictionary.ContainsKey("usebroker");
         if (string.IsNullOrEmpty(parameters.Authority) && !string.IsNullOrEmpty(parameters.Tenant))
         {
             parameters.Authority = $"https://login.microsoftonline.com/{parameters.Tenant}/oauth2/authorize";
         }
         parameters.CertificateStoreName = ExtractStoreName(dictionary);
+        ValidateAuthenticationType(dictionary, parameters);
         return parameters;
     }
 
@@ -108,6 +121,56 @@ public record AuthenticationParameters
             }
         }
         return StoreName.My;
+    }
+
+    private static string GetValue(Dictionary<string, string> parameters, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (parameters.TryGetValue(name, out var value))
+            {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private static bool GetBoolean(Dictionary<string, string> parameters, string name)
+        => parameters.TryGetValue(name, out var value) &&
+           bool.TryParse(value, out var parsed) &&
+           parsed;
+
+    private static bool IsAuthType(Dictionary<string, string> parameters, params string[] expected)
+        => parameters.TryGetValue("authtype", out var value) &&
+           expected.Contains(value, StringComparer.OrdinalIgnoreCase);
+
+    private static void ValidateAuthenticationType(
+        Dictionary<string, string> values,
+        AuthenticationParameters parameters)
+    {
+        if (!values.TryGetValue("authtype", out var authenticationType))
+        {
+            return;
+        }
+        var supported = new[]
+        {
+            "oauth", "interactive", "devicecode", "clientsecret", "certificate", "ad", "integratedwindows"
+        };
+        if (!supported.Contains(authenticationType, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                $"Connection-string AuthType '{authenticationType}' is not supported. Use Interactive, DeviceCode, ClientSecret, Certificate, or IntegratedWindows.");
+        }
+        if (authenticationType.Equals("clientsecret", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(parameters.ClientSecret))
+        {
+            throw new ArgumentException("AuthType=ClientSecret requires ClientSecret or Secret.");
+        }
+        if (authenticationType.Equals("certificate", StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(parameters.CertificateThumbprint))
+        {
+            throw new ArgumentException("AuthType=Certificate requires CertificateThumbprint or Thumbprint.");
+        }
     }
 
     public bool IsValid() => !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(Resource) &&

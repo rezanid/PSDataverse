@@ -13,7 +13,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.PowerShell.Commands;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using PSDataverse.Auth;
 using PSDataverse.Dataverse;
 using PSDataverse.Dataverse.Execute;
 using PSDataverse.Dataverse.Model;
@@ -47,12 +46,16 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
     [Parameter(Position = 4, Mandatory = false)]
     public SwitchParameter AutoPaginate { get; set; }
 
+    [Parameter]
+    public DataverseConnection Connection { get; set; }
+
+    [Parameter]
+    public string ConnectionName { get; set; }
+
     private bool IsOnPremise;
     private bool isValidationFailed;
     private string accessToken;
-    private AuthenticationParameters dataverseCnnStr;
-    private AuthenticationService authenticationService;
-    private DateTimeOffset? authExpiresOn;
+    private DataverseConnection activeConnection;
     private OperationProcessor operationProcessor;
     private OperationHandler operationHandler;
     private BatchProcessor batchProcessor;
@@ -73,20 +76,33 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
         stopwatch = Stopwatch.StartNew();
 
-        var serviceProvider = (IServiceProvider)GetVariableValue(Globals.VariableNameServiceProvider);
-        if (serviceProvider is null)
+        if (Connection is not null && !string.IsNullOrWhiteSpace(ConnectionName))
         {
             WriteError(new ErrorRecord(
-                new InvalidOperationException("No active connection detected. Run Connect-Dataverse first."),
-                Globals.ErrorIdNotConnected,
-                ErrorCategory.ConnectionError,
-                null));
+                new PSArgumentException("Specify either -Connection or -ConnectionName, not both."),
+                Globals.ErrorIdConnectionNotFound,
+                ErrorCategory.InvalidArgument,
+                ConnectionName));
             isValidationFailed = true;
             return;
         }
+        activeConnection = Connection ?? GetConnectionRegistry(create: false)?.Get(ConnectionName);
+        if (activeConnection is null)
+        {
+            var message = string.IsNullOrWhiteSpace(ConnectionName)
+                ? "No active connection detected. Run Connect-Dataverse first."
+                : $"No Dataverse connection named '{ConnectionName}' exists.";
+            WriteError(new ErrorRecord(
+                new InvalidOperationException(message),
+                string.IsNullOrWhiteSpace(ConnectionName) ? Globals.ErrorIdNotConnected : Globals.ErrorIdConnectionNotFound,
+                ErrorCategory.ConnectionError,
+                ConnectionName));
+            isValidationFailed = true;
+            return;
+        }
+        var serviceProvider = activeConnection.Services;
         operationProcessor = serviceProvider.GetService<OperationProcessor>();
         batchProcessor = serviceProvider.GetService<BatchProcessor>();
-        authenticationService = serviceProvider.GetService<AuthenticationService>();
         operationHandler = new(operationProcessor, this);
         if (!VerifyConnection())
         {
@@ -233,45 +249,26 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
     private bool VerifyConnection()
     {
-        IsOnPremise = GetVariableValue(Globals.VariableNameIsOnPremise) is true;
+        IsOnPremise = activeConnection.IsOnPremises;
         if (IsOnPremise) { return true; }
-        accessToken = (string)GetVariableValue(Globals.VariableNameAccessToken);
-        authExpiresOn = (DateTimeOffset?)GetVariableValue(Globals.VariableNameAccessTokenExpiresOn);
-        dataverseCnnStr = (AuthenticationParameters)GetVariableValue(Globals.VariableNameConnectionString);
-        if (string.IsNullOrEmpty(accessToken))
+        try
         {
-            var errMessage = "No active connection detected. Run Connect-Dataverse first.";
-            WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdNotConnected, ErrorCategory.ConnectionError, null));
-            return false;
-        }
-        if (authExpiresOn is null || authExpiresOn > DateTimeOffset.UtcNow.AddMinutes(5))
-        {
+            accessToken = activeConnection.GetAccessTokenAsync(CancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
             return true;
         }
-        if (dataverseCnnStr is null)
-        {
-            var errMessage = "The active connection has expired and cannot be refreshed. Run Connect-Dataverse again.";
-            WriteError(new ErrorRecord(new InvalidOperationException(errMessage), Globals.ErrorIdConnectionExpired, ErrorCategory.ConnectionError, null));
-            return false;
-        }
-        var authResult = authenticationService.AuthenticateAsync(dataverseCnnStr, OnMessageForUser, CancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-        if (authResult is null)
+        catch (Exception exception)
         {
             WriteError(new ErrorRecord(
-                new InvalidOperationException("The active connection could not refresh its access token."),
+                new InvalidOperationException(
+                    $"Connection '{activeConnection.Name}' could not refresh its access token: {exception.Message}",
+                    exception),
                 Globals.ErrorIdConnectionExpired,
                 ErrorCategory.AuthenticationError,
-                null));
+                activeConnection));
             return false;
         }
-        accessToken = authResult.AccessToken;
-        authExpiresOn = authResult.ExpiresOn;
-        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessToken, authResult.AccessToken, ScopedItemOptions.AllScope));
-        SessionState.PSVariable.Set(new PSVariable(Globals.VariableNameAccessTokenExpiresOn, authResult.ExpiresOn, ScopedItemOptions.AllScope));
-        return true;
     }
-
-    private void OnMessageForUser(string message) => WriteInformation(message, ["dataverse"]);
 
     private bool IsNewBatchNeeded() => (BatchSize > 0 && operationCounter == 0) || operationCounter % BatchSize == 0;
 
