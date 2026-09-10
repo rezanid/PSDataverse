@@ -14,6 +14,7 @@ $expected = @(
     'Get-DataverseAttributes'
     'Get-DataverseConnection'
     'Get-DataverseTableRowCount'
+    'Invoke-DataverseRequest'
     'Send-DataverseOperation'
     'Set-DataverseDefaultConnection'
 )
