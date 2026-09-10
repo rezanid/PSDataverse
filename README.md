@@ -192,14 +192,28 @@ benchmark measures POST, PATCH, and DELETE using individual requests, transactio
 
 ```powershell
 Connect-Dataverse https://<environment>.crm.dynamics.com -DeviceCode
-./tools/Measure-DataverseWritePerformance.ps1 -Count 100 -Confirm:$false
+$results = ./tools/Measure-DataverseWritePerformance.ps1 `
+    -Count 100 `
+    -MaxDop 1,8,20,32 `
+    -BatchSize 20 -BatchMaxDop 1,4,8 `
+    -BulkSize 50 -BulkMaxDop 1,4 `
+    -RepeatCount 3 -SummaryOnly `
+    -Confirm:$false
+$results | Format-Table -AutoSize
 ```
 
 Run this only in a disposable development environment. It creates a uniquely
 named `new_PsdvBenchmark...` table, verifies row counts between phases, and
-removes the entire table in a `finally` block. Dataverse does not support
-DeleteMultiple for standard tables, so DELETE compares individual requests with
-`$batch` only.
+removes the entire table in a `finally` block. It warms each transport, randomizes
+scenario order within each verb, repeats the measurements, and reports medians
+with `-SummaryOnly`. `EnvelopeCount` makes it clear how many HTTP or `$batch`
+requests can actually run concurrently. A batch or bulk DOP above one has no
+effect unless `Count` is greater than its corresponding batch or bulk size.
+
+Dataverse does not support DeleteMultiple for standard tables, so DELETE compares
+individual requests with `$batch` only. Concurrent batch envelopes are appropriate
+only when the envelopes are independent; operations inside each transactional
+change set remain ordered, but separate envelopes can complete out of order.
 
 
 
