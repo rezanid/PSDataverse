@@ -122,3 +122,9 @@ Traditional IWA is deprecated by Microsoft in favor of WAM and only supports fed
 
 - `Invoke-DataverseRequest` will become the preferred low-level verb-noun name. `Send-DataverseOperation` will remain as a compatibility alias during migration.
 - Convenience CRUD, metadata, action/function, and bulk commands will layer on the same transparent request engine.
+
+## Milestone 3 request-engine changes
+
+Batch submission now uses a bounded channel rather than an ever-growing task list and polling loop. `-MaxDop` remains the client-side ceiling; when Dataverse returns `x-ms-dop-hint`, PSDataverse lowers the active concurrency for subsequent queued batches. Completion order remains the fast default. Use `-OutputOrder Input` when downstream pipeline processing must match the original batch order.
+
+Automatic transport retries are now replay-safe by default. GET, HEAD, and OPTIONS requests retry transient failures and honor `Retry-After`. POST, PATCH, DELETE, and batches containing those methods are sent once because a missing response does not prove that Dataverse failed to apply the write. Scripts that previously relied on implicit write replay should perform an application-specific existence/version check before retrying.

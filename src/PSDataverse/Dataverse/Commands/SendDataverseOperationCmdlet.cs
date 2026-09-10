@@ -2,7 +2,6 @@ namespace PSDataverse;
 
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -47,6 +46,10 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
     public SwitchParameter AutoPaginate { get; set; }
 
     [Parameter]
+    [ValidateSet("Completion", "Input")]
+    public string OutputOrder { get; set; } = "Completion";
+
+    [Parameter]
     public DataverseConnection Connection { get; set; }
 
     [Parameter]
@@ -61,10 +64,11 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
     private BatchProcessor batchProcessor;
     private int operationCounter;
     private int batchCounter;
-    private ConcurrentBag<Operation<string>> operations;
-    private List<Task<Batch<string>>> tasks;
+    private List<Operation<string>> operations;
     private Stopwatch stopwatch;
-    private SemaphoreSlim taskThrottler;
+    private BoundedChannelScheduler<Batch<string>, Batch<string>> batchScheduler;
+    private readonly SortedDictionary<long, ScheduledResult<Batch<string>>> orderedResults = [];
+    private long nextOutputSequence;
     private int effectiveMaxDop;
 
     private const int DefaultMaxDop = 20;
@@ -112,10 +116,14 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
         if (BatchSize > 0)
         {
-            operations = [.. new List<Operation<string>>(BatchSize)];
-            tasks = [];
+            operations = new List<Operation<string>>(BatchSize);
             effectiveMaxDop = ResolveMaxDop(MaxDop);
-            taskThrottler = new SemaphoreSlim(effectiveMaxDop);
+            batchScheduler = new BoundedChannelScheduler<Batch<string>, Batch<string>>(
+                Math.Max(1, effectiveMaxDop * 2),
+                effectiveMaxDop,
+                SendBatchAsync,
+                CancellationToken,
+                batch => batch.Response?.RecommendedDegreeOfParallelism);
         }
         operationCounter = 0;
     }
@@ -149,18 +157,25 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
         operations.Add(op);
 
-        if (IsNewBatchNeeded())
+        if (operations.Count >= BatchSize)
         {
             batchProcessor.AuthenticationToken = accessToken;
-            MakeAndSendBatchThenOutput(waitForAll: false);
+            QueueBatch();
+            DrainBatchResults(waitForCompletion: false);
         }
     }
 
     protected override void EndProcessing()
     {
-        if (tasks?.Count > 0 || (operations?.Any() ?? false))
+        if (BatchSize > 0)
         {
-            MakeAndSendBatchThenOutput(waitForAll: true);
+            if (operations.Count > 0)
+            {
+                batchProcessor.AuthenticationToken = accessToken;
+                QueueBatch();
+            }
+            batchScheduler.Complete();
+            DrainBatchResults(waitForCompletion: true);
         }
         if (BatchSize == 0)
         {
@@ -169,7 +184,6 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
             return;
         }
         stopwatch.Stop();
-        taskThrottler.Dispose();
         WriteInformation($"Send-Dataverse completed - Elapsed: {stopwatch.Elapsed}, Batches: {batchCounter}, Operations: {operationCounter}.", ["Dataverse"]);
 
         base.EndProcessing();
@@ -270,62 +284,62 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         }
     }
 
-    private bool IsNewBatchNeeded() => (BatchSize > 0 && operationCounter == 0) || operationCounter % BatchSize == 0;
+    internal static int ResolveMaxDop(int maxDop)
+        => maxDop <= 0 ? DefaultMaxDop : Math.Min(maxDop, 1024);
 
-    internal static int ResolveMaxDop(int maxDop) => maxDop <= 0 ? DefaultMaxDop : maxDop;
-
-    private void MakeAndSendBatchThenOutput(bool waitForAll)
+    private void QueueBatch()
     {
-        if (operations?.Count > 0)
+        var batch = new Batch<string>(operations.ToArray());
+        operations.Clear();
+        _ = Interlocked.Increment(ref batchCounter);
+        WriteInformation($"Batch-{batch.Id}[total:{batch.ChangeSet.Operations.Count()}, starting: {batch.ChangeSet.Operations.First().ContentId}] queued.", ["dataverse"]);
+        batchScheduler.EnqueueAsync(batch).AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+    }
+
+    private void DrainBatchResults(bool waitForCompletion)
+    {
+        do
         {
-            var batch = new Batch<string>(operations);
-            operations.Clear();
-            var task = SendBatchAsync(batch);
-            tasks.Add(task);
-        }
-        if (waitForAll)
-        {
-            var all = Task.WhenAll(tasks);
-            try
+            while (batchScheduler.Results.TryRead(out var result))
             {
-                var responses = all.Result;
-                foreach (var response in responses)
-                {
-                    WriteOutput(response);
-                }
+                AcceptBatchResult(result);
             }
-            catch (AggregateException ex)
+            if (!waitForCompletion)
             {
-                foreach (var exception in ex.InnerExceptions)
-                {
-                    WriteError(new ErrorRecord(exception, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
-                }
-            }
-            tasks.Clear();
-        }
-        else
-        {
-            while (tasks.Count != 0 && tasks.Count >= effectiveMaxDop)
-            {
-                Thread.Sleep(100);
-                var completedTasks = tasks.Where(t => t.IsCompleted).ToArray();
-                foreach (var completedTask in completedTasks)
-                {
-                    try
-                    {
-                        WriteOutput(completedTask.Result);
-                    }
-                    catch (AggregateException ex)
-                    {
-                        foreach (var exception in ex.InnerExceptions)
-                        {
-                            WriteError(new ErrorRecord(exception, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
-                        }
-                    }
-                }
-                tasks.RemoveAll(t => completedTasks.Contains(t));
+                return;
             }
         }
+        while (batchScheduler.Results.WaitToReadAsync(CancellationToken).AsTask()
+            .ConfigureAwait(false).GetAwaiter().GetResult());
+    }
+
+    private void AcceptBatchResult(ScheduledResult<Batch<string>> result)
+    {
+        if (OutputOrder.Equals("Input", StringComparison.OrdinalIgnoreCase))
+        {
+            orderedResults.Add(result.Sequence, result);
+            while (orderedResults.Remove(nextOutputSequence, out var next))
+            {
+                WriteBatchResult(next);
+                nextOutputSequence++;
+            }
+            return;
+        }
+        WriteBatchResult(result);
+    }
+
+    private void WriteBatchResult(ScheduledResult<Batch<string>> result)
+    {
+        if (result.IsSuccess)
+        {
+            WriteOutput(result.Value);
+            return;
+        }
+        if (result.Error is OperationCanceledException)
+        {
+            throw result.Error;
+        }
+        WriteError(new ErrorRecord(result.Error, Globals.ErrorIdBatchFailure, ErrorCategory.WriteError, this));
     }
 
     private void WriteOutput(Batch<string> batch)
@@ -368,16 +382,12 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         }
     }
 
-    private async Task<Batch<string>> SendBatchAsync(Batch<string> batch)
+    private async Task<Batch<string>> SendBatchAsync(Batch<string> batch, CancellationToken cancellationToken)
     {
-        WriteInformation($"Batch-{batch.Id}[total:{batch.ChangeSet.Operations.Count()}, starting: {batch.ChangeSet.Operations.First().ContentId}] being sent...", ["dataverse"]);
         BatchResponse response = null;
-        var lockAcquired = false;
         try
         {
-            await taskThrottler.WaitAsync(CancellationToken).ConfigureAwait(false);
-            lockAcquired = true;
-            response = await batchProcessor.ExecuteBatchAsync(batch, CancellationToken);
+            response = await batchProcessor.ExecuteBatchAsync(batch, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -386,14 +396,6 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         catch (Exception ex)
         {
             throw new BatchException<string>($"Batch failed: {ex.Message}", ex) { Batch = batch };
-        }
-        finally
-        {
-            if (lockAcquired)
-            {
-                _ = taskThrottler.Release();
-            }
-            _ = Interlocked.Increment(ref batchCounter);
         }
         batch.Response = response;
         return batch;
@@ -405,7 +407,10 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
         { return; }
         if (disposing)
         {
-            taskThrottler?.Dispose();
+            if (batchScheduler is not null)
+            {
+                batchScheduler.DisposeAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
         }
         base.Dispose(disposing);
     }

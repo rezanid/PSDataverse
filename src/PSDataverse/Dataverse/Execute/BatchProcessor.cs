@@ -2,6 +2,7 @@ namespace PSDataverse.Dataverse.Execute;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -21,7 +22,8 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
     private const int MaxErrorBodyLength = 2048;
     private readonly ILogger log;
     private readonly HttpClient httpClient;
-    private readonly IAsyncPolicy<HttpResponseMessage> retry;
+    private readonly IAsyncPolicy<HttpResponseMessage> retryPolicy;
+    private readonly IAsyncPolicy<HttpResponseMessage> noRetryPolicy;
 
     public string AuthenticationToken
     {
@@ -43,7 +45,8 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
     {
         this.log = log;
         httpClient = httpClientFactory.CreateClient(Globals.DataverseHttpClientName);
-        retry = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
+        retryPolicy = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
+        noRetryPolicy = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameNoRetry);
     }
 
     public async IAsyncEnumerable<BatchResponse> ProcessAsync(Batch<JObject> batch)
@@ -71,7 +74,10 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
             throw new ArgumentException("Batch.Id cannot be null or empty.", nameof(batch));
         }
 
-        using var response = await retry.ExecuteAsync(
+        var policy = batch.ChangeSet?.Operations?.All(operation => HttpReplaySafety.IsReplaySafe(operation.Method)) == true
+            ? retryPolicy
+            : noRetryPolicy;
+        using var response = await policy.ExecuteAsync(
             ct => httpClient.SendAsync(HttpMethod.Post, "$batch", batch, ct),
             cancellationToken).ConfigureAwait(false);
 
@@ -130,6 +136,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
         try
         {
             var batchResponse = BatchResponse.Parse(responseContent);
+            batchResponse.RecommendedDegreeOfParallelism = GetRecommendedDegreeOfParallelism(response);
             if (!batchResponse.IsSuccessful)
             {
                 var failedResponse = batchResponse.Operations.FirstOrDefault();
@@ -162,6 +169,19 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
             ErrorCode = (int)response.StatusCode,
             RetryAfter = response.Headers.RetryAfter?.Delta
         };
+
+    private static int? GetRecommendedDegreeOfParallelism(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("x-ms-dop-hint", out var values))
+        {
+            return null;
+        }
+
+        var value = values.FirstOrDefault();
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hint) && hint > 0
+            ? hint
+            : null;
+    }
 
     private static string Limit(string value)
         => string.IsNullOrEmpty(value)
