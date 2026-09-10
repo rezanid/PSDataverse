@@ -139,6 +139,8 @@ Or even:
 Send-DataverseOperation WhoAmI
 ```
 
+For batched pipelines, `-MaxDop` is the client-side concurrency ceiling. PSDataverse automatically follows Dataverse's lower concurrency hint when one is returned. Results stream in completion order by default; specify `-OutputOrder Input` when stable input ordering is required.
+
 
 
 This will result in an OperationResponse like the following:

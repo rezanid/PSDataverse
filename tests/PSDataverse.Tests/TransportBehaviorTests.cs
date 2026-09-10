@@ -75,6 +75,55 @@ public class TransportBehaviorTests
     }
 
     [Fact]
+    public async Task RetryPolicyDoesNotReplayPostAfterTransientResponse()
+    {
+        var handler = new TestHttpMessageHandler()
+            .Enqueue(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        using var client = TestHttpInfrastructure.CreateClient(handler);
+        var processor = new OperationProcessor(
+            NullLogger.Instance,
+            new TestHttpClientFactory(client),
+            new Startup(new Uri("https://example.crm.dynamics.com")).SetupRetryPolicies());
+
+        var action = () => processor.ExecuteAsync(new Operation<string>
+        {
+            Method = "POST",
+            Uri = "accounts",
+            Value = "{\"name\":\"example\"}"
+        });
+
+        await action.Should().ThrowAsync<OperationException<string>>();
+        handler.RequestCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task BatchResponseCapturesServerDegreeOfParallelismHint()
+    {
+        var body = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory,
+            "samples",
+            "BatchResponse-Success.http"));
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(body)
+        };
+        response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(
+            "multipart/mixed; boundary=batchresponse_batch-1");
+        response.Headers.Add("x-ms-dop-hint", "7");
+        var handler = new TestHttpMessageHandler().Enqueue(response);
+        using var client = TestHttpInfrastructure.CreateClient(handler);
+        var processor = new BatchProcessor(
+            NullLogger.Instance,
+            new TestHttpClientFactory(client),
+            TestHttpInfrastructure.CreateNoOpPolicies());
+
+        var result = await processor.ExecuteBatchAsync(new Batch<string>(
+            [new Operation<string> { ContentId = "1", Method = "DELETE", Uri = "accounts(1)" }]));
+
+        result.RecommendedDegreeOfParallelism.Should().Be(7);
+    }
+
+    [Fact]
     public void RetryDelaySupportsDeltaDateAndExceptionResults()
     {
         var now = new DateTimeOffset(2026, 9, 9, 12, 0, 0, TimeSpan.Zero);

@@ -49,7 +49,7 @@ internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
             client.DefaultRequestHeaders.Add("OData-Version", "4.0");
             client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
         })
-        .ConfigureHttpMessageHandlerBuilder(builder => builder.PrimaryHandler = new HttpClientHandler
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {
             AllowAutoRedirect = false,
             UseCookies = false,
@@ -78,6 +78,7 @@ internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
             .WaitAndRetryAsync(5, WaitTimeProvider, OnRetryAsync);
 
         registry.Add(Globals.PolicyNameHttp, httpPolicy);
+        registry.Add(Globals.PolicyNameNoRetry, Policy.NoOpAsync<HttpResponseMessage>());
         return registry;
     }
 

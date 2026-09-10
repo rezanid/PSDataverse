@@ -41,6 +41,7 @@ public class CoreRegressionTests
     [InlineData(-1, 20)]
     [InlineData(1, 1)]
     [InlineData(64, 64)]
+    [InlineData(int.MaxValue, 1024)]
     public void MaxDopUsesABoundedDefault(int input, int expected)
         => SendDataverseOperationCmdlet.ResolveMaxDop(input).Should().Be(expected);
 

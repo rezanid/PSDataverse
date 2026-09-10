@@ -12,6 +12,7 @@ public static class Globals
     public const string VariableNameIsOnPremise = "Dataverse-IsOnPremise";
     public const string VariableNameConnectionRegistry = "Dataverse-ConnectionRegistry";
     public const string PolicyNameHttp = "httpPolicy";
+    public const string PolicyNameNoRetry = "noRetryPolicy";
     public const string ErrorIdAuthenticationFailed = "DVERR-901";
     public const string ErrorIdBatchFailure = "DVERR-1001";
     public const string ErrorIdNotConnected = "DVERR-1001";

@@ -72,6 +72,7 @@ internal static class TestHttpInfrastructure
     public static PolicyRegistry CreateNoOpPolicies()
         => new()
         {
-            { Globals.PolicyNameHttp, Policy.NoOpAsync<HttpResponseMessage>() }
+            { Globals.PolicyNameHttp, Policy.NoOpAsync<HttpResponseMessage>() },
+            { Globals.PolicyNameNoRetry, Policy.NoOpAsync<HttpResponseMessage>() }
         };
 }

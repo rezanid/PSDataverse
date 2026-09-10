@@ -17,7 +17,8 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
 {
     private readonly ILogger log;
     private readonly HttpClient httpClient;
-    private readonly IAsyncPolicy<HttpResponseMessage> policy;
+    private readonly IAsyncPolicy<HttpResponseMessage> retryPolicy;
+    private readonly IAsyncPolicy<HttpResponseMessage> noRetryPolicy;
     public string AuthenticationToken
     {
         set => httpClient.DefaultRequestHeaders.Authorization =
@@ -37,7 +38,8 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
     {
         this.log = log;
         httpClient = httpClientFactory.CreateClient("Dataverse");
-        policy = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
+        retryPolicy = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameHttp);
+        noRetryPolicy = policyRegistry.Get<IAsyncPolicy<HttpResponseMessage>>(Globals.PolicyNameNoRetry);
     }
 
     public async IAsyncEnumerable<HttpResponseMessage> ProcessAsync(Batch<JObject> batch)
@@ -70,7 +72,8 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
         }
 
         log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
-        var response = await policy.ExecuteAsync(ct => httpClient.SendAsync(operation, ct), cancellationToken);
+        var response = await GetPolicy(operation.Method)
+            .ExecuteAsync(ct => httpClient.SendAsync(operation, ct), cancellationToken);
         log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
 
         if (response.IsSuccessStatusCode)
@@ -97,7 +100,8 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
         }
 
         log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
-        var response = await policy.ExecuteAsync(ct => httpClient.SendAsync(operation, ct), cancellationToken);
+        var response = await GetPolicy(operation.Method)
+            .ExecuteAsync(ct => httpClient.SendAsync(operation, ct), cancellationToken);
         log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
 
         if (response.IsSuccessStatusCode)
@@ -125,6 +129,9 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
                 string.IsNullOrEmpty(operation.ContentId) ? Guid.Empty.ToString() : operation.ContentId,
                 error));
     }
+
+    private IAsyncPolicy<HttpResponseMessage> GetPolicy(string method)
+        => HttpReplaySafety.IsReplaySafe(method) ? retryPolicy : noRetryPolicy;
 
     private async Task ThrowOperationExceptionAsync(
         Operation<string> operation,

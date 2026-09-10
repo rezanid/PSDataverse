@@ -9,6 +9,7 @@ public class BatchResponse
     public string Id { get; }
     public string BoundaryId { get; }
     public bool IsSuccessful { get; set; }
+    public int? RecommendedDegreeOfParallelism { get; set; }
     public List<OperationResponse> Operations { get; set; }
 
     public BatchResponse() { }
