@@ -50,6 +50,8 @@ Describe 'PSDataverse packaged module contract' {
         ($sets | Where-Object Name -EQ 'ClientSecret').Parameters.Name | Should -Contain 'ClientId'
         ($sets | Where-Object Name -EQ 'Certificate').Parameters.Name | Should -Contain 'CertificateThumbprint'
         ($sets | Where-Object Name -EQ 'AccessToken').Parameters.Name | Should -Contain 'ExpiresOn'
+        ($sets | Where-Object Name -EQ 'Interactive').Parameters.Name | Should -Contain 'ForceAuthentication'
+        ($sets | Where-Object Name -EQ 'DeviceCode').Parameters.Name | Should -Not -Contain 'ForceAuthentication'
     }
 
     It 'accepts operations and objects from the pipeline' {

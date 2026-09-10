@@ -76,6 +76,9 @@ Connect-Dataverse $url -Interactive -TenantId $tenantId
 # Force the system browser on Windows
 Connect-Dataverse $url -Interactive -UseSystemBrowser
 
+# Bypass a cached identity and display the account chooser
+Connect-Dataverse $url -Interactive -ForceAuthentication
+
 Connect-Dataverse $url -DeviceCode -TenantId $tenantId
 
 # Windows-only IWA (subject to tenant policy, federation, and MFA constraints)
@@ -107,6 +110,10 @@ Legacy connection strings remain supported. Familiar XRM tooling names such as `
 `Disconnect-Dataverse` disconnects the default connection when no name is supplied. Use `-All` to dispose every connection. The old `Dataverse-*` global token/service-provider variables are no longer the source of truth; scripts that read those undocumented variables should migrate to `Get-DataverseConnection`.
 
 Passkeys are available through the operating system or browser interactive sign-in experience. There is intentionally no separate “passkey OAuth flow.”
+
+Explicit device-code connections now always perform the device-code interaction instead of silently selecting the first cached account. Token refreshes for the resulting connection still use the cache. Interactive connections retain silent single sign-on by default; use `-ForceAuthentication` when an account chooser is required. In connection strings, the equivalent option is `ForceAuthentication=true`.
+
+Traditional IWA is deprecated by Microsoft in favor of WAM and only supports federated, Active Directory-backed users. Managed Entra-only identities now receive a targeted error recommending `-Interactive` or `-DeviceCode` instead of the raw MSAL failure.
 
 ## Planned PSDataverse 2 migration
 

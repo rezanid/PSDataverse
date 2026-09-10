@@ -15,19 +15,22 @@ internal class DeviceCodeAuthenticator : DelegatingAuthenticator
     {
         var app = await GetClientAppAsync(parameters, cancellationToken).ConfigureAwait(false);
 
-        // Attempt to get a token silently from the cache
-        var accounts = await app.GetAccountsAsync().ConfigureAwait(false);
-        var account = parameters.Account ?? accounts.FirstOrDefault();
-        if (account is not null)
+        if (!parameters.ForceAuthentication)
         {
-            try
+            // Refresh an established connection silently when possible.
+            var accounts = await app.GetAccountsAsync().ConfigureAwait(false);
+            var account = parameters.Account ?? accounts.FirstOrDefault();
+            if (account is not null)
             {
-                var silentResult = await app.AcquireTokenSilent(parameters.Scopes, account).ExecuteAsync(cancellationToken).ConfigureAwait(false);
-                if (silentResult != null) { return silentResult; }
-            }
-            catch (MsalUiRequiredException)
-            {
-                // Silent acquisition failed, user interaction required
+                try
+                {
+                    var silentResult = await app.AcquireTokenSilent(parameters.Scopes, account).ExecuteAsync(cancellationToken).ConfigureAwait(false);
+                    if (silentResult != null) { return silentResult; }
+                }
+                catch (MsalUiRequiredException)
+                {
+                    // Silent acquisition failed, user interaction required.
+                }
             }
         }
 
