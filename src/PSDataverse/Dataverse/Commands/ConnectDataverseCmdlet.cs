@@ -89,6 +89,9 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
     public SwitchParameter UseSystemBrowser { get; set; }
 
     [Parameter(ParameterSetName = InteractiveSet)]
+    public SwitchParameter ForceAuthentication { get; set; }
+
+    [Parameter(ParameterSetName = InteractiveSet)]
     [Parameter(ParameterSetName = DeviceCodeSet)]
     public string RedirectUri { get; set; } = AuthenticationParameters.DefaultRedirectUrl;
 
@@ -203,6 +206,7 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
             UseCurrentUser = ParameterSetName is UrlSet or InteractiveSet,
             UseIntegratedWindowsAuthentication = ParameterSetName == IntegratedWindowsSet,
             UseBroker = (ParameterSetName is UrlSet or InteractiveSet) && OperatingSystem.IsWindows() && !UseSystemBrowser,
+            ForceAuthentication = ParameterSetName == DeviceCodeSet || ForceAuthentication,
             Username = Username,
             ClientSecret = ResolveClientSecret(),
             CertificateThumbprint = CertificateThumbprint,

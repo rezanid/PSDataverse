@@ -28,27 +28,32 @@ internal sealed class WamAuthenticator : DelegatingAuthenticator
         var account = parameters.Account ?? accounts.FirstOrDefault(candidate =>
             string.Equals(candidate.HomeAccountId?.TenantId, parameters.Tenant, StringComparison.OrdinalIgnoreCase))
             ?? accounts.FirstOrDefault();
-        try
+        if (!parameters.ForceAuthentication && account is not null)
         {
-            return await app.AcquireTokenSilent(parameters.Scopes, account)
-                .ExecuteAsync(cancellationToken)
-                .ConfigureAwait(false);
+            try
+            {
+                return await app.AcquireTokenSilent(parameters.Scopes, account)
+                    .ExecuteAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (MsalUiRequiredException)
+            {
+                // Nothing usable in the cache; continue interactively.
+            }
         }
-        catch (MsalUiRequiredException)
+
+        var builder = app.AcquireTokenInteractive(parameters.Scopes)
+            .WithPrompt(Prompt.SelectAccount);
+        if (!parameters.ForceAuthentication && account is not null)
         {
-            var builder = app.AcquireTokenInteractive(parameters.Scopes)
-                .WithPrompt(Prompt.SelectAccount);
-            if (account is not null)
-            {
-                builder = builder.WithAccount(account);
-            }
-            var parent = WindowHelper.GetConsoleOrTerminalWindow();
-            if (parent != IntPtr.Zero)
-            {
-                builder = builder.WithParentActivityOrWindow(parent);
-            }
-            return await builder.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+            builder = builder.WithAccount(account);
         }
+        var parent = WindowHelper.GetConsoleOrTerminalWindow();
+        if (parent != IntPtr.Zero)
+        {
+            builder = builder.WithParentActivityOrWindow(parent);
+        }
+        return await builder.ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static Task<IPublicClientApplication> CreateApplicationAsync(

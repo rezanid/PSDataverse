@@ -34,7 +34,19 @@ public class AuthenticationParametersTests
         Assert.Equal(expected: "https://login.microsoftonline.com/tenant-id/oauth2/authorize", cnnString.Authority);
         Assert.Equal(expected: "client-id", cnnString.ClientId);
         Assert.True(cnnString.UseDeviceFlow);
+        Assert.True(cnnString.ForceAuthentication);
         Assert.Equal(expected: "https://environment-name.crm4.dynamics.com/", cnnString.Resource);
+    }
+
+    [Fact]
+    public void CanForceInteractiveAuthenticationFromConnectionString()
+    {
+        var value = AuthenticationParameters.Parse(
+            "AuthType=Interactive;Url=https://example.crm.dynamics.com;" +
+            "TenantId=tenant-id;ForceAuthentication=true");
+
+        value.UseCurrentUser.Should().BeTrue();
+        value.ForceAuthentication.Should().BeTrue();
     }
 
     [Fact]

@@ -38,6 +38,9 @@ internal static class DataverseConnectionFactory
                     var result = await services.GetRequiredService<AuthenticationService>()
                         .AuthenticateAsync(parameters, onMessageForUser, token)
                         .ConfigureAwait(false);
+                    // A forced prompt applies only to initial connection establishment.
+                    // Token refresh should continue to use MSAL's cache silently.
+                    parameters.ForceAuthentication = false;
                     connection.AuthenticationAccount = result.Account;
                     connection.Account = result.Account?.Username ?? "application";
                     return new DataverseAccessToken(result.AccessToken, result.ExpiresOn);

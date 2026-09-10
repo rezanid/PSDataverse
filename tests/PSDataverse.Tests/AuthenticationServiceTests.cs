@@ -47,6 +47,31 @@ public class AuthenticationServiceTests
         authenticator.CanAuthenticate(parameters).Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData(
+        "integrated_windows_auth_not_supported_managed_user",
+        "only supports federated, Active Directory-backed users")]
+    [InlineData("unknown_user", "could not identify a supported domain identity")]
+    public void IntegratedWindowsFailuresProvideActionableGuidance(string errorCode, string expectedMessage)
+    {
+        var source = new MsalClientException(errorCode, "opaque MSAL failure");
+
+        var result = IntegratedWindowsAuthenticator.CreateActionableException(source);
+
+        result.Should().NotBeNull();
+        result.Message.Should().Contain(expectedMessage);
+        result.Message.Should().Contain("-Interactive");
+        result.InnerException.Should().BeSameAs(source);
+    }
+
+    [Fact]
+    public void UnrecognizedIntegratedWindowsFailureIsNotRewritten()
+    {
+        var source = new MsalClientException("something_else", "original failure");
+
+        IntegratedWindowsAuthenticator.CreateActionableException(source).Should().BeNull();
+    }
+
     private sealed class RecordingAuthenticator : IAuthenticator
     {
         public IAuthenticator NextAuthenticator { get; set; } = null!;

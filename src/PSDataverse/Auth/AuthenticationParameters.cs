@@ -26,6 +26,7 @@ public record AuthenticationParameters
     public bool UseCurrentUser { get; set; }
     public bool UseIntegratedWindowsAuthentication { get; set; }
     public bool UseBroker { get; set; }
+    public bool ForceAuthentication { get; set; }
     internal bool BrokerPreferenceSpecified { get; set; }
     public string RedirectUri { get; set; } = DefaultRedirectUrl;
     public string Username { get; set; }
@@ -93,7 +94,9 @@ public record AuthenticationParameters
             UseDeviceFlow = GetBoolean(dictionary, "device") || IsAuthType(dictionary, "devicecode"),
             UseCurrentUser = GetBoolean(dictionary, "integrated security") || IsAuthType(dictionary, "oauth", "interactive"),
             UseIntegratedWindowsAuthentication = IsAuthType(dictionary, "ad", "integratedwindows"),
-            UseBroker = GetBoolean(dictionary, "usebroker")
+            UseBroker = GetBoolean(dictionary, "usebroker"),
+            ForceAuthentication = GetBoolean(dictionary, "forceauthentication") ||
+                GetBoolean(dictionary, "device") || IsAuthType(dictionary, "devicecode")
         };
         parameters.BrokerPreferenceSpecified = dictionary.ContainsKey("usebroker");
         if (string.IsNullOrEmpty(parameters.Authority) && !string.IsNullOrEmpty(parameters.Tenant))

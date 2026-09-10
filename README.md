@@ -50,11 +50,23 @@ Start by connecting to a Dataverse environment with `Connect-Dataverse`. PSDatav
 $connection = Connect-Dataverse https://<environment>.crm.dynamics.com -Interactive
 ```
 
+Interactive authentication normally reuses a suitable cached identity. Add `-ForceAuthentication` to display the account chooser when the wrong account is cached or when you need to change identity:
+
+```powershell
+$connection = Connect-Dataverse https://<environment>.crm.dynamics.com `
+  -Interactive -ForceAuthentication
+```
+
 **Device-code authentication** is convenient for remote terminals and hosts without a browser.
 
 ```powershell
 Connect-Dataverse https://<environment>.crm.dynamics.com -DeviceCode -InformationAction Continue
 ```
+
+An explicit `-DeviceCode` connection always displays a new device code. Later token refreshes remain silent while MSAL can refresh the selected identity.
+
+> [!NOTE]
+> Traditional Integrated Windows Authentication is retained for federated, Active Directory-backed users, but it is deprecated by Microsoft and does not support managed Entra-only users. Prefer `-Interactive`, which uses WAM on Windows.
 
 **Application authentication** accepts a secure client secret or a certificate from the operating-system certificate store.
 
