@@ -39,6 +39,20 @@ if (-not (Get-Module -Name PSDataverse)) {
 > **NOTE!**
 > PSDataverse is a hybrid module that is a mix of PSDataverse.dll and PSDataverse.psd1 module definition. Only the commands that made more sense to be implemented as binary are included in the dll, and the rest of the implementation is done using PowerShell language.
 
+## Developing and testing
+
+Build and test dependencies are pinned and installed under the ignored `output` directory, so a machine-wide Pester installation is not used:
+
+```powershell
+Import-Module ./build.psm1 -Force
+Start-PSDataverseBuild -Output ./output/PSDataverse
+./tools/Install-BuildDependencies.ps1
+./tools/Test-PSDataverseModule.ps1 -ModulePath ./output/PSDataverse/PSDataverse.psd1
+dotnet test PSDataverse.sln
+```
+
+If the build reports that its output is in use, close every PowerShell session that imported that copy of PSDataverse and rerun it.
+
 # How to use
 Start by connecting to a Dataverse environment with `Connect-Dataverse`. PSDataverse supports browser or broker interaction, Integrated Windows Authentication, device code, application credentials, supplied tokens, token providers, and legacy connection strings.
 
@@ -50,11 +64,13 @@ Start by connecting to a Dataverse environment with `Connect-Dataverse`. PSDatav
 $connection = Connect-Dataverse https://<environment>.crm.dynamics.com -Interactive
 ```
 
+On Windows, the preceding command uses Web Account Manager (WAM) by default. You can state that choice explicitly with `-UseWebAccountManager` (alias `-UseWam`), or opt out with `-UseSystemBrowser`.
+
 Interactive authentication normally reuses a suitable cached identity. Add `-ForceAuthentication` to display the account chooser when the wrong account is cached or when you need to change identity:
 
 ```powershell
 $connection = Connect-Dataverse https://<environment>.crm.dynamics.com `
-  -Interactive -ForceAuthentication
+  -Interactive -UseWam -ForceAuthentication
 ```
 
 **Device-code authentication** is convenient for remote terminals and hosts without a browser.
@@ -109,7 +125,15 @@ Let's look at a simple operation.
  ```powershell
  Send-DataverseOperation @{Uri="WhoAmI"}
  ```
- 
+
+Or even:
+
+```powershell
+Send-DataverseOperation WhoAmI
+```
+
+
+
 This will result in an OperationResponse like the following:
 
 ```

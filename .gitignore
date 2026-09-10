@@ -1,5 +1,6 @@
 /nuget-repository/
 /output/
+/testResults.xml
 bin/
 obj/
 /.vs/
