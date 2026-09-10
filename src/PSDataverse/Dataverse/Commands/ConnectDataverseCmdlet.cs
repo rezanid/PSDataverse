@@ -1,9 +1,11 @@
 namespace PSDataverse;
 
 using System;
+using System.Collections.Concurrent;
 using System.Management.Automation;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 
 [Cmdlet(VerbsCommunications.Connect, "Dataverse", DefaultParameterSetName = ConnectionStringSet)]
@@ -133,7 +135,7 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
         DataverseConnection connection = null;
         try
         {
-            connection = CreateConnectionAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            connection = CreateConnection();
             DisposeLegacyConnection();
             GetConnectionRegistry().Add(connection, setDefault: !NoDefault);
             WriteInformation(
@@ -161,7 +163,31 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
         }
     }
 
-    private async Task<DataverseConnection> CreateConnectionAsync()
+    private DataverseConnection CreateConnection()
+    {
+        var messages = new ConcurrentQueue<string>();
+        var connectionTask = CreateConnectionAsync(messages.Enqueue);
+        while (!connectionTask.IsCompleted)
+        {
+            WritePendingMessages(messages);
+            CancellationToken.ThrowIfCancellationRequested();
+            Thread.Sleep(25);
+        }
+        WritePendingMessages(messages);
+        return connectionTask.ConfigureAwait(false).GetAwaiter().GetResult();
+    }
+
+    private void WritePendingMessages(ConcurrentQueue<string> messages)
+    {
+        while (messages.TryDequeue(out var message))
+        {
+            WriteInformation(
+                new HostInformationMessage { Message = message },
+                ["PSHOST", "dataverse"]);
+        }
+    }
+
+    private async Task<DataverseConnection> CreateConnectionAsync(Action<string> onMessageForUser)
     {
         if (ParameterSetName == ConnectionStringSet)
         {
@@ -173,7 +199,7 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
             }
             var connectionKind = ResolveAuthenticationKind(connectionParameters);
             return await DataverseConnectionFactory.CreateMsalAsync(
-                Name, new Uri(connectionParameters.Resource), ApiVersion, connectionKind, connectionParameters, OnMessageForUser, CancellationToken)
+                Name, new Uri(connectionParameters.Resource), ApiVersion, connectionKind, connectionParameters, onMessageForUser, CancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -241,7 +267,7 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
             _ => DataverseAuthenticationKind.Interactive
         };
         return await DataverseConnectionFactory.CreateMsalAsync(
-            Name, serviceUrl, ApiVersion, kind, parameters, OnMessageForUser, CancellationToken)
+            Name, serviceUrl, ApiVersion, kind, parameters, onMessageForUser, CancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -302,8 +328,6 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
         }
         return new Uri(uri.AbsoluteUri.TrimEnd('/') + "/");
     }
-
-    private void OnMessageForUser(string message) => WriteInformation(message, ["dataverse"]);
 
     private void DisposeLegacyConnection()
     {

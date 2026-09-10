@@ -116,6 +116,8 @@ Passkeys are available through the operating system or browser interactive sign-
 
 Explicit device-code connections now always perform the device-code interaction instead of silently selecting the first cached account. Token refreshes for the resulting connection still use the cache. Interactive connections retain silent single sign-on by default; use `-ForceAuthentication` when an account chooser is required. In connection strings, the equivalent option is `ForceAuthentication=true`.
 
+Device-code instructions are written to the PowerShell host and are visible under the default information preference. Earlier development builds wrote them as ordinary information records, which made a connection appear to hang unless `-InformationAction Continue` was supplied.
+
 Traditional IWA is deprecated by Microsoft in favor of WAM and only supports federated, Active Directory-backed users. Managed Entra-only identities now receive a targeted error recommending `-Interactive` or `-DeviceCode` instead of the raw MSAL failure.
 
 ## Milestone 3 request-engine changes
