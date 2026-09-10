@@ -78,14 +78,18 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
     private DataverseConnection activeConnection;
     private OperationProcessor operationProcessor;
     private OperationHandler operationHandler;
+    private readonly JsonToPSObjectConverter jsonConverter = new();
     private BatchProcessor batchProcessor;
     private int operationCounter;
     private int batchCounter;
     private List<Operation<string>> operations;
     private Stopwatch stopwatch;
     private BoundedChannelScheduler<Batch<string>, Batch<string>> batchScheduler;
+    private BoundedChannelScheduler<Operation<string>, OperationExecutionResult> operationScheduler;
     private readonly SortedDictionary<long, ScheduledResult<Batch<string>>> orderedResults = [];
+    private readonly SortedDictionary<long, ScheduledResult<OperationExecutionResult>> orderedOperationResults = [];
     private long nextOutputSequence;
+    private long nextOperationOutputSequence;
     private int effectiveMaxDop;
 
     private const int DefaultMaxDop = 20;
@@ -131,16 +135,26 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
             return;
         }
 
+        effectiveMaxDop = ResolveMaxDop(MaxDop);
         if (BatchSize > 0)
         {
             operations = new List<Operation<string>>(BatchSize);
-            effectiveMaxDop = ResolveMaxDop(MaxDop);
             batchScheduler = new BoundedChannelScheduler<Batch<string>, Batch<string>>(
                 Math.Max(1, effectiveMaxDop * 2),
                 effectiveMaxDop,
                 SendBatchAsync,
                 CancellationToken,
                 batch => batch.Response?.RecommendedDegreeOfParallelism);
+        }
+        else
+        {
+            operationProcessor.AuthenticationToken = accessToken;
+            operationScheduler = new BoundedChannelScheduler<Operation<string>, OperationExecutionResult>(
+                Math.Max(1, effectiveMaxDop * 2),
+                effectiveMaxDop,
+                SendOperationAsync,
+                CancellationToken,
+                result => result.RecommendedDegreeOfParallelism);
         }
         operationCounter = 0;
     }
@@ -168,7 +182,8 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
 
         if (BatchSize <= 0)
         {
-            operationHandler.ExecuteSingleOperation(op, accessToken, AutoPaginate.IsPresent, CancellationToken);
+            operationScheduler.EnqueueAsync(op).AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+            DrainOperationResults(waitForCompletion: false);
             return;
         }
 
@@ -184,6 +199,17 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
 
     protected override void EndProcessing()
     {
+        if (isValidationFailed)
+        {
+            stopwatch?.Stop();
+            base.EndProcessing();
+            return;
+        }
+        if (BatchSize == 0)
+        {
+            operationScheduler.Complete();
+            DrainOperationResults(waitForCompletion: true);
+        }
         if (BatchSize > 0)
         {
             if (operations.Count > 0)
@@ -349,6 +375,59 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
             .ConfigureAwait(false).GetAwaiter().GetResult());
     }
 
+    private void DrainOperationResults(bool waitForCompletion)
+    {
+        do
+        {
+            while (operationScheduler.Results.TryRead(out var result))
+            {
+                AcceptOperationResult(result);
+            }
+            if (!waitForCompletion)
+            {
+                return;
+            }
+        }
+        while (operationScheduler.Results.WaitToReadAsync(CancellationToken).AsTask()
+            .ConfigureAwait(false).GetAwaiter().GetResult());
+    }
+
+    private void AcceptOperationResult(ScheduledResult<OperationExecutionResult> result)
+    {
+        if (OutputOrder.Equals("Input", StringComparison.OrdinalIgnoreCase))
+        {
+            orderedOperationResults.Add(result.Sequence, result);
+            while (orderedOperationResults.Remove(nextOperationOutputSequence, out var next))
+            {
+                WriteOperationResult(next);
+                nextOperationOutputSequence++;
+            }
+            return;
+        }
+        WriteOperationResult(result);
+    }
+
+    private void WriteOperationResult(ScheduledResult<OperationExecutionResult> result)
+    {
+        if (result.IsSuccess)
+        {
+            foreach (var output in result.Value.Output)
+            {
+                WriteObject(output);
+            }
+            return;
+        }
+        if (result.Error is OperationCanceledException)
+        {
+            throw result.Error;
+        }
+        WriteError(new ErrorRecord(
+            result.Error,
+            Globals.ErrorIdOperationException,
+            ErrorCategory.WriteError,
+            this));
+    }
+
     private void AcceptBatchResult(ScheduledResult<Batch<string>> result)
     {
         if (OutputOrder.Equals("Input", StringComparison.OrdinalIgnoreCase))
@@ -437,6 +516,48 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
         return batch;
     }
 
+    private async Task<OperationExecutionResult> SendOperationAsync(
+        Operation<string> operation,
+        CancellationToken cancellationToken)
+    {
+        var output = new List<object>();
+        int? recommendedDegreeOfParallelism = null;
+        do
+        {
+            using var response = await operationProcessor.ExecuteAsync(operation, cancellationToken).ConfigureAwait(false);
+            var operationResponse = OperationResponse.From(response);
+            if (string.IsNullOrEmpty(operationResponse.ContentId))
+            {
+                operationResponse.ContentId = operation.ContentId;
+            }
+            recommendedDegreeOfParallelism ??= GetDegreeOfParallelismHint(operationResponse.Headers);
+            if (!AutoPaginate.IsPresent)
+            {
+                output.Add(operationResponse);
+                break;
+            }
+
+            var page = jsonConverter.FromODataJsonString(operationResponse.Content);
+            output.Add(page);
+            var nextPage = page.Properties["@odata.nextLink"]?.Value as string;
+            if (string.IsNullOrEmpty(nextPage))
+            {
+                break;
+            }
+            operation.Uri = nextPage;
+        }
+        while (true);
+
+        return new OperationExecutionResult(output, recommendedDegreeOfParallelism);
+    }
+
+    private static int? GetDegreeOfParallelismHint(IReadOnlyDictionary<string, string> headers)
+        => headers is not null &&
+           headers.TryGetValue("x-ms-dop-hint", out var value) &&
+           int.TryParse(value, out var hint) && hint > 0
+            ? hint
+            : null;
+
     protected override void Dispose(bool disposing)
     {
         if (Disposed)
@@ -447,9 +568,17 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
             {
                 batchScheduler.DisposeAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
             }
+            if (operationScheduler is not null)
+            {
+                operationScheduler.DisposeAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
         }
         base.Dispose(disposing);
     }
 
     public void WriteInformation(string messageData, string[] tags) => base.WriteInformation(messageData, tags);
+
+    private sealed record OperationExecutionResult(
+        IReadOnlyList<object> Output,
+        int? RecommendedDegreeOfParallelism);
 }
