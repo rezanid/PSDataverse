@@ -75,6 +75,30 @@ public class TransportBehaviorTests
     }
 
     [Fact]
+    public async Task RetryPolicyRepeatsTooManyRequestsUsingRetryAfter()
+    {
+        var throttled = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+        throttled.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.Zero);
+        var handler = new TestHttpMessageHandler()
+            .Enqueue(throttled)
+            .Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"value\":[]}")
+            });
+        using var client = TestHttpInfrastructure.CreateClient(handler);
+        var processor = new OperationProcessor(
+            NullLogger.Instance,
+            new TestHttpClientFactory(client),
+            Startup.SetupRetryPolicies());
+
+        using var response = await processor.ExecuteAsync(
+            new Operation<string> { Method = "GET", Uri = "accounts" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        handler.RequestCount.Should().Be(2);
+    }
+
+    [Fact]
     public async Task RetryPolicyDoesNotReplayPostAfterTransientResponse()
     {
         var handler = new TestHttpMessageHandler()
