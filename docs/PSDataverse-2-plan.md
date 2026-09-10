@@ -64,9 +64,10 @@ Milestone 2 is complete when named connections can be created, enumerated, selec
 - [x] Introduce `Invoke-DataverseRequest` and keep `Send-DataverseOperation` as a compatibility alias for at least one major release.
 - [x] Add connection inspection, WhoAmI/test, CRUD, metadata, action/function, and bulk import/export commands.
 - [x] Generate and publish command-reference help for the expanded command surface.
-- Benchmark parallel individual requests, small `$batch` payloads, and Dataverse bulk APIs before selecting defaults.
+- [x] Add a guarded disposable-table harness that independently measures POST, PATCH, and DELETE with parallel individual requests, `$batch`, and the bulk APIs supported by custom standard tables.
+- Benchmark the guarded write harness in the test environment before selecting defaults.
 
-The read-only parallel-request benchmark harness is available in `tools/Measure-DataverseRequestPerformance.ps1`; the first recorded result is in `docs/benchmarks/2026-09-org8848d2a1.md`. Selecting batch and bulk defaults remains open until the same environment/data shape can be measured without risking production data.
+The read-only parallel-request benchmark harness is available in `tools/Measure-DataverseRequestPerformance.ps1`; the first recorded result is in `docs/benchmarks/2026-09-org8848d2a1.md`. The guarded write harness is `tools/Measure-DataverseWritePerformance.ps1`. It creates and removes a uniquely named custom table, verifies counts between phases, and deliberately treats GET, POST, PATCH, and DELETE as different workloads. Selecting batch and bulk defaults remains open until its live results are recorded.
 
 ## Compatibility policy
 
