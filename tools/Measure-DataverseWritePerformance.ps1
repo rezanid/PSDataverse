@@ -1,9 +1,15 @@
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [ValidateRange(1, 5000)][int]$Count = 100,
-    [ValidateNotNullOrEmpty()][int[]]$MaxDop = @(1, 8, 32),
-    [ValidateRange(1, 1000)][int]$BatchSize = 100,
-    [ValidateRange(1, 1000)][int]$BulkSize = 100,
+    [ValidateNotNullOrEmpty()][int[]]$MaxDop = @(1, 8, 20, 32),
+    [ValidateNotNullOrEmpty()][int[]]$BatchMaxDop = @(1, 4, 8),
+    [ValidateNotNullOrEmpty()][int[]]$BulkMaxDop = @(1, 4),
+    [ValidateRange(1, 1000)][int]$BatchSize = 20,
+    [ValidateRange(1, 1000)][int]$BulkSize = 50,
+    [ValidateRange(1, 20)][int]$RepeatCount = 3,
+    [ValidateRange(0, 100)][int]$WarmUpCount = 5,
+    [int]$RandomSeed = 8848,
+    [switch]$SummaryOnly,
     [string]$ConnectionName
 )
 
@@ -11,32 +17,43 @@ $ErrorActionPreference = 'Stop'
 $connectionParameters = @{}
 if ($ConnectionName) { $connectionParameters.ConnectionName = $ConnectionName }
 
+foreach ($dop in @($MaxDop) + @($BatchMaxDop) + @($BulkMaxDop)) {
+    if ($dop -lt 1 -or $dop -gt 1024) { throw "MaxDop value '$dop' must be between 1 and 1024." }
+}
+
+$bulkEnvelopeCount = [math]::Ceiling($Count / [double]$BulkSize)
+$effectiveBulkMaxDop = @($BulkMaxDop | Sort-Object -Unique)
+if ($bulkEnvelopeCount -eq 1 -and @($effectiveBulkMaxDop | Where-Object { $_ -gt 1 }).Count) {
+    Write-Warning "Count $Count and BulkSize $BulkSize produce one bulk envelope; BulkMaxDop above 1 cannot add concurrency and will be skipped."
+    $effectiveBulkMaxDop = @(1)
+}
+
+$batchEnvelopeCount = [math]::Ceiling($Count / [double]$BatchSize)
+$effectiveBatchMaxDop = @($BatchMaxDop | Sort-Object -Unique)
+if ($batchEnvelopeCount -eq 1 -and @($effectiveBatchMaxDop | Where-Object { $_ -gt 1 }).Count) {
+    Write-Warning "Count $Count and BatchSize $BatchSize produce one batch envelope; BatchMaxDop above 1 cannot add concurrency and will be skipped."
+    $effectiveBatchMaxDop = @(1)
+}
+
 $suffix = (Get-Date -Format 'MMddHHmmss') + (Get-Random -Minimum 100 -Maximum 999)
 $schemaName = "new_PsdvBenchmark$suffix"
 $logicalName = $schemaName.ToLowerInvariant()
-$primaryName = "${logicalName}name"
-$primaryId = "${logicalName}id"
 $tableCreated = $false
 $results = [Collections.Generic.List[object]]::new()
+$random = [Random]::new($RandomSeed)
 
-function Invoke-TimedScenario {
-    param(
-        [string]$Operation,
-        [string]$Transport,
-        [int]$LogicalOperationCount,
-        [int]$RequestedMaxDop,
-        [scriptblock]$Action
-    )
-    $timer = [Diagnostics.Stopwatch]::StartNew()
-    & $Action
-    $timer.Stop()
+function Add-TimedResult {
+    param([int]$Iteration, [string]$Operation, [pscustomobject]$Scenario,
+        [int]$EnvelopeCount, [timespan]$Elapsed)
     $script:results.Add([pscustomobject]@{
+        Iteration = $Iteration
         Operation = $Operation
-        Transport = $Transport
-        RequestedMaxDop = $RequestedMaxDop
-        OperationCount = $LogicalOperationCount
-        Elapsed = $timer.Elapsed
-        OperationsPerSecond = [math]::Round($LogicalOperationCount / $timer.Elapsed.TotalSeconds, 2)
+        Transport = $Scenario.Transport
+        RequestedMaxDop = $Scenario.MaxDop
+        EnvelopeCount = $EnvelopeCount
+        OperationCount = $Scenario.Rows.Count
+        Elapsed = $Elapsed
+        OperationsPerSecond = [math]::Round($Scenario.Rows.Count / $Elapsed.TotalSeconds, 2)
     })
 }
 
@@ -52,20 +69,130 @@ function Assert-TableCount {
 }
 
 function Get-BenchmarkRowSet {
-    param([string]$Cohort)
-    @(1..$Count | ForEach-Object {
+    param([string]$Cohort, [int]$RowCount)
+    @(1..$RowCount | ForEach-Object {
         $id = [guid]::NewGuid()
         [pscustomobject]@{ Id = $id; Cohort = $Cohort; Name = "$Cohort create $_" }
     })
 }
 
-function Invoke-ChunkedAction {
-    param([object[]]$Rows, [int]$Size, [scriptblock]$Action)
+function Get-BulkRequest {
+    param([object[]]$Rows, [int]$Size, [ValidateSet('POST', 'PATCH')][string]$Operation)
     for ($offset = 0; $offset -lt $Rows.Count; $offset += $Size) {
         $last = [math]::Min($offset + $Size - 1, $Rows.Count - 1)
         $chunk = @($Rows[$offset..$last])
-        & $Action -chunk $chunk
+        $targets = if ($Operation -eq 'POST') {
+            @($chunk | ForEach-Object {
+                @{ '@odata.type' = "Microsoft.Dynamics.CRM.$script:logicalName"
+                    $script:primaryId = $_.Id; $script:primaryName = $_.Name }
+            })
+        } else {
+            @($chunk | ForEach-Object {
+                @{ '@odata.type' = "Microsoft.Dynamics.CRM.$script:logicalName"
+                    $script:primaryId = $_.Id; $script:primaryName = "$($_.Cohort) updated" }
+            })
+        }
+        $actionName = if ($Operation -eq 'POST') { 'CreateMultiple' } else { 'UpdateMultiple' }
+        @{ ContentId = "bulk-$offset"; Method = 'POST'
+            Uri = "$script:tableSetName/Microsoft.Dynamics.CRM.$actionName"
+            Value = @{ Targets = $targets } }
     }
+}
+
+function Invoke-Scenario {
+    param([pscustomobject]$Scenario,
+        [ValidateSet('POST', 'PATCH', 'DELETE')][string]$Operation,
+        [int]$Iteration, [switch]$Measure)
+
+    $timer = [Diagnostics.Stopwatch]::StartNew()
+    switch ($Scenario.Kind) {
+        'Individual' {
+            $null = $Scenario.Rows | ForEach-Object {
+                $request = @{ ContentId = $_.Id.ToString(); Method = $Operation }
+                if ($Operation -eq 'POST') {
+                    $request.Uri = $script:tableSetName
+                    $request.Value = @{ $script:primaryId = $_.Id; $script:primaryName = $_.Name }
+                } else {
+                    $request.Uri = "$script:tableSetName($($_.Id))"
+                    $request.Headers = @{ 'If-Match' = '*' }
+                    if ($Operation -eq 'PATCH') {
+                        $request.Value = @{ $script:primaryName = "$($_.Cohort) updated" }
+                    }
+                }
+                $request
+            } | Invoke-DataverseRequest -MaxDop $Scenario.MaxDop @connectionParameters
+            $envelopeCount = $Scenario.Rows.Count
+        }
+        'Batch' {
+            $null = $Scenario.Rows | ForEach-Object {
+                $request = @{ ContentId = $_.Id.ToString(); Method = $Operation }
+                if ($Operation -eq 'POST') {
+                    $request.Uri = $script:tableSetName
+                    $request.Value = @{ $script:primaryId = $_.Id; $script:primaryName = $_.Name }
+                } else {
+                    $request.Uri = "$script:tableSetName($($_.Id))"
+                    $request.Headers = @{ 'If-Match' = '*' }
+                    if ($Operation -eq 'PATCH') {
+                        $request.Value = @{ $script:primaryName = "$($_.Cohort) updated" }
+                    }
+                }
+                $request
+            } | Invoke-DataverseRequest -BatchSize $Scenario.Size -MaxDop $Scenario.MaxDop @connectionParameters
+            $envelopeCount = [math]::Ceiling($Scenario.Rows.Count / [double]$Scenario.Size)
+        }
+        'Bulk' {
+            if ($Operation -eq 'DELETE') {
+                $null = $Scenario.Rows | ForEach-Object {
+                    @{ ContentId = $_.Id.ToString(); Method = 'DELETE'; Uri = "$script:tableSetName($($_.Id))"
+                        Headers = @{ 'If-Match' = '*' } }
+                } | Invoke-DataverseRequest -MaxDop 20 @connectionParameters
+                $envelopeCount = $Scenario.Rows.Count
+                break
+            }
+            $null = Get-BulkRequest $Scenario.Rows $Scenario.Size $Operation |
+                Invoke-DataverseRequest -MaxDop $Scenario.MaxDop @connectionParameters
+            $envelopeCount = [math]::Ceiling($Scenario.Rows.Count / [double]$Scenario.Size)
+        }
+    }
+    $timer.Stop()
+    if ($Measure) { Add-TimedResult $Iteration $Operation $Scenario $envelopeCount $timer.Elapsed }
+}
+
+function Get-ShuffledScenario {
+    param([object[]]$Scenario)
+    @($Scenario | Sort-Object { $script:random.Next() })
+}
+
+function Get-Median {
+    param([double[]]$Value)
+    $ordered = @($Value | Sort-Object)
+    $middle = [math]::Floor($ordered.Count / 2)
+    if ($ordered.Count % 2) { return $ordered[$middle] }
+    ($ordered[$middle - 1] + $ordered[$middle]) / 2
+}
+
+function Get-ScenarioSet {
+    param([int]$Iteration, [int]$RowCount)
+    $scenarios = [Collections.Generic.List[object]]::new()
+    foreach ($dop in $MaxDop | Sort-Object -Unique) {
+        $scenarios.Add([pscustomobject]@{
+            Kind = 'Individual'; Transport = 'Individual'; MaxDop = $dop; Size = 0
+            Rows = Get-BenchmarkRowSet "run-$Iteration-individual-$dop" $RowCount
+        })
+    }
+    foreach ($dop in $effectiveBatchMaxDop) {
+        $scenarios.Add([pscustomobject]@{
+            Kind = 'Batch'; Transport = "Batch($BatchSize)"; MaxDop = $dop; Size = $BatchSize
+            Rows = Get-BenchmarkRowSet "run-$Iteration-batch-$dop" $RowCount
+        })
+    }
+    foreach ($dop in $effectiveBulkMaxDop) {
+        $scenarios.Add([pscustomobject]@{
+            Kind = 'Bulk'; Transport = "Bulk($BulkSize)"; MaxDop = $dop; Size = $BulkSize
+            Rows = Get-BenchmarkRowSet "run-$Iteration-bulk-$dop" $RowCount
+        })
+    }
+    @($scenarios)
 }
 
 if (!$PSCmdlet.ShouldProcess(
@@ -91,96 +218,63 @@ try {
         }
     }
     $script:tableSetName = $metadata.EntitySetName
-    $primaryId = $metadata.PrimaryIdAttribute
-    $primaryName = $metadata.PrimaryNameAttribute
+    $script:primaryId = $metadata.PrimaryIdAttribute
+    $script:primaryName = $metadata.PrimaryNameAttribute
+    $script:logicalName = $metadata.LogicalName
     Write-Verbose "Benchmarking $logicalName through $script:tableSetName."
 
-    $cohorts = [ordered]@{}
-    foreach ($dop in $MaxDop) {
-        if ($dop -lt 1 -or $dop -gt 1024) { throw "MaxDop value '$dop' must be between 1 and 1024." }
-        $rows = Get-BenchmarkRowSet "individual-$dop"
-        $cohorts["Individual:$dop"] = $rows
-        Invoke-TimedScenario POST Individual $Count $dop {
-            $null = $rows | ForEach-Object {
-                @{ ContentId = $_.Id.ToString(); Method = 'POST'; Uri = $script:tableSetName
-                    Value = @{ $primaryId = $_.Id; $primaryName = $_.Name } }
-            } | Invoke-DataverseRequest -MaxDop $dop @connectionParameters
+    if ($WarmUpCount -gt 0) {
+        Write-Verbose "Warming individual, batch, and bulk write paths with $WarmUpCount rows each."
+        $warmScenarios = @(
+            [pscustomobject]@{ Kind = 'Individual'; Transport = 'Individual'; MaxDop = 20; Size = 0
+                Rows = Get-BenchmarkRowSet 'warm-individual' $WarmUpCount }
+            [pscustomobject]@{ Kind = 'Batch'; Transport = "Batch($BatchSize)"; MaxDop = 1; Size = $BatchSize
+                Rows = Get-BenchmarkRowSet 'warm-batch' $WarmUpCount }
+            [pscustomobject]@{ Kind = 'Bulk'; Transport = "Bulk($BulkSize)"; MaxDop = 1; Size = $BulkSize
+                Rows = Get-BenchmarkRowSet 'warm-bulk' $WarmUpCount }
+        )
+        foreach ($operation in 'POST', 'PATCH', 'DELETE') {
+            foreach ($scenario in $warmScenarios) { Invoke-Scenario $scenario $operation 0 }
         }
+        Assert-TableCount 0
     }
 
-    $batchRows = Get-BenchmarkRowSet 'batch'
-    $cohorts.Batch = $batchRows
-    Invoke-TimedScenario POST "Batch($BatchSize)" $Count 1 {
-        $null = $batchRows | ForEach-Object {
-            @{ ContentId = $_.Id.ToString(); Method = 'POST'; Uri = $script:tableSetName
-                Value = @{ $primaryId = $_.Id; $primaryName = $_.Name } }
-        } | Invoke-DataverseRequest -BatchSize $BatchSize -MaxDop 1 @connectionParameters
-    }
-
-    $bulkRows = Get-BenchmarkRowSet 'create-multiple'
-    $cohorts.CreateMultiple = $bulkRows
-    Invoke-TimedScenario POST "CreateMultiple($BulkSize)" $Count 1 {
-        Invoke-ChunkedAction $bulkRows $BulkSize {
-            param($chunk)
-            $targets = @($chunk | ForEach-Object { @{ $primaryId = $_.Id; $primaryName = $_.Name } })
-            $null = Invoke-DataverseCreateMultiple $script:tableSetName $logicalName $targets `
-                @connectionParameters -Confirm:$false
+    for ($iteration = 1; $iteration -le $RepeatCount; $iteration++) {
+        $scenarios = Get-ScenarioSet $iteration $Count
+        Write-Verbose "Starting measured iteration $iteration of $RepeatCount with $($scenarios.Count) scenarios."
+        foreach ($operation in 'POST', 'PATCH') {
+            foreach ($scenario in Get-ShuffledScenario $scenarios) {
+                Invoke-Scenario $scenario $operation $iteration -Measure
+            }
+            Assert-TableCount ($Count * $scenarios.Count)
         }
-    }
-    Assert-TableCount ($Count * $cohorts.Count)
-
-    foreach ($dop in $MaxDop) {
-        $rows = $cohorts["Individual:$dop"]
-        Invoke-TimedScenario PATCH Individual $Count $dop {
-            $null = $rows | ForEach-Object {
-                @{ ContentId = $_.Id.ToString(); Method = 'PATCH'; Uri = "$script:tableSetName($($_.Id))"
-                    Headers = @{ 'If-Match' = '*' }; Value = @{ $primaryName = "$($_.Cohort) updated" } }
-            } | Invoke-DataverseRequest -MaxDop $dop @connectionParameters
+        foreach ($scenario in Get-ShuffledScenario @($scenarios | Where-Object Kind -NE 'Bulk')) {
+            Invoke-Scenario $scenario DELETE $iteration -Measure
         }
-    }
-
-    Invoke-TimedScenario PATCH "Batch($BatchSize)" $Count 1 {
-        $null = $batchRows | ForEach-Object {
-            @{ ContentId = $_.Id.ToString(); Method = 'PATCH'; Uri = "$script:tableSetName($($_.Id))"
-                Headers = @{ 'If-Match' = '*' }; Value = @{ $primaryName = 'batch updated' } }
-        } | Invoke-DataverseRequest -BatchSize $BatchSize -MaxDop 1 @connectionParameters
-    }
-
-    Invoke-TimedScenario PATCH "UpdateMultiple($BulkSize)" $Count 1 {
-        Invoke-ChunkedAction $bulkRows $BulkSize {
-            param($chunk)
-            $targets = @($chunk | ForEach-Object { @{ $primaryId = $_.Id; $primaryName = 'update-multiple updated' } })
-            $null = Invoke-DataverseUpdateMultiple $script:tableSetName $logicalName $targets `
-                @connectionParameters -Confirm:$false
+        foreach ($scenario in $scenarios | Where-Object Kind -EQ 'Bulk') {
+            Invoke-Scenario $scenario DELETE $iteration
         }
+        Assert-TableCount 0
     }
-    Assert-TableCount ($Count * $cohorts.Count)
-
-    foreach ($dop in $MaxDop) {
-        $rows = $cohorts["Individual:$dop"]
-        Invoke-TimedScenario DELETE Individual $Count $dop {
-            $null = $rows | ForEach-Object {
-                @{ ContentId = $_.Id.ToString(); Method = 'DELETE'; Uri = "$script:tableSetName($($_.Id))"
-                    Headers = @{ 'If-Match' = '*' } }
-            } | Invoke-DataverseRequest -MaxDop $dop @connectionParameters
-        }
+    if ($SummaryOnly) {
+        $results | Group-Object Operation, Transport, RequestedMaxDop | ForEach-Object {
+            $sample = @($_.Group)
+            $rates = @($sample.OperationsPerSecond)
+            [pscustomobject]@{
+                Operation = $sample[0].Operation
+                Transport = $sample[0].Transport
+                RequestedMaxDop = $sample[0].RequestedMaxDop
+                EnvelopeCount = $sample[0].EnvelopeCount
+                OperationCount = $sample[0].OperationCount
+                Samples = $sample.Count
+                MedianOperationsPerSecond = [math]::Round((Get-Median $rates), 2)
+                MinimumOperationsPerSecond = [math]::Round(($rates | Measure-Object -Minimum).Minimum, 2)
+                MaximumOperationsPerSecond = [math]::Round(($rates | Measure-Object -Maximum).Maximum, 2)
+            }
+        } | Sort-Object Operation, Transport, RequestedMaxDop
+    } else {
+        $results
     }
-
-    Invoke-TimedScenario DELETE "Batch($BatchSize)" $Count 1 {
-        $null = $batchRows | ForEach-Object {
-            @{ ContentId = $_.Id.ToString(); Method = 'DELETE'; Uri = "$script:tableSetName($($_.Id))"
-                Headers = @{ 'If-Match' = '*' } }
-        } | Invoke-DataverseRequest -BatchSize $BatchSize -MaxDop 1 @connectionParameters
-    }
-
-    Invoke-TimedScenario DELETE Individual $Count 20 {
-        $null = $bulkRows | ForEach-Object {
-            @{ ContentId = $_.Id.ToString(); Method = 'DELETE'; Uri = "$script:tableSetName($($_.Id))"
-                Headers = @{ 'If-Match' = '*' } }
-        } | Invoke-DataverseRequest -MaxDop 20 @connectionParameters
-    }
-    Assert-TableCount 0
-    $results
 }
 finally {
     if ($tableCreated) {
