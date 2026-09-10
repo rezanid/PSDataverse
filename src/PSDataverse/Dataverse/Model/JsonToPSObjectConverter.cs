@@ -46,7 +46,7 @@ public class JsonToPSObjectConverter
         return psObj;
     }
 
-    private object ConvertJsonArrayToPSObject(JsonElement element)
+    private System.Collections.Generic.List<object> ConvertJsonArrayToPSObject(JsonElement element)
     {
         const int parallelThreshold = 500;
 

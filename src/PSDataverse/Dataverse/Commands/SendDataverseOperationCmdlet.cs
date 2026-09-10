@@ -271,10 +271,10 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
                 var jobject = JObject.Parse(str);
                 operation = new Operation<string>
                 {
-                    ContentId = jobject.TryGetValue("ContentId", out var contentId) ? contentId.ToString() : null,
-                    Method = jobject.TryGetValue("Method", out var method) ? method.ToString() : null,
-                    Uri = jobject.TryGetValue("Uri", out var uri) ? uri.ToString() : null,
-                    Headers = jobject.TryGetValue("Headers", out var headers) ? headers.ToObject<Dictionary<string, string>>() : null,
+                    ContentId = jobject.TryGetValue(nameof(ContentId), out var contentId) ? contentId.ToString() : null,
+                    Method = jobject.TryGetValue(nameof(Method), out var method) ? method.ToString() : null,
+                    Uri = jobject.TryGetValue(nameof(Uri), out var uri) ? uri.ToString() : null,
+                    Headers = jobject.TryGetValue(nameof(Headers), out var headers) ? headers.ToObject<Dictionary<string, string>>() : null,
                     Value = jobject.TryGetValue("Value", out var value) ? value.ToString(Formatting.None, []) : null
                 };
                 return true;
@@ -283,10 +283,10 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
             {
                 operation = new Operation<string>
                 {
-                    ContentId = InputObject.TryGetPropertyValue("ContentId"),
-                    Method = InputObject.TryGetPropertyValue("Method"),
-                    Uri = InputObject.TryGetPropertyValue("Uri"),
-                    Headers = dictionary.TryGetValue("Headers", out var headers) && headers != null ?
+                    ContentId = InputObject.TryGetPropertyValue(nameof(ContentId)),
+                    Method = InputObject.TryGetPropertyValue(nameof(Method)),
+                    Uri = InputObject.TryGetPropertyValue(nameof(Uri)),
+                    Headers = dictionary.TryGetValue(nameof(Headers), out var headers) && headers != null ?
                         (headers as IDictionary).Cast<DictionaryEntry>().ToDictionary(e => e.Key.ToString(), e => e.Value.ToString())
                         : null,
                     Value = dictionary.TryGetValue("Value", out var value) && value != null ? ConvertToJson(value) : null
@@ -551,7 +551,7 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
         return new OperationExecutionResult(output, recommendedDegreeOfParallelism);
     }
 
-    private static int? GetDegreeOfParallelismHint(IReadOnlyDictionary<string, string> headers)
+    private static int? GetDegreeOfParallelismHint(Dictionary<string, string> headers)
         => headers is not null &&
            headers.TryGetValue("x-ms-dop-hint", out var value) &&
            int.TryParse(value, out var hint) && hint > 0

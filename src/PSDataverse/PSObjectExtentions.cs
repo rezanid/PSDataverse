@@ -8,8 +8,7 @@ public static class PSObjectExtentions
 
     internal static string GetPSPropertyInfoValue(this PSPropertyInfo property)
     {
-        if (property == null)
-        { throw new ArgumentNullException(nameof(property)); }
+        ArgumentNullException.ThrowIfNull(property);
 
         try
         {
