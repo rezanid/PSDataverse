@@ -147,18 +147,32 @@ function Remove-DataverseRow {
 }
 
 function Get-DataverseTableMetadata {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'LogicalName')]
     param(
-        [Parameter(Mandatory, Position = 0, ValueFromPipeline)][string]$LogicalName,
+        [Parameter(Mandatory, Position = 0, ValueFromPipeline, ParameterSetName = 'LogicalName')]
+        [ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$LogicalName,
+        [Parameter(Mandatory, Position = 0, ParameterSetName = 'TableSetName')]
+        [ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
         [switch]$IncludeColumns,
         [PSDataverse.DataverseConnection]$Connection,
         [string]$ConnectionName
     )
     process {
+        $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
+        if ($PSCmdlet.ParameterSetName -eq 'TableSetName') {
+            $escapedSetName = $TableSetName.Replace("'", "''")
+            $lookupUri = "EntityDefinitions?`$select=LogicalName,EntitySetName,PrimaryIdAttribute,PrimaryNameAttribute&`$filter=EntitySetName%20eq%20'$escapedSetName'"
+            $matches = @(Invoke-DataverseRequest -Uri $lookupUri @connectionParameters |
+                ConvertFrom-DataverseResponseContent)
+            if ($matches.Count -ne 1) {
+                throw "Expected one table with entity set name '$TableSetName', but found $($matches.Count)."
+            }
+            if (!$IncludeColumns) { return $matches[0] }
+            $LogicalName = $matches[0].LogicalName
+        }
         $escapedName = $LogicalName.Replace("'", "''")
         $uri = "EntityDefinitions(LogicalName='$escapedName')"
         if ($IncludeColumns) { $uri += '/Attributes' }
-        $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
         Invoke-DataverseRequest -Uri $uri @connectionParameters | ConvertFrom-DataverseResponseContent
     }
 }
@@ -233,54 +247,109 @@ function Remove-DataverseTable {
     }
 }
 
+function ConvertTo-DataverseMultipleTarget {
+    [CmdletBinding()]
+    param([Parameter(Mandatory, ValueFromPipeline)]$Row, [Parameter(Mandatory)][string]$TableLogicalName)
+    process {
+        $target = [ordered]@{ '@odata.type' = "Microsoft.Dynamics.CRM.$TableLogicalName" }
+        if ($Row -is [System.Collections.IDictionary]) {
+            foreach ($entry in $Row.GetEnumerator()) { $target[$entry.Key] = $entry.Value }
+        } else {
+            foreach ($property in $Row.PSObject.Properties) { $target[$property.Name] = $property.Value }
+        }
+        $target
+    }
+}
+
+function Invoke-DataverseMultipleOperation {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][ValidateSet('CreateMultiple', 'UpdateMultiple', 'UpsertMultiple')][string]$ActionName,
+        [Parameter(Mandatory)][string]$TableSetName,
+        [Parameter(Mandatory)][string]$TableLogicalName,
+        [Parameter(Mandatory)][object[]]$Rows,
+        [Parameter(Mandatory)][int]$ChunkSize,
+        [Parameter(Mandatory)][int]$MaxDop,
+        [PSDataverse.DataverseConnection]$Connection,
+        [string]$ConnectionName
+    )
+    $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
+    if (!$TableLogicalName) {
+        $metadata = Get-DataverseTableMetadata -TableSetName $TableSetName @connectionParameters
+        $TableLogicalName = $metadata.LogicalName
+    }
+    $chunkNumber = 0
+    $operations = for ($offset = 0; $offset -lt $Rows.Count; $offset += $ChunkSize) {
+        $last = [math]::Min($offset + $ChunkSize - 1, $Rows.Count - 1)
+        $chunkNumber++
+        $targets = @($Rows[$offset..$last] |
+            ConvertTo-DataverseMultipleTarget -TableLogicalName $TableLogicalName)
+        @{
+            ContentId = "${ActionName}_$chunkNumber"
+            Method = 'POST'
+            Uri = "$TableSetName/Microsoft.Dynamics.CRM.$ActionName"
+            Value = @{ Targets = $targets }
+        }
+    }
+    $operations | Invoke-DataverseRequest -MaxDop $MaxDop @connectionParameters |
+        ConvertFrom-DataverseResponseContent
+}
+
 function Invoke-DataverseCreateMultiple {
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ResolveLogicalName')]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
-        [Parameter(Mandatory, Position = 1)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableLogicalName,
-        [Parameter(Mandatory, Position = 2)][ValidateNotNullOrEmpty()][object[]]$Rows,
+        [Parameter(Mandatory, Position = 1, ParameterSetName = 'ExplicitLogicalName')]
+        [ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableLogicalName,
+        [Parameter(Mandatory, Position = 1, ParameterSetName = 'ResolveLogicalName')]
+        [Parameter(Mandatory, Position = 2, ParameterSetName = 'ExplicitLogicalName')]
+        [ValidateNotNullOrEmpty()][object[]]$Rows,
+        [ValidateRange(1, 1000)][int]$ChunkSize = 100,
+        [ValidateRange(0, 1024)][int]$MaxDop = 0,
         [PSDataverse.DataverseConnection]$Connection,
         [string]$ConnectionName
     )
     if (!$PSCmdlet.ShouldProcess($TableSetName, "Create $($Rows.Count) Dataverse rows with CreateMultiple")) { return }
-    $targets = foreach ($row in $Rows) {
-        $target = [ordered]@{ '@odata.type' = "Microsoft.Dynamics.CRM.$TableLogicalName" }
-        if ($row -is [System.Collections.IDictionary]) {
-            foreach ($entry in $row.GetEnumerator()) { $target[$entry.Key] = $entry.Value }
-        } else {
-            foreach ($property in $row.PSObject.Properties) { $target[$property.Name] = $property.Value }
-        }
-        $target
-    }
-    $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
-    Invoke-DataverseRequest -Uri "$TableSetName/Microsoft.Dynamics.CRM.CreateMultiple" `
-        -Method POST -Body @{ Targets = @($targets) } @connectionParameters |
-        ConvertFrom-DataverseResponseContent
+    Invoke-DataverseMultipleOperation CreateMultiple $TableSetName $TableLogicalName $Rows `
+        $ChunkSize $MaxDop $Connection $ConnectionName
 }
 
 function Invoke-DataverseUpdateMultiple {
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ResolveLogicalName')]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
-        [Parameter(Mandatory, Position = 1)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableLogicalName,
-        [Parameter(Mandatory, Position = 2)][ValidateNotNullOrEmpty()][object[]]$Rows,
+        [Parameter(Mandatory, Position = 1, ParameterSetName = 'ExplicitLogicalName')]
+        [ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableLogicalName,
+        [Parameter(Mandatory, Position = 1, ParameterSetName = 'ResolveLogicalName')]
+        [Parameter(Mandatory, Position = 2, ParameterSetName = 'ExplicitLogicalName')]
+        [ValidateNotNullOrEmpty()][object[]]$Rows,
+        [ValidateRange(1, 1000)][int]$ChunkSize = 100,
+        [ValidateRange(0, 1024)][int]$MaxDop = 0,
         [PSDataverse.DataverseConnection]$Connection,
         [string]$ConnectionName
     )
     if (!$PSCmdlet.ShouldProcess($TableSetName, "Update $($Rows.Count) Dataverse rows with UpdateMultiple")) { return }
-    $targets = foreach ($row in $Rows) {
-        $target = [ordered]@{ '@odata.type' = "Microsoft.Dynamics.CRM.$TableLogicalName" }
-        if ($row -is [System.Collections.IDictionary]) {
-            foreach ($entry in $row.GetEnumerator()) { $target[$entry.Key] = $entry.Value }
-        } else {
-            foreach ($property in $row.PSObject.Properties) { $target[$property.Name] = $property.Value }
-        }
-        $target
-    }
-    $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
-    Invoke-DataverseRequest -Uri "$TableSetName/Microsoft.Dynamics.CRM.UpdateMultiple" `
-        -Method POST -Body @{ Targets = @($targets) } @connectionParameters |
-        ConvertFrom-DataverseResponseContent
+    Invoke-DataverseMultipleOperation UpdateMultiple $TableSetName $TableLogicalName $Rows `
+        $ChunkSize $MaxDop $Connection $ConnectionName
+}
+
+function Invoke-DataverseUpsertMultiple {
+    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ResolveLogicalName')]
+    param(
+        [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
+        [Parameter(Mandatory, Position = 1, ParameterSetName = 'ExplicitLogicalName')]
+        [ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableLogicalName,
+        [Parameter(Mandatory, Position = 1, ParameterSetName = 'ResolveLogicalName')]
+        [Parameter(Mandatory, Position = 2, ParameterSetName = 'ExplicitLogicalName')]
+        [ValidateNotNullOrEmpty()][object[]]$Rows,
+        [ValidateRange(1, 1000)][int]$ChunkSize = 100,
+        [ValidateRange(0, 1024)][int]$MaxDop = 0,
+        [PSDataverse.DataverseConnection]$Connection,
+        [string]$ConnectionName
+    )
+    if (!$PSCmdlet.ShouldProcess($TableSetName, "Upsert $($Rows.Count) Dataverse rows with UpsertMultiple")) { return }
+    Invoke-DataverseMultipleOperation UpsertMultiple $TableSetName $TableLogicalName $Rows `
+        $ChunkSize $MaxDop $Connection $ConnectionName
 }
 
 function Invoke-DataverseAction {
@@ -357,8 +426,11 @@ function Import-DataverseRows {
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
         [Parameter(Mandatory, Position = 1)][ValidateScript({ Test-Path -LiteralPath $_ -PathType Leaf })][string]$Path,
         [ValidateSet('Csv', 'Json')][string]$Format,
+        [ValidateSet('Individual', 'Batch', 'Bulk')][string]$Mode = 'Batch',
         [ValidateRange(1, 1000)][int]$BatchSize = 10,
+        [ValidateRange(1, 1000)][int]$ChunkSize = 100,
         [ValidateRange(0, 1024)][int]$MaxDop = 0,
+        [ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableLogicalName,
         [PSDataverse.DataverseConnection]$Connection,
         [string]$ConnectionName
     )
@@ -370,9 +442,23 @@ function Import-DataverseRows {
         @(Import-Csv -LiteralPath $Path)
     }
     $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
+    if ($Mode -eq 'Bulk') {
+        if (!$TableLogicalName) {
+            $metadata = Get-DataverseTableMetadata -TableSetName $TableSetName @connectionParameters
+            $TableLogicalName = $metadata.LogicalName
+        }
+        Invoke-DataverseCreateMultiple $TableSetName $TableLogicalName $rows `
+            -ChunkSize $ChunkSize -MaxDop $MaxDop @connectionParameters -Confirm:$false
+        return
+    }
     $contentId = 0
-    $rows | ForEach-Object {
+    $operations = $rows | ForEach-Object {
         $contentId++
         @{ ContentId = $contentId.ToString(); Method = 'POST'; Uri = $TableSetName; Value = $_ }
-    } | Invoke-DataverseRequest -BatchSize $BatchSize -MaxDop $MaxDop @connectionParameters
+    }
+    if ($Mode -eq 'Individual') {
+        $operations | Invoke-DataverseRequest -MaxDop $MaxDop @connectionParameters
+    } else {
+        $operations | Invoke-DataverseRequest -BatchSize $BatchSize -MaxDop $MaxDop @connectionParameters
+    }
 }

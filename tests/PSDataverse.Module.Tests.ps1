@@ -23,6 +23,7 @@ BeforeAll {
         'Invoke-DataverseFunction'
         'Invoke-DataverseRequest'
         'Invoke-DataverseUpdateMultiple'
+        'Invoke-DataverseUpsertMultiple'
         'New-DataverseRow'
         'New-DataverseTable'
         'Remove-DataverseRow'
@@ -134,6 +135,7 @@ Describe 'PSDataverse packaged module contract' {
         'Invoke-DataverseAction'
         'Invoke-DataverseCreateMultiple'
         'Invoke-DataverseUpdateMultiple'
+        'Invoke-DataverseUpsertMultiple'
         'New-DataverseRow'
         'New-DataverseTable'
         'Remove-DataverseRow'
@@ -141,6 +143,21 @@ Describe 'PSDataverse packaged module contract' {
         'Set-DataverseRow'
     ) {
         (Get-Command $_).Parameters.Keys | Should -Contain 'WhatIf'
+    }
+
+    It 'offers explicit import transports and concurrent multiple-operation chunks' {
+        $import = Get-Command Import-DataverseRows
+        $import.Parameters.Keys | Should -Contain 'Mode'
+        $import.Parameters.Keys | Should -Contain 'BatchSize'
+        $import.Parameters.Keys | Should -Contain 'ChunkSize'
+        $import.Parameters.Keys | Should -Contain 'MaxDop'
+        @($import.Parameters.Mode.Attributes.ValidValues) | Should -Be @('Individual', 'Batch', 'Bulk')
+
+        foreach ($name in 'Invoke-DataverseCreateMultiple', 'Invoke-DataverseUpdateMultiple', 'Invoke-DataverseUpsertMultiple') {
+            $command = Get-Command $name
+            $command.Parameters.Keys | Should -Contain 'ChunkSize'
+            $command.Parameters.Keys | Should -Contain 'MaxDop'
+        }
     }
 
     It 'tests a missing connection without throwing' {

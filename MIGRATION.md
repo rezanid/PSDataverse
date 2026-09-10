@@ -118,6 +118,18 @@ Explicit device-code connections now always perform the device-code interaction 
 
 Device-code instructions are written to the PowerShell host and are visible under the default information preference. Earlier development builds wrote them as ordinary information records, which made a connection appear to hang unless `-InformationAction Continue` was supplied.
 
+## Import and multiple-row operations
+
+`Import-DataverseRows` retains `$batch` as its default transport. New scripts can
+choose explicitly between `-Mode Individual`, `-Mode Batch`, and `-Mode Bulk`.
+For imports, `Bulk` means Dataverse `CreateMultiple`, with `-ChunkSize` controlling
+rows per request and `-MaxDop` controlling concurrent requests.
+
+The dedicated `Invoke-DataverseCreateMultiple`,
+`Invoke-DataverseUpdateMultiple`, and `Invoke-DataverseUpsertMultiple` commands
+support the same chunking and concurrency controls. They resolve the logical table
+name from the table-set name unless `-TableLogicalName` is supplied explicitly.
+
 Traditional IWA is deprecated by Microsoft in favor of WAM and only supports federated, Active Directory-backed users. Managed Entra-only identities now receive a targeted error recommending `-Interactive` or `-DeviceCode` instead of the raw MSAL failure.
 
 ## Milestone 3 request-engine changes

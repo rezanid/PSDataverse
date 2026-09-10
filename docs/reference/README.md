@@ -18,6 +18,7 @@ Generated from the packaged module command metadata.
 - [Invoke-DataverseFunction](Invoke-DataverseFunction.md)
 - [Invoke-DataverseRequest](Invoke-DataverseRequest.md)
 - [Invoke-DataverseUpdateMultiple](Invoke-DataverseUpdateMultiple.md)
+- [Invoke-DataverseUpsertMultiple](Invoke-DataverseUpsertMultiple.md)
 - [New-DataverseRow](New-DataverseRow.md)
 - [New-DataverseTable](New-DataverseTable.md)
 - [Remove-DataverseRow](Remove-DataverseRow.md)

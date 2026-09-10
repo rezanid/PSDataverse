@@ -1,13 +1,13 @@
-# Invoke-DataverseUpdateMultiple
+# Invoke-DataverseUpsertMultiple
 
 ## Syntax
 
 ```powershell
-Invoke-DataverseUpdateMultiple [-ChunkSize <Int32>] [-Confirm] [-Connection <DataverseConnection>] [-ConnectionName <String>] [-MaxDop <Int32>] [-WhatIf] -TableSetName <String> -Rows <Object[]>
+Invoke-DataverseUpsertMultiple [-ChunkSize <Int32>] [-Confirm] [-Connection <DataverseConnection>] [-ConnectionName <String>] [-MaxDop <Int32>] [-WhatIf] -TableSetName <String> -Rows <Object[]>
 ```
 
 ```powershell
-Invoke-DataverseUpdateMultiple [-ChunkSize <Int32>] [-Confirm] [-Connection <DataverseConnection>] [-ConnectionName <String>] [-MaxDop <Int32>] [-WhatIf] -TableSetName <String> -TableLogicalName <String> -Rows <Object[]>
+Invoke-DataverseUpsertMultiple [-ChunkSize <Int32>] [-Confirm] [-Connection <DataverseConnection>] [-ConnectionName <String>] [-MaxDop <Int32>] [-WhatIf] -TableSetName <String> -TableLogicalName <String> -Rows <Object[]>
 ```
 
 ## Parameters
