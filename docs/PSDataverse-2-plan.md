@@ -67,9 +67,10 @@ Milestone 2 is complete when named connections can be created, enumerated, selec
 - [x] Add a guarded disposable-table harness that independently measures POST, PATCH, and DELETE with parallel individual requests, `$batch`, and the bulk APIs supported by custom standard tables.
 - [x] Run the guarded write harness as a 30-row smoke benchmark in the test environment and record the verb-specific results.
 - [x] Extend the harness with concurrent batch and bulk envelopes, warm-up operations, repeated samples, randomized scenario order, envelope counts, and median summaries.
-- Add warmed, repeated, larger-payload trials before selecting `$batch` and bulk-operation defaults.
+- [x] Run the warmed, repeated 100-row benchmark with concurrent `$batch` and bulk envelopes.
+- Keep batching and bulk APIs explicit because their transactional, failure, ordering, and response semantics differ; document measured starting points rather than silently selecting one transport.
 
-The read-only and first disposable-table write results are recorded in `docs/benchmarks/2026-09-org8848d2a1.md`. The guarded write harness is `tools/Measure-DataverseWritePerformance.ps1`. It creates and removes a uniquely named custom table, verifies counts between phases, and deliberately treats GET, POST, PATCH, and DELETE as different workloads. Its second revision can run multiple `$batch` and bulk envelopes concurrently and reduces warm-up and ordering bias. The first smoke run supports retaining 20 as the general individual-request ceiling, but selecting `$batch` and bulk defaults remains open until the revised harness is run.
+The read-only and disposable-table write results are recorded in `docs/benchmarks/2026-09-org8848d2a1.md`. The guarded write harness is `tools/Measure-DataverseWritePerformance.ps1`. It creates and removes a uniquely named custom table, verifies counts between phases, and deliberately treats GET, POST, PATCH, and DELETE as different workloads. Its second revision can run multiple `$batch` and bulk envelopes concurrently and reduces warm-up and ordering bias. The repeated run supports retaining 20 as the general individual-request ceiling. It also demonstrates that concurrent envelopes can substantially outperform individual requests, but transport selection remains explicit because it changes semantics.
 
 ## Compatibility policy
 
