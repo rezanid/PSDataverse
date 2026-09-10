@@ -122,6 +122,8 @@ Traditional IWA is deprecated by Microsoft in favor of WAM and only supports fed
 
 Batch submission now uses a bounded channel rather than an ever-growing task list and polling loop. `-MaxDop` remains the client-side ceiling; when Dataverse returns `x-ms-dop-hint`, PSDataverse lowers the active concurrency for subsequent queued batches. Completion order remains the fast default. Use `-OutputOrder Input` when downstream pipeline processing must match the original batch order.
 
+Unbatched operation pipelines now use the same bounded scheduler, so `-MaxDop 1` is the explicit serial mode and omitted/zero `-MaxDop` uses the default ceiling of 20. The server's concurrency hint can lower that ceiling. A single request behaves as before.
+
 Automatic transport retries are now replay-safe by default. GET, HEAD, and OPTIONS requests retry transient failures and honor `Retry-After`. POST, PATCH, DELETE, and batches containing those methods are sent once because a missing response does not prove that Dataverse failed to apply the write. Scripts that previously relied on implicit write replay should perform an application-specific existence/version check before retrying.
 
 `Invoke-DataverseRequest` is now the preferred low-level command. `Send-DataverseOperation` is an exported alias to the same implementation and will remain available for at least one major release. Existing operation objects and hashtables continue to work, while new scripts can use direct parameters:

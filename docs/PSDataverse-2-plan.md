@@ -66,6 +66,8 @@ Milestone 2 is complete when named connections can be created, enumerated, selec
 - [x] Generate and publish command-reference help for the expanded command surface.
 - Benchmark parallel individual requests, small `$batch` payloads, and Dataverse bulk APIs before selecting defaults.
 
+The read-only parallel-request benchmark harness is available in `tools/Measure-DataverseRequestPerformance.ps1`. Selecting batch and bulk defaults remains open until the same environment/data shape can be measured without risking production data.
+
 ## Compatibility policy
 
 - Preserve concepts and common scripts where doing so does not retain a defect or insecure behavior.
