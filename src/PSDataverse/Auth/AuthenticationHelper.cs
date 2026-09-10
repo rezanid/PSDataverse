@@ -10,10 +10,7 @@ internal class AuthenticationHelper
 {
     public static AuthenticationResult Authenticate(AuthenticationParameters connectionString)
     {
-        if (connectionString == null)
-        {
-            throw new ArgumentNullException(nameof(connectionString));
-        }
+        ArgumentNullException.ThrowIfNull(connectionString);
         if (!string.IsNullOrEmpty(connectionString.CertificateThumbprint))
         {
             var certificate = FindCertificate(connectionString.CertificateThumbprint, StoreName.My) ?? throw new InvalidOperationException($"No certificate found with thumbprint '{connectionString.CertificateThumbprint}'.");

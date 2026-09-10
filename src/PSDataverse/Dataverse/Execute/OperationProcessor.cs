@@ -15,6 +15,21 @@ using PSDataverse.Dataverse.Model;
 
 public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
 {
+    private static readonly Action<ILogger, string, string, Exception> LogExecutingOperation =
+        LoggerMessage.Define<string, string>(
+            LogLevel.Debug,
+            new EventId(1, nameof(LogExecutingOperation)),
+            "Executing operation {Method} {Uri}.");
+    private static readonly Action<ILogger, int, string, Exception> LogDataverseResponse =
+        LoggerMessage.Define<int, string>(
+            LogLevel.Debug,
+            new EventId(2, nameof(LogDataverseResponse)),
+            "Dataverse returned {StatusCode} {ReasonPhrase}.");
+    private static readonly Action<ILogger, Exception> LogMissingErrorContent =
+        LoggerMessage.Define(
+            LogLevel.Warning,
+            new EventId(3, nameof(LogMissingErrorContent)),
+            "Dataverse returned a non-success response without content.");
     private readonly ILogger log;
     private readonly HttpClient httpClient;
     private readonly IAsyncPolicy<HttpResponseMessage> retryPolicy;
@@ -63,18 +78,17 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
 
     public async Task<HttpResponseMessage> ExecuteAsync(Operation<JObject> operation, CancellationToken cancellationToken)
     {
-        if (operation is null)
-        { throw new ArgumentNullException(nameof(operation)); }
+        ArgumentNullException.ThrowIfNull(operation);
 
         if (!operation.Uri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
             operation.Uri = new Uri(httpClient.BaseAddress, operation.Uri).ToString();
         }
 
-        log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
+        LogExecutingOperation(log, operation.Method, operation.Uri, null);
         var response = await GetPolicy(operation.Method)
             .ExecuteAsync(ct => httpClient.SendAsync(operation, ct), cancellationToken);
-        log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
+        LogDataverseResponse(log, (int)response.StatusCode, response.ReasonPhrase, null);
 
         if (response.IsSuccessStatusCode)
         { return response; }
@@ -91,18 +105,17 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
 
     public async Task<HttpResponseMessage> ExecuteAsync(Operation<string> operation, CancellationToken cancellationToken)
     {
-        if (operation is null)
-        { throw new ArgumentNullException(nameof(operation)); }
+        ArgumentNullException.ThrowIfNull(operation);
 
         if (!operation.Uri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
             operation.Uri = new Uri(httpClient.BaseAddress, operation.Uri).ToString();
         }
 
-        log.LogDebug($"Executing operation {operation.Method} {operation.Uri}...");
+        LogExecutingOperation(log, operation.Method, operation.Uri, null);
         var response = await GetPolicy(operation.Method)
             .ExecuteAsync(ct => httpClient.SendAsync(operation, ct), cancellationToken);
-        log.LogDebug($"Dataverse: {(int)response.StatusCode} {response.ReasonPhrase}");
+        LogDataverseResponse(log, (int)response.StatusCode, response.ReasonPhrase, null);
 
         if (response.IsSuccessStatusCode)
         { return response; }
@@ -155,7 +168,7 @@ public class OperationProcessor : Processor<JObject>//, IBatchProcessor<JObject>
     {
         if (response.Content == null)
         {
-            log.LogWarning("Dynamics 365 returned non-success without conntent!");
+            LogMissingErrorContent(log, null);
             return null;
         }
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

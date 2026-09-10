@@ -22,7 +22,11 @@ internal sealed class IntegratedWindowsAuthenticator : DelegatingAuthenticator
         }
         var app = (await GetClientAppAsync(parameters, cancellationToken).ConfigureAwait(false)).AsPublicClient()
             ?? throw new InvalidOperationException("Integrated Windows Authentication requires a public client application.");
+        // Retained for PSDataverse 2 compatibility with federated, AD-backed identities.
+        // MSAL marks IWA obsolete; WAM is the recommended Windows flow for managed Entra identities.
+#pragma warning disable CS0618
         var builder = app.AcquireTokenByIntegratedWindowsAuth(parameters.Scopes);
+#pragma warning restore CS0618
         if (!string.IsNullOrWhiteSpace(parameters.Username))
         {
             builder = builder.WithUsername(parameters.Username);

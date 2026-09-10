@@ -59,7 +59,7 @@ internal sealed class Startup(Uri baseUrl, string apiVersion = "v9.2")
         return services;
     }
 
-    public PolicyRegistry SetupRetryPolicies()
+    public static PolicyRegistry SetupRetryPolicies()
     {
         HttpStatusCode[] httpStatusCodesWorthRetrying = [
             HttpStatusCode.RequestTimeout,       // 408

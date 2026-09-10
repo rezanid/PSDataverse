@@ -65,7 +65,7 @@ public class TransportBehaviorTests
         var processor = new OperationProcessor(
             NullLogger.Instance,
             new TestHttpClientFactory(client),
-            new Startup(new Uri("https://example.crm.dynamics.com")).SetupRetryPolicies());
+            Startup.SetupRetryPolicies());
 
         using var response = await processor.ExecuteAsync(
             new Operation<string> { Method = "GET", Uri = "accounts" });
@@ -83,7 +83,7 @@ public class TransportBehaviorTests
         var processor = new OperationProcessor(
             NullLogger.Instance,
             new TestHttpClientFactory(client),
-            new Startup(new Uri("https://example.crm.dynamics.com")).SetupRetryPolicies());
+            Startup.SetupRetryPolicies());
 
         var action = () => processor.ExecuteAsync(new Operation<string>
         {

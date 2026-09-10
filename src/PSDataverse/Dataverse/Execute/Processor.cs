@@ -8,7 +8,7 @@ public abstract class Processor<T>
     {
         var uriSegments = operation.Uri.Split('/');
         var entitySegment = uriSegments[^1] == "$ref" ? uriSegments[^3] : uriSegments[^1];
-        var entityNameEnd = entitySegment.IndexOf("(", System.StringComparison.Ordinal);
+        var entityNameEnd = entitySegment.IndexOf('(');
         if (entityNameEnd == -1)
         { entityNameEnd = entitySegment.Length; }
         return entitySegment[..entityNameEnd];

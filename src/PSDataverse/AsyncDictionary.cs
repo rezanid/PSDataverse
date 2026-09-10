@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using AsyncKeyedLock;
 
 //TODO: Implement IDictionary<TKey, TValue>.
-public class AsyncDictionary<TKey, TValue> : IDisposable
+internal class AsyncDictionary<TKey, TValue> : IDisposable
 {
     private readonly ConcurrentDictionary<TKey, TValue> dictionary = new();
     private readonly AsyncKeyedLocker<TKey> locks = new();

@@ -3,7 +3,7 @@ namespace PSDataverse;
 using System;
 using System.Runtime.InteropServices;
 
-public static class WindowHelper
+public static partial class WindowHelper
 {
     public enum GetAncestorEnums
     {
@@ -22,11 +22,11 @@ public static class WindowHelper
     /// If this parameter is the desktop window, the function returns NULL. </param>
     /// <param name="flags">The ancestor to be retrieved.</param>
     /// <returns>The return value is the handle to the ancestor window.</returns>
-    [DllImport("user32.dll", ExactSpelling = true)]
-    private static extern IntPtr GetAncestor(IntPtr hwnd, GetAncestorEnums flags);
+    [LibraryImport("user32.dll", EntryPoint = "GetAncestor")]
+    private static partial IntPtr GetAncestor(IntPtr hwnd, GetAncestorEnums flags);
 
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetConsoleWindow();
+    [LibraryImport("kernel32.dll", EntryPoint = "GetConsoleWindow")]
+    private static partial IntPtr GetConsoleWindow();
 
     public static IntPtr GetConsoleOrTerminalWindow()
     {

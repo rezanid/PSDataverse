@@ -20,6 +20,16 @@ using PSDataverse.Dataverse.Model;
 public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
 {
     private const int MaxErrorBodyLength = 2048;
+    private static readonly Action<ILogger, string, int, string, Exception> LogBatchResponse =
+        LoggerMessage.Define<string, int, string>(
+            LogLevel.Debug,
+            new EventId(1, nameof(LogBatchResponse)),
+            "Dataverse batch {BatchId} returned {StatusCode} {ReasonPhrase}.");
+    private static readonly Action<ILogger, string, object, Exception> LogBatchOperationFailure =
+        LoggerMessage.Define<string, object>(
+            LogLevel.Warning,
+            new EventId(2, nameof(LogBatchOperationFailure)),
+            "Dataverse batch {BatchId} failed at operation {Operation}.");
     private readonly ILogger log;
     private readonly HttpClient httpClient;
     private readonly IAsyncPolicy<HttpResponseMessage> retryPolicy;
@@ -81,8 +91,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
             ct => httpClient.SendAsync(HttpMethod.Post, "$batch", batch, ct),
             cancellationToken).ConfigureAwait(false);
 
-        log.LogDebug("Dataverse batch {BatchId} returned {StatusCode} {ReasonPhrase}.",
-            batch.Id, (int)response.StatusCode, response.ReasonPhrase);
+        LogBatchResponse(log, batch.Id, (int)response.StatusCode, response.ReasonPhrase, null);
 
         var mediaType = response.Content?.Headers.ContentType?.MediaType;
         var responseContent = response.Content is null
@@ -145,7 +154,7 @@ public class BatchProcessor : Processor<JObject>, IBatchProcessor<JObject>
                 if (failedOperation is not null)
                 {
                     failedOperation.RunCount++;
-                    log.LogWarning("Dataverse batch {BatchId} failed at operation {Operation}.", batch.Id, failedOperation);
+                    LogBatchOperationFailure(log, batch.Id, failedOperation, null);
                 }
             }
             return batchResponse;

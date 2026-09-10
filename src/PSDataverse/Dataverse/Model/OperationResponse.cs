@@ -49,8 +49,7 @@ public class OperationResponse
 
     public static OperationResponse? From(HttpResponseMessage message)
     {
-        if (message == null)
-        { throw new ArgumentNullException(nameof(message)); }
+        ArgumentNullException.ThrowIfNull(message);
         if (message.Content == null)
         { throw new InvalidOperationException($"{nameof(message)}'s Content cannot be null"); }
         var content = message.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
@@ -132,7 +131,7 @@ public class OperationResponse
         buffer = reader.ReadLine();
         if (string.IsNullOrEmpty(buffer))
         { return null; }
-        var status = int.Parse(buffer.Substring(9, 3), NumberStyles.None, CultureInfo.InvariantCulture);
+        var status = int.Parse(buffer.AsSpan(9, 3), NumberStyles.None, CultureInfo.InvariantCulture);
         // Reason text could also be extracted by `buffer.Substring(13)`;
 
         //Content-Type: application/json; odata.metadata=minimal<CRLF>
