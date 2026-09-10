@@ -11,12 +11,22 @@ BeforeAll {
         'Connect-Dataverse'
         'Disconnect-Dataverse'
         'Export-DataverseOptionSet'
+        'Export-DataverseRows'
         'Get-DataverseAttributes'
         'Get-DataverseConnection'
+        'Get-DataverseRow'
+        'Get-DataverseTableMetadata'
         'Get-DataverseTableRowCount'
+        'Import-DataverseRows'
+        'Invoke-DataverseAction'
+        'Invoke-DataverseFunction'
         'Invoke-DataverseRequest'
-        'Send-DataverseOperation'
-        'Set-DataverseDefaultConnection'
+    'New-DataverseRow'
+    'Remove-DataverseRow'
+    'Send-DataverseOperation'
+    'Set-DataverseDefaultConnection'
+    'Set-DataverseRow'
+    'Test-DataverseConnection'
     )
     Import-Module $ModulePath -Force
 }
@@ -114,9 +124,23 @@ Describe 'PSDataverse packaged module contract' {
     It 'supports WhatIf on commands that mutate or export data' -ForEach @(
         'Clear-DataverseTable'
         'Export-DataverseOptionSet'
+        'Export-DataverseRows'
         'Get-DataverseAttributes'
+        'Import-DataverseRows'
+        'Invoke-DataverseAction'
+        'New-DataverseRow'
+        'Remove-DataverseRow'
+        'Set-DataverseRow'
     ) {
         (Get-Command $_).Parameters.Keys | Should -Contain 'WhatIf'
+    }
+
+    It 'tests a missing connection without throwing' {
+        Disconnect-Dataverse -All -Confirm:$false -InformationAction Ignore
+        Test-DataverseConnection | Should -BeFalse
+        $detail = Test-DataverseConnection -Detailed
+        $detail.IsConnected | Should -BeFalse
+        $detail.Error | Should -Not -BeNullOrEmpty
     }
 
     It 'returns a stable connection error when invoked while disconnected' {

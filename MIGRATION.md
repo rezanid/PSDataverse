@@ -134,4 +134,12 @@ Invoke-DataverseRequest -Uri accounts -Method POST -Body @{
 } -Headers @{ Prefer = 'return=representation' }
 ```
 
-Convenience CRUD, metadata, action/function, and bulk commands are still planned on top of this request engine.
+The first convenience layer is available on top of the same request engine:
+
+- `Test-DataverseConnection` performs `WhoAmI` and can return identity/timing details.
+- `Get/New/Set/Remove-DataverseRow` cover ordinary table-row CRUD.
+- `Get-DataverseTableMetadata` optionally returns column metadata.
+- `Invoke-DataverseAction` and `Invoke-DataverseFunction` cover bound and unbound operations.
+- `Export-DataverseRows` writes CSV or JSON, while `Import-DataverseRows` submits CSV or JSON rows in bounded batches.
+
+These commands require the Web API entity-set name (for example, `accounts`), not the singular logical table name (`account`). The metadata command is the exception and accepts the singular logical name.

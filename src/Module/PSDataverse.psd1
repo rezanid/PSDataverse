@@ -58,7 +58,22 @@ PowerShellVersion = '7.4'
 NestedModules = @('./bin/PSDataverse.dll')
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @('Clear-DataverseTable', 'Export-DataverseOptionSet', 'Get-DataverseAttributes', 'Get-DataverseTableRowCount')
+FunctionsToExport = @(
+    'Clear-DataverseTable',
+    'Export-DataverseOptionSet',
+    'Export-DataverseRows',
+    'Get-DataverseAttributes',
+    'Get-DataverseRow',
+    'Get-DataverseTableMetadata',
+    'Get-DataverseTableRowCount',
+    'Invoke-DataverseAction',
+    'Invoke-DataverseFunction',
+    'Import-DataverseRows',
+    'New-DataverseRow',
+    'Remove-DataverseRow',
+    'Set-DataverseRow',
+    'Test-DataverseConnection'
+)
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @(
