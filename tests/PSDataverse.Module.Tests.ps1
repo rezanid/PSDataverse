@@ -39,6 +39,7 @@ BeforeAll {
 Describe 'PSDataverse packaged module contract' {
     It 'has a valid manifest and imports the packaged binary' {
         { Test-ModuleManifest -Path $ModulePath -ErrorAction Stop } | Should -Not -Throw
+        (Test-ModuleManifest -Path $ModulePath).PowerShellVersion | Should -Be ([version]'7.6')
         Split-Path (Get-Module PSDataverse).Path -Parent |
             Should -Be (Split-Path (Resolve-Path $ModulePath).Path -Parent)
     }

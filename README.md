@@ -10,7 +10,7 @@
 PSDataverse is a PowerShell module that brings Dataverse's Web API to PowerShell 7+ with features like piping, batching and more. It is designed with ease-of-use and performance in mind and follows the patterns of native PowerShell cmdlets to play nicely with other modules.
 
 > [!IMPORTANT]
-> PSDataverse 2 modernization is in progress. See the [implementation plan](docs/PSDataverse-2-plan.md) and [0.x migration guide](MIGRATION.md). The current development build requires PowerShell 7.4 or later.
+> PSDataverse 2 modernization is in progress. See the [implementation plan](docs/PSDataverse-2-plan.md) and [0.x migration guide](MIGRATION.md). The current development build requires PowerShell 7.6 or later.
 
 The generated [command reference](docs/reference/README.md) lists the syntax, parameter sets, pipeline support, and aliases exported by the current package.
 
@@ -30,7 +30,7 @@ You can install the [PSDataverse module directly from PowerShell Gallery](https:
 Install-Module -Name PSDataverse
 ```
 
-To build the latest source locally, install PowerShell 7.4 or later and the .NET 8 SDK, then run:
+To build the latest source locally, install PowerShell 7.6 or later and the .NET 10 SDK, then run:
 
 ```powershell
 git clone https://github.com/rezanid/PSDataverse.git
