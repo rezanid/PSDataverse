@@ -60,6 +60,22 @@ Start-PSDataverseBuild -Output ./output/PSDataverse
 dotnet test PSDataverse.sln
 ```
 
+The opt-in live integration suite creates and removes a uniquely named disposable
+table. Import the built module, connect using any supported authentication flow, and
+pass that connection explicitly:
+
+```powershell
+Import-Module ./output/PSDataverse/PSDataverse.psd1 -Force
+$connection = Connect-Dataverse https://<environment>.crm.dynamics.com -Interactive
+./tests/Invoke-PSDataverseLiveIntegration.ps1 -Connection $connection -Confirm:$false
+```
+
+The suite covers convenience CRUD commands, forced pagination, concurrent `$batch`
+envelopes, CreateMultiple, UpdateMultiple, and UpsertMultiple. It always attempts to
+remove its disposable table. Throttling retries are tested deterministically in the
+.NET transport tests; the live suite records Dataverse service-protection hints but
+does not intentionally overload the environment to produce HTTP 429 responses.
+
 If the build reports that its output is in use, close every PowerShell session that imported that copy of PSDataverse and rerun it.
 
 # How to use

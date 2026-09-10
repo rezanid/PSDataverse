@@ -78,7 +78,7 @@ The read-only and disposable-table write results are recorded in `docs/benchmark
 - [x] Retain Integrated Windows Authentication for federated and compatible Active Directory identities; keep WAM interactive authentication as the recommended Windows flow for managed Entra identities.
 - [x] Target .NET 10 and require PowerShell 7.6 LTS across the project, manifest, documentation, and CI.
 - [x] Review and resolve compiler warnings and obsolete APIs, documenting intentional compatibility exceptions such as the retained MSAL IWA call.
-- [ ] Add guarded live integration coverage for CRUD, pagination, `$batch`, CreateMultiple, UpdateMultiple, UpsertMultiple, throttling behavior, and cleanup.
+- [x] Add guarded live integration coverage for CRUD, pagination, `$batch`, CreateMultiple, UpdateMultiple, UpsertMultiple, throttling behavior, and cleanup.
 - [ ] Improve multiple-operation failures so errors identify the failed chunk and its input rows.
 - [ ] Detect and report whether a table supports each multiple-operation message before sending a large workload.
 - [ ] Complete command help, measured transport recommendations, and the 0.x-to-2.x migration guide.
@@ -97,6 +97,14 @@ logging messages replaced analyzer-warning implementations, and smaller API and
 allocation warnings were resolved. The sole obsolete behavior retained by design is
 MSAL's Integrated Windows Authentication builder; its compiler suppression is scoped
 to that call, while WAM remains the recommended Windows flow.
+
+The guarded live suite in `tests/Invoke-PSDataverseLiveIntegration.ps1` passed against
+the disposable custom table it created in the org8848d2a1 test environment. It covers
+convenience CRUD, concurrent `$batch` envelopes, CreateMultiple, UpdateMultiple,
+UpsertMultiple, and forced multi-page reads, and removes the generated table in a
+`finally` block. Service-protection headers are captured without intentionally
+overloading the tenant; HTTP 429 `Retry-After` handling is covered deterministically
+by the transport test suite.
 
 ## Compatibility policy
 
