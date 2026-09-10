@@ -51,6 +51,7 @@ function Add-TimedResult {
         Transport = $Scenario.Transport
         RequestedMaxDop = $Scenario.MaxDop
         EnvelopeCount = $EnvelopeCount
+        EffectiveMaxDop = [math]::Min($Scenario.MaxDop, $EnvelopeCount)
         OperationCount = $Scenario.Rows.Count
         Elapsed = $Elapsed
         OperationsPerSecond = [math]::Round($Scenario.Rows.Count / $Elapsed.TotalSeconds, 2)
@@ -265,6 +266,7 @@ try {
                 Transport = $sample[0].Transport
                 RequestedMaxDop = $sample[0].RequestedMaxDop
                 EnvelopeCount = $sample[0].EnvelopeCount
+                EffectiveMaxDop = $sample[0].EffectiveMaxDop
                 OperationCount = $sample[0].OperationCount
                 Samples = $sample.Count
                 MedianOperationsPerSecond = [math]::Round((Get-Median $rates), 2)

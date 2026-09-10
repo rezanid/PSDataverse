@@ -206,9 +206,10 @@ Run this only in a disposable development environment. It creates a uniquely
 named `new_PsdvBenchmark...` table, verifies row counts between phases, and
 removes the entire table in a `finally` block. It warms each transport, randomizes
 scenario order within each verb, repeats the measurements, and reports medians
-with `-SummaryOnly`. `EnvelopeCount` makes it clear how many HTTP or `$batch`
-requests can actually run concurrently. A batch or bulk DOP above one has no
-effect unless `Count` is greater than its corresponding batch or bulk size.
+with `-SummaryOnly`. `EnvelopeCount` and `EffectiveMaxDop` distinguish requested
+parallelism from the number of HTTP or `$batch` requests that can actually run
+concurrently. A batch or bulk DOP above one has no effect unless `Count` is greater
+than its corresponding batch or bulk size.
 
 Dataverse does not support DeleteMultiple for standard tables, so DELETE compares
 individual requests with `$batch` only. Concurrent batch envelopes are appropriate
