@@ -28,13 +28,20 @@ You can install the [PSDataverse module directly from PowerShell Gallery](https:
 Install-Module -Name PSDataverse
 ```
 
-As an alternative, you can also download the dll and module or clone the repository and build it locally. After that, to import the module to your current session you can run the following command.
+To build the latest source locally, install PowerShell 7.4 or later and the .NET 8 SDK, then run:
 
 ```powershell
-if (-not (Get-Module -Name PSDataverse)) {
-  Import-Module .\PSDataverse.psd1
-}
+git clone https://github.com/rezanid/PSDataverse.git
+Set-Location ./PSDataverse
+
+Import-Module ./build.psm1 -Force
+Start-PSDataverseBuild -Output ./output/PSDataverse
+
+Import-Module ./output/PSDataverse/PSDataverse.psd1 -Force
+Get-Command -Module PSDataverse
 ```
+
+If you downloaded a prebuilt module package instead, extract it and import its `PSDataverse.psd1` manifest.
 
 > **NOTE!**
 > PSDataverse is a hybrid module that is a mix of PSDataverse.dll and PSDataverse.psd1 module definition. Only the commands that made more sense to be implemented as binary are included in the dll, and the rest of the implementation is done using PowerShell language.
