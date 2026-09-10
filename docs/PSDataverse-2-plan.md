@@ -68,7 +68,8 @@ Milestone 2 is complete when named connections can be created, enumerated, selec
 - [x] Run the guarded write harness as a 30-row smoke benchmark in the test environment and record the verb-specific results.
 - [x] Extend the harness with concurrent batch and bulk envelopes, warm-up operations, repeated samples, randomized scenario order, envelope counts, and median summaries.
 - [x] Run the warmed, repeated 100-row benchmark with concurrent `$batch` and bulk envelopes.
-- Keep batching and bulk APIs explicit because their transactional, failure, ordering, and response semantics differ; document measured starting points rather than silently selecting one transport.
+- [x] Keep individual, `$batch`, and multiple-operation APIs explicit on imports; add chunking and concurrent-envelope controls to CreateMultiple, UpdateMultiple, and UpsertMultiple commands.
+- Document measured starting points rather than silently selecting one transport because transactional, failure, ordering, and response semantics differ.
 
 The read-only and disposable-table write results are recorded in `docs/benchmarks/2026-09-org8848d2a1.md`. The guarded write harness is `tools/Measure-DataverseWritePerformance.ps1`. It creates and removes a uniquely named custom table, verifies counts between phases, and deliberately treats GET, POST, PATCH, and DELETE as different workloads. Its second revision can run multiple `$batch` and bulk envelopes concurrently and reduces warm-up and ordering bias. The repeated run supports retaining 20 as the general individual-request ceiling. It also demonstrates that concurrent envelopes can substantially outperform individual requests, but transport selection remains explicit because it changes semantics.
 

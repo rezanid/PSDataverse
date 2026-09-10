@@ -169,9 +169,9 @@ Set-DataverseRow accounts $accountId @{ telephone1 = '+33 1 23 45 67 89' }
 Remove-DataverseRow accounts $accountId
 Get-DataverseTableMetadata account -IncludeColumns
 New-DataverseTable new_Project 'Project' 'Projects'
-Invoke-DataverseCreateMultiple new_projects new_project @(
+Invoke-DataverseCreateMultiple new_projects @(
     @{ new_projectid = [guid]::NewGuid(); new_projectname = 'First project' }
-)
+) -ChunkSize 100 -MaxDop 4
 Remove-DataverseTable new_project -Confirm:$false
 Invoke-DataverseAction -Name new_Recalculate -Parameters @{ TargetId = $accountId }
 Export-DataverseRows accounts ./accounts.csv -Select name,accountid
@@ -179,10 +179,31 @@ Import-DataverseRows accounts ./accounts.csv -BatchSize 10 -MaxDop 4
 ```
 
 Table creation can be associated with an unmanaged solution by passing
-`-SolutionUniqueName` to `New-DataverseTable`. `Invoke-DataverseCreateMultiple`
-and `Invoke-DataverseUpdateMultiple` expose Dataverse's bulk APIs for custom
-standard tables while preserving `Invoke-DataverseRequest` as the low-level
-escape hatch.
+`-SolutionUniqueName` to `New-DataverseTable`. `Invoke-DataverseCreateMultiple`,
+`Invoke-DataverseUpdateMultiple`, and `Invoke-DataverseUpsertMultiple` expose
+Dataverse's homogeneous multiple-row APIs while preserving
+`Invoke-DataverseRequest` as the low-level escape hatch. They split rows into
+`-ChunkSize` groups and run those requests concurrently up to `-MaxDop`. The table
+logical name is normally resolved from the table-set name; supply
+`-TableLogicalName` explicitly to avoid that metadata lookup.
+
+`Import-DataverseRows` makes the transport choice explicit:
+
+```powershell
+# One independent HTTP request per row.
+Import-DataverseRows accounts ./accounts.csv -Mode Individual -MaxDop 20
+
+# Multipart $batch requests containing transactional change sets.
+Import-DataverseRows accounts ./accounts.csv -Mode Batch -BatchSize 20 -MaxDop 5
+
+# CreateMultiple requests, automatically chunked and sent concurrently.
+Import-DataverseRows new_projects ./projects.csv -Mode Bulk -ChunkSize 50 -MaxDop 2
+```
+
+`Batch` remains the import default for compatibility. `Bulk` means
+`CreateMultiple` for imports; it is not Dataverse's asynchronous bulk-delete job.
+Use `UpsertMultiple` when rows may already exist, normally with primary IDs or
+alternate keys that identify them.
 
 ### Performance testing
 

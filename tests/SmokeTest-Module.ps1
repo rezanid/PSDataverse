@@ -23,6 +23,7 @@ $expected = @(
     'Invoke-DataverseFunction'
     'Invoke-DataverseRequest'
     'Invoke-DataverseUpdateMultiple'
+    'Invoke-DataverseUpsertMultiple'
     'New-DataverseRow'
     'New-DataverseTable'
     'Remove-DataverseRow'
