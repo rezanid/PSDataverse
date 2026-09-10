@@ -17,8 +17,8 @@ using PSDataverse.Dataverse.Execute;
 using PSDataverse.Dataverse.Model;
 using PSDataverse.Extensions;
 
-[Cmdlet(VerbsCommunications.Send, "DataverseOperation", DefaultParameterSetName = "Object")]
-public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
+[Cmdlet(VerbsLifecycle.Invoke, "DataverseRequest", DefaultParameterSetName = "Object")]
+public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
 {
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Operation", ValueFromPipeline = true)]
     public Operation<string> InputOperation { get; set; }
@@ -28,6 +28,23 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
     [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Object", ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
     public PSObject InputObject { get; set; }
+
+    [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Request", ValueFromPipeline = true)]
+    [ValidateNotNullOrEmpty]
+    public string Uri { get; set; }
+
+    [Parameter(ParameterSetName = "Request")]
+    [ValidateSet("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")]
+    public string Method { get; set; }
+
+    [Parameter(ParameterSetName = "Request")]
+    public object Body { get; set; }
+
+    [Parameter(ParameterSetName = "Request")]
+    public IDictionary Headers { get; set; }
+
+    [Parameter(ParameterSetName = "Request")]
+    public string ContentId { get; set; }
 
     [Parameter(Position = 1, Mandatory = false)]
     [Alias("BatchCapacity")]
@@ -72,7 +89,7 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
     private int effectiveMaxDop;
 
     private const int DefaultMaxDop = 20;
-    private static readonly string[] ValidMethodsWithoutPayload = ["GET", "DELETE"];
+    private static readonly string[] ValidMethodsWithoutPayload = ["GET", "DELETE", "HEAD", "OPTIONS"];
 
     protected override void BeginProcessing()
     {
@@ -191,6 +208,25 @@ public class SendDataverseOperationCmdlet : DataverseCmdlet, IOperationReporter
 
     private bool TryGetInputOperation(out Operation<string> operation)
     {
+        if (ParameterSetName == "Request")
+        {
+            operation = new Operation<string>
+            {
+                ContentId = ContentId,
+                Method = Method,
+                Uri = Uri,
+                Headers = Headers?.Cast<DictionaryEntry>().ToDictionary(
+                    entry => entry.Key.ToString(),
+                    entry => entry.Value?.ToString()),
+                Value = Body switch
+                {
+                    null => null,
+                    string value => value,
+                    _ => ConvertToJson(Body)
+                }
+            };
+            return true;
+        }
         if (InputOperation is not null)
         {
             operation = InputOperation;

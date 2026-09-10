@@ -14,6 +14,7 @@ BeforeAll {
         'Get-DataverseAttributes'
         'Get-DataverseConnection'
         'Get-DataverseTableRowCount'
+        'Invoke-DataverseRequest'
         'Send-DataverseOperation'
         'Set-DataverseDefaultConnection'
     )
@@ -57,15 +58,32 @@ Describe 'PSDataverse packaged module contract' {
     }
 
     It 'accepts operations and objects from the pipeline' {
-        $command = Get-Command Send-DataverseOperation
+        $command = Get-Command Invoke-DataverseRequest
         $command.ParameterSets.Name | Should -Contain 'Operation'
         $command.ParameterSets.Name | Should -Contain 'Object'
+        $command.ParameterSets.Name | Should -Contain 'Request'
         $command.Parameters.InputOperation.Attributes.ValueFromPipeline | Should -Contain $true
         $command.Parameters.InputObject.Attributes.ValueFromPipeline | Should -Contain $true
+        $command.Parameters.Uri.Attributes.ValueFromPipeline | Should -Contain $true
+    }
+
+    It 'keeps Send-DataverseOperation as an alias for the new low-level command' {
+        (Get-Command Send-DataverseOperation).CommandType | Should -Be 'Alias'
+        (Get-Command Send-DataverseOperation).ResolvedCommandName | Should -Be 'Invoke-DataverseRequest'
+    }
+
+    It 'offers direct request parameters without constructing an operation object' {
+        $request = (Get-Command Invoke-DataverseRequest).ParameterSets |
+            Where-Object Name -EQ 'Request'
+        $request.Parameters.Name | Should -Contain 'Uri'
+        $request.Parameters.Name | Should -Contain 'Method'
+        $request.Parameters.Name | Should -Contain 'Body'
+        $request.Parameters.Name | Should -Contain 'Headers'
+        $request.Parameters.Name | Should -Contain 'ContentId'
     }
 
     It 'offers batch and table output controls with validation metadata' {
-        $command = Get-Command Send-DataverseOperation
+        $command = Get-Command Invoke-DataverseRequest
         $command.Parameters.OutputTable.ParameterType | Should -Be ([switch])
         $command.Parameters.BatchSize.Aliases | Should -Contain 'BatchCapacity'
         $command.Parameters.MaxDop.Aliases | Should -Contain 'ThrottleLimit'

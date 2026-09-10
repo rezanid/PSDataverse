@@ -122,7 +122,23 @@ The latest default connection is used when `-Connection` and `-ConnectionName` a
 
 ## Sending operations to Dataverse
 
-Let's look at a simple operation.
+`Invoke-DataverseRequest` is the preferred low-level command. The familiar `Send-DataverseOperation` name remains available as a compatibility alias.
+
+The concise form performs a GET:
+
+```powershell
+Invoke-DataverseRequest WhoAmI
+```
+
+Methods, bodies, and headers can be supplied directly:
+
+```powershell
+Invoke-DataverseRequest -Uri accounts -Method POST `
+    -Body @{ name = 'Contoso' } `
+    -Headers @{ Prefer = 'return=representation' }
+```
+
+Operation objects and hashtables remain useful for generated pipelines and batching.
 
 **Example 1: Running a global action using piping**
  ```powershell
