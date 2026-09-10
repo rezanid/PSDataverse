@@ -39,7 +39,12 @@ function Start-PSDataverseBuild {
         foreach ($entry in $managedEntries) {
             $managedPath = Join-Path $outputPath $entry
             if (Test-Path -LiteralPath $managedPath) {
-                Remove-Item -LiteralPath $managedPath -Recurse -Force
+                try {
+                    Remove-Item -LiteralPath $managedPath -Recurse -Force -ErrorAction Stop
+                }
+                catch {
+                    throw "Build output '$managedPath' is in use. Close PowerShell sessions that imported this module, then run the build again. $($_.Exception.Message)"
+                }
             }
         }
     }

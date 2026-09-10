@@ -43,29 +43,13 @@ jobs:
         run: |
           ./tests/SmokeTest-Module.ps1 -ModulePath ./output/PSDataverse/PSDataverse.psd1
 
-      - name: Install Pester
+      - name: Install PowerShell build dependencies
         shell: pwsh
-        run: |
-          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force
-          Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force
+        run: ./tools/Install-BuildDependencies.ps1
 
-      - name: Analyze PowerShell sources
+      - name: Analyze and test PowerShell module
         shell: pwsh
-        run: |
-          $issues = @(Invoke-ScriptAnalyzer -Path ./src/Module -Recurse -Severity Error)
-          if ($issues.Count -ne 0) {
-            $issues | Format-Table -AutoSize
-            throw "$($issues.Count) PowerShell analyzer errors found."
-          }
-
-      - name: Test packaged module contract
-        shell: pwsh
-        run: |
-          $container = New-PesterContainer -Path ./tests/PSDataverse.Module.Tests.ps1 -Data @{ ModulePath = './output/PSDataverse/PSDataverse.psd1' }
-          $result = Invoke-Pester -Container $container -PassThru -CI
-          if ($result.FailedCount -ne 0) {
-            throw "$($result.FailedCount) packaged-module tests failed."
-          }
+        run: ./tools/Test-PSDataverseModule.ps1 -ModulePath ./output/PSDataverse/PSDataverse.psd1 -CI
 
       - name: Install minimum PowerShell host
         run: dotnet tool install --tool-path ./output/pwsh74 PowerShell --version 7.4.19

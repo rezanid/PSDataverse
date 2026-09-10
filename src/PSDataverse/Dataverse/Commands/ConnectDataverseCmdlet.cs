@@ -89,6 +89,10 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
     public SwitchParameter UseSystemBrowser { get; set; }
 
     [Parameter(ParameterSetName = InteractiveSet)]
+    [Alias("UseWam")]
+    public SwitchParameter UseWebAccountManager { get; set; }
+
+    [Parameter(ParameterSetName = InteractiveSet)]
     public SwitchParameter ForceAuthentication { get; set; }
 
     [Parameter(ParameterSetName = InteractiveSet)]
@@ -162,18 +166,28 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
         if (ParameterSetName == ConnectionStringSet)
         {
             var connectionParameters = AuthenticationParameters.Parse(ConnectionString);
-            var connectionKind = ResolveAuthenticationKind(connectionParameters);
             if (!connectionParameters.BrokerPreferenceSpecified)
             {
                 connectionParameters.UseBroker = OperatingSystem.IsWindows() &&
-                    connectionKind == DataverseAuthenticationKind.Interactive;
+                    ResolveAuthenticationKind(connectionParameters) == DataverseAuthenticationKind.Interactive;
             }
+            var connectionKind = ResolveAuthenticationKind(connectionParameters);
             return await DataverseConnectionFactory.CreateMsalAsync(
                 Name, new Uri(connectionParameters.Resource), ApiVersion, connectionKind, connectionParameters, OnMessageForUser, CancellationToken)
                 .ConfigureAwait(false);
         }
 
         var serviceUrl = NormalizeServiceUrl(Url);
+        if (UseWebAccountManager && !OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException(
+                "Web Account Manager authentication is only supported on Windows. Use -Interactive on this platform.");
+        }
+        if (UseWebAccountManager && UseSystemBrowser)
+        {
+            throw new ArgumentException(
+                "-UseWebAccountManager and -UseSystemBrowser cannot be used together.");
+        }
         if (ParameterSetName == IntegratedWindowsSet && !OperatingSystem.IsWindows())
         {
             throw new PlatformNotSupportedException(
@@ -223,6 +237,7 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
             IntegratedWindowsSet => DataverseAuthenticationKind.IntegratedWindows,
             ClientSecretSet or ClientSecretProviderSet => DataverseAuthenticationKind.ClientSecret,
             CertificateSet => DataverseAuthenticationKind.Certificate,
+            _ when parameters.UseBroker => DataverseAuthenticationKind.Wam,
             _ => DataverseAuthenticationKind.Interactive
         };
         return await DataverseConnectionFactory.CreateMsalAsync(
@@ -230,7 +245,7 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
             .ConfigureAwait(false);
     }
 
-    private static DataverseAuthenticationKind ResolveAuthenticationKind(AuthenticationParameters parameters)
+    internal static DataverseAuthenticationKind ResolveAuthenticationKind(AuthenticationParameters parameters)
     {
         if (parameters.UseIntegratedWindowsAuthentication)
         {
@@ -243,6 +258,10 @@ public sealed class ConnectDataverseCmdlet : DataverseCmdlet
         if (!string.IsNullOrWhiteSpace(parameters.CertificateThumbprint))
         {
             return DataverseAuthenticationKind.Certificate;
+        }
+        if (parameters.UseBroker && OperatingSystem.IsWindows())
+        {
+            return DataverseAuthenticationKind.Wam;
         }
         return parameters.UseDeviceFlow
             ? DataverseAuthenticationKind.DeviceCode

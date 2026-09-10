@@ -72,6 +72,25 @@ public class AuthenticationServiceTests
         IntegratedWindowsAuthenticator.CreateActionableException(source).Should().BeNull();
     }
 
+    [Fact]
+    public void BrokerAuthenticationIsReportedAsWamOnWindows()
+    {
+        var parameters = new AuthenticationParameters
+        {
+            Resource = "https://example.crm.dynamics.com/",
+            ClientId = "client-id",
+            Tenant = "tenant-id",
+            UseCurrentUser = true,
+            UseBroker = true
+        };
+
+        var result = ConnectDataverseCmdlet.ResolveAuthenticationKind(parameters);
+
+        result.Should().Be(OperatingSystem.IsWindows()
+            ? DataverseAuthenticationKind.Wam
+            : DataverseAuthenticationKind.Interactive);
+    }
+
     private sealed class RecordingAuthenticator : IAuthenticator
     {
         public IAuthenticator NextAuthenticator { get; set; } = null!;

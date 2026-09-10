@@ -51,6 +51,8 @@ Describe 'PSDataverse packaged module contract' {
         ($sets | Where-Object Name -EQ 'Certificate').Parameters.Name | Should -Contain 'CertificateThumbprint'
         ($sets | Where-Object Name -EQ 'AccessToken').Parameters.Name | Should -Contain 'ExpiresOn'
         ($sets | Where-Object Name -EQ 'Interactive').Parameters.Name | Should -Contain 'ForceAuthentication'
+        ($sets | Where-Object Name -EQ 'Interactive').Parameters.Name | Should -Contain 'UseWebAccountManager'
+        (Get-Command Connect-Dataverse).Parameters.UseWebAccountManager.Aliases | Should -Contain 'UseWam'
         ($sets | Where-Object Name -EQ 'DeviceCode').Parameters.Name | Should -Not -Contain 'ForceAuthentication'
     }
 

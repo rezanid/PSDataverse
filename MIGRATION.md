@@ -73,6 +73,9 @@ The supported authentication forms are:
 # WAM on Windows; system browser on other platforms
 Connect-Dataverse $url -Interactive -TenantId $tenantId
 
+# Explicit WAM selection on Windows (WAM remains the default there)
+Connect-Dataverse $url -Interactive -UseWam -TenantId $tenantId
+
 # Force the system browser on Windows
 Connect-Dataverse $url -Interactive -UseSystemBrowser
 
