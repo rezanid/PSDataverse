@@ -36,7 +36,7 @@ Milestone 0 is complete when:
 
 ### Support contract for this milestone
 
-The transition build targets .NET 8 and requires PowerShell 7.4. Before the first PSDataverse 2 stable release, move the production target to .NET 10 and the minimum host to PowerShell 7.6 LTS unless real user compatibility evidence justifies one final 7.4 build. PowerShell 5.1 is not supported by the current binary architecture.
+The early transition build targeted .NET 8 and required PowerShell 7.4. Milestone 4 moves the production target to .NET 10 and the minimum host to PowerShell 7.6 LTS. PowerShell 5.1 and PowerShell 7.4 are not supported by the PSDataverse 2 binary architecture.
 
 ## Milestone 1: executable specification
 
@@ -45,7 +45,7 @@ The transition build targets .NET 8 and requires PowerShell 7.4. Before the firs
 - [x] Add Pester tests for packaged-module imports, parameter sets, pipeline input, output modes, command exports, and error categories.
 - [x] Add Windows/Linux/macOS CI for the current and minimum supported PowerShell hosts, dependency audit, static analysis, and deterministic package creation.
 
-Milestone 1 is complete when the C# and Pester suites pass, two clean builds produce identical file hashes, the package imports in PowerShell 7.4 and the current host, static analysis reports no errors, and the dependency audit reports no known vulnerabilities.
+Milestone 1 was completed against the transitional PowerShell 7.4 host. Milestone 4 supersedes that runtime baseline with PowerShell 7.6 LTS and .NET 10.
 
 ## Milestone 2: connections and authentication
 
@@ -72,6 +72,24 @@ Milestone 2 is complete when named connections can be created, enumerated, selec
 - Document measured starting points rather than silently selecting one transport because transactional, failure, ordering, and response semantics differ.
 
 The read-only and disposable-table write results are recorded in `docs/benchmarks/2026-09-org8848d2a1.md`. The guarded write harness is `tools/Measure-DataverseWritePerformance.ps1`. It creates and removes a uniquely named custom table, verifies counts between phases, and deliberately treats GET, POST, PATCH, and DELETE as different workloads. Its second revision can run multiple `$batch` and bulk envelopes concurrently and reduces warm-up and ordering bias. The repeated run supports retaining 20 as the general individual-request ceiling. It also demonstrates that concurrent envelopes can substantially outperform individual requests, but transport selection remains explicit because it changes semantics.
+
+## Milestone 4: runtime modernization and release hardening
+
+- [x] Retain Integrated Windows Authentication for federated and compatible Active Directory identities; keep WAM interactive authentication as the recommended Windows flow for managed Entra identities.
+- [x] Target .NET 10 and require PowerShell 7.6 LTS across the project, manifest, documentation, and CI.
+- [ ] Review and resolve compiler warnings and obsolete APIs, documenting intentional compatibility exceptions such as the retained MSAL IWA call.
+- [ ] Add guarded live integration coverage for CRUD, pagination, `$batch`, CreateMultiple, UpdateMultiple, UpsertMultiple, throttling behavior, and cleanup.
+- [ ] Improve multiple-operation failures so errors identify the failed chunk and its input rows.
+- [ ] Detect and report whether a table supports each multiple-operation message before sending a large workload.
+- [ ] Complete command help, measured transport recommendations, and the 0.x-to-2.x migration guide.
+- [ ] Produce and verify deterministic prerelease packages, including installation from a local PowerShell repository.
+- [ ] Run the release-candidate package on Windows, Linux, and macOS with PowerShell 7.6.
+
+Milestone 4 is complete when the .NET 10 package passes unit, packaged-module,
+integration, vulnerability, deterministic-build, and cross-platform PowerShell 7.6
+checks; intentional compatibility warnings are documented; migration guidance is
+complete; and a release-candidate package can be installed without using the source
+tree.
 
 ## Compatibility policy
 

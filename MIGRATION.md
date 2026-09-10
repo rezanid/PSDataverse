@@ -6,7 +6,7 @@ This guide tracks breaking and behavior-changing work as PSDataverse 2 is develo
 
 ### Runtime support
 
-The transition build requires PowerShell 7.4 or later and targets .NET 8. PowerShell 5.1 is not supported. The stable PSDataverse 2 release is expected to require PowerShell 7.6 LTS and .NET 10; that final runtime decision has not yet been applied.
+PSDataverse 2 requires PowerShell 7.6 LTS or later and targets .NET 10. PowerShell 5.1 and PowerShell 7.4 are not supported by the PSDataverse 2 binary package.
 
 ### Removed template command
 

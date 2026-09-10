@@ -31,7 +31,7 @@ Copyright = 'Copyright (c) Novovio.'
 Description = 'Bring Dataverse''s Web API to PowerShell.'
 
 # Minimum version of the PowerShell engine required by this module
-PowerShellVersion = '7.4'
+PowerShellVersion = '7.6'
 
 # Minimum version of Microsoft .NET Framework required by this module. This prerequisite is valid for the PowerShell Desktop edition only.
 # DotNetFrameworkVersion doesn't apply to PowerShell Core modules.

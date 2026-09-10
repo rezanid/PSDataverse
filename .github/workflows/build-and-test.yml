@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  DOTNET_VERSION: 8.0.x
+  DOTNET_VERSION: 10.0.x
 
 jobs:
   test:
@@ -52,15 +52,15 @@ jobs:
         run: ./tools/Test-PSDataverseModule.ps1 -ModulePath ./output/PSDataverse/PSDataverse.psd1 -CI
 
       - name: Install minimum PowerShell host
-        run: dotnet tool install --tool-path ./output/pwsh74 PowerShell --version 7.4.19
+        run: dotnet tool install --tool-path ./output/pwsh76 PowerShell --version 7.6.5
 
       - name: Smoke-test minimum PowerShell host
         shell: pwsh
         run: |
-          $executable = if ($IsWindows) { './output/pwsh74/pwsh.exe' } else { './output/pwsh74/pwsh' }
+          $executable = if ($IsWindows) { './output/pwsh76/pwsh.exe' } else { './output/pwsh76/pwsh' }
           & $executable -NoLogo -NoProfile -File ./tests/SmokeTest-Module.ps1 -ModulePath ./output/PSDataverse/PSDataverse.psd1
           if ($LASTEXITCODE -ne 0) {
-            throw "PowerShell 7.4 module smoke test failed with exit code $LASTEXITCODE."
+            throw "PowerShell 7.6 module smoke test failed with exit code $LASTEXITCODE."
           }
 
       - name: Audit NuGet dependencies
