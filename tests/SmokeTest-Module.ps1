@@ -11,12 +11,22 @@ $expected = @(
     'Connect-Dataverse'
     'Disconnect-Dataverse'
     'Export-DataverseOptionSet'
+    'Export-DataverseRows'
     'Get-DataverseAttributes'
     'Get-DataverseConnection'
+    'Get-DataverseRow'
+    'Get-DataverseTableMetadata'
     'Get-DataverseTableRowCount'
+    'Import-DataverseRows'
+    'Invoke-DataverseAction'
+    'Invoke-DataverseFunction'
     'Invoke-DataverseRequest'
+    'New-DataverseRow'
+    'Remove-DataverseRow'
     'Send-DataverseOperation'
     'Set-DataverseDefaultConnection'
+    'Set-DataverseRow'
+    'Test-DataverseConnection'
 )
 
 Import-Module $ModulePath -Force

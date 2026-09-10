@@ -62,8 +62,8 @@ Milestone 2 is complete when named connections can be created, enumerated, selec
 - [x] Replace the polling task list with a bounded `System.Threading.Channels` scheduler with backpressure.
 - [x] Honor Dataverse DOP hints, `Retry-After`, cancellation, completion/input ordering modes, and idempotency-aware replay rules.
 - [x] Introduce `Invoke-DataverseRequest` and keep `Send-DataverseOperation` as a compatibility alias for at least one major release.
-- Add connection inspection, WhoAmI/test, CRUD, metadata, action/function, and bulk import/export commands.
-- Generate and publish command-reference help for the expanded command surface.
+- [x] Add connection inspection, WhoAmI/test, CRUD, metadata, action/function, and bulk import/export commands.
+- [x] Generate and publish command-reference help for the expanded command surface.
 - Benchmark parallel individual requests, small `$batch` payloads, and Dataverse bulk APIs before selecting defaults.
 
 ## Compatibility policy

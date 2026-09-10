@@ -12,6 +12,8 @@ PSDataverse is a PowerShell module that brings Dataverse's Web API to PowerShell
 > [!IMPORTANT]
 > PSDataverse 2 modernization is in progress. See the [implementation plan](docs/PSDataverse-2-plan.md) and [0.x migration guide](MIGRATION.md). The current development build requires PowerShell 7.4 or later.
 
+The generated [command reference](docs/reference/README.md) lists the syntax, parameter sets, pipeline support, and aliases exported by the current package.
+
 # Features
 * Securely connect to Dataverse.
 * Supports batching.
@@ -156,6 +158,20 @@ Send-DataverseOperation WhoAmI
 ```
 
 For batched pipelines, `-MaxDop` is the client-side concurrency ceiling. PSDataverse automatically follows Dataverse's lower concurrency hint when one is returned. Results stream in completion order by default; specify `-OutputOrder Input` when stable input ordering is required.
+
+Common tasks now have PowerShell-native wrappers:
+
+```powershell
+Test-DataverseConnection -Detailed
+Get-DataverseRow accounts -Select name,accountid -Top 10
+New-DataverseRow accounts @{ name = 'Contoso' }
+Set-DataverseRow accounts $accountId @{ telephone1 = '+33 1 23 45 67 89' }
+Remove-DataverseRow accounts $accountId
+Get-DataverseTableMetadata account -IncludeColumns
+Invoke-DataverseAction -Name new_Recalculate -Parameters @{ TargetId = $accountId }
+Export-DataverseRows accounts ./accounts.csv -Select name,accountid
+Import-DataverseRows accounts ./accounts.csv -BatchSize 10 -MaxDop 4
+```
 
 
 
