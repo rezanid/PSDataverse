@@ -163,6 +163,126 @@ function Get-DataverseTableMetadata {
     }
 }
 
+function New-DataverseTable {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z][A-Za-z0-9_]*$')][string]$SchemaName,
+        [Parameter(Mandatory, Position = 1)][ValidateNotNullOrEmpty()][string]$DisplayName,
+        [Parameter(Mandatory, Position = 2)][ValidateNotNullOrEmpty()][string]$DisplayCollectionName,
+        [ValidatePattern('^[A-Za-z][A-Za-z0-9_]*$')][string]$PrimaryNameSchemaName,
+        [ValidateRange(1, 4000)][int]$PrimaryNameMaxLength = 200,
+        [ValidateSet('UserOwned', 'OrganizationOwned')][string]$OwnershipType = 'UserOwned',
+        [ValidateRange(0, 2147483647)][int]$LanguageCode = 1033,
+        [string]$SolutionUniqueName,
+        [PSDataverse.DataverseConnection]$Connection,
+        [string]$ConnectionName
+    )
+
+    if (!$PrimaryNameSchemaName) { $PrimaryNameSchemaName = "${SchemaName}Name" }
+    if (!$PSCmdlet.ShouldProcess($SchemaName, 'Create Dataverse table')) { return }
+
+    $label = {
+        param([string]$Text)
+        @{
+            '@odata.type' = 'Microsoft.Dynamics.CRM.Label'
+            LocalizedLabels = @(@{
+                '@odata.type' = 'Microsoft.Dynamics.CRM.LocalizedLabel'
+                Label = $Text
+                LanguageCode = $LanguageCode
+            })
+        }
+    }
+    $body = @{
+        '@odata.type' = 'Microsoft.Dynamics.CRM.EntityMetadata'
+        SchemaName = $SchemaName
+        DisplayName = & $label $DisplayName
+        DisplayCollectionName = & $label $DisplayCollectionName
+        OwnershipType = $OwnershipType
+        IsActivity = $false
+        HasActivities = $false
+        HasNotes = $false
+        Attributes = @(@{
+            '@odata.type' = 'Microsoft.Dynamics.CRM.StringAttributeMetadata'
+            SchemaName = $PrimaryNameSchemaName
+            IsPrimaryName = $true
+            RequiredLevel = @{ Value = 'None'; CanBeChanged = $true; ManagedPropertyLogicalName = 'canmodifyrequirementlevelsettings' }
+            MaxLength = $PrimaryNameMaxLength
+            FormatName = @{ Value = 'Text' }
+            DisplayName = & $label $DisplayName
+        })
+    }
+    $headers = @{}
+    if ($SolutionUniqueName) { $headers['MSCRM.SolutionUniqueName'] = $SolutionUniqueName }
+    $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
+    Invoke-DataverseRequest -Uri EntityDefinitions -Method POST -Body $body -Headers $headers @connectionParameters
+}
+
+function Remove-DataverseTable {
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+    param(
+        [Parameter(Mandatory, Position = 0, ValueFromPipeline)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$LogicalName,
+        [PSDataverse.DataverseConnection]$Connection,
+        [string]$ConnectionName
+    )
+    process {
+        $escapedName = $LogicalName.Replace("'", "''")
+        $uri = "EntityDefinitions(LogicalName='$escapedName')"
+        if (!$PSCmdlet.ShouldProcess($LogicalName, 'Delete Dataverse table and all of its data')) { return }
+        $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
+        Invoke-DataverseRequest -Uri $uri -Method DELETE @connectionParameters
+    }
+}
+
+function Invoke-DataverseCreateMultiple {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
+        [Parameter(Mandatory, Position = 1)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableLogicalName,
+        [Parameter(Mandatory, Position = 2)][ValidateNotNullOrEmpty()][object[]]$Rows,
+        [PSDataverse.DataverseConnection]$Connection,
+        [string]$ConnectionName
+    )
+    if (!$PSCmdlet.ShouldProcess($TableSetName, "Create $($Rows.Count) Dataverse rows with CreateMultiple")) { return }
+    $targets = foreach ($row in $Rows) {
+        $target = [ordered]@{ '@odata.type' = "Microsoft.Dynamics.CRM.$TableLogicalName" }
+        if ($row -is [System.Collections.IDictionary]) {
+            foreach ($entry in $row.GetEnumerator()) { $target[$entry.Key] = $entry.Value }
+        } else {
+            foreach ($property in $row.PSObject.Properties) { $target[$property.Name] = $property.Value }
+        }
+        $target
+    }
+    $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
+    Invoke-DataverseRequest -Uri "$TableSetName/Microsoft.Dynamics.CRM.CreateMultiple" `
+        -Method POST -Body @{ Targets = @($targets) } @connectionParameters |
+        ConvertFrom-DataverseResponseContent
+}
+
+function Invoke-DataverseUpdateMultiple {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
+        [Parameter(Mandatory, Position = 1)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableLogicalName,
+        [Parameter(Mandatory, Position = 2)][ValidateNotNullOrEmpty()][object[]]$Rows,
+        [PSDataverse.DataverseConnection]$Connection,
+        [string]$ConnectionName
+    )
+    if (!$PSCmdlet.ShouldProcess($TableSetName, "Update $($Rows.Count) Dataverse rows with UpdateMultiple")) { return }
+    $targets = foreach ($row in $Rows) {
+        $target = [ordered]@{ '@odata.type' = "Microsoft.Dynamics.CRM.$TableLogicalName" }
+        if ($row -is [System.Collections.IDictionary]) {
+            foreach ($entry in $row.GetEnumerator()) { $target[$entry.Key] = $entry.Value }
+        } else {
+            foreach ($property in $row.PSObject.Properties) { $target[$property.Name] = $property.Value }
+        }
+        $target
+    }
+    $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
+    Invoke-DataverseRequest -Uri "$TableSetName/Microsoft.Dynamics.CRM.UpdateMultiple" `
+        -Method POST -Body @{ Targets = @($targets) } @connectionParameters |
+        ConvertFrom-DataverseResponseContent
+}
+
 function Invoke-DataverseAction {
     [CmdletBinding(SupportsShouldProcess)]
     param(

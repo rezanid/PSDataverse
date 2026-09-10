@@ -168,10 +168,38 @@ New-DataverseRow accounts @{ name = 'Contoso' }
 Set-DataverseRow accounts $accountId @{ telephone1 = '+33 1 23 45 67 89' }
 Remove-DataverseRow accounts $accountId
 Get-DataverseTableMetadata account -IncludeColumns
+New-DataverseTable new_Project 'Project' 'Projects'
+Invoke-DataverseCreateMultiple new_projects new_project @(
+    @{ new_projectid = [guid]::NewGuid(); new_projectname = 'First project' }
+)
+Remove-DataverseTable new_project -Confirm:$false
 Invoke-DataverseAction -Name new_Recalculate -Parameters @{ TargetId = $accountId }
 Export-DataverseRows accounts ./accounts.csv -Select name,accountid
 Import-DataverseRows accounts ./accounts.csv -BatchSize 10 -MaxDop 4
 ```
+
+Table creation can be associated with an unmanaged solution by passing
+`-SolutionUniqueName` to `New-DataverseTable`. `Invoke-DataverseCreateMultiple`
+and `Invoke-DataverseUpdateMultiple` expose Dataverse's bulk APIs for custom
+standard tables while preserving `Invoke-DataverseRequest` as the low-level
+escape hatch.
+
+### Performance testing
+
+The read benchmark only characterizes GET requests. A separate destructive
+benchmark measures POST, PATCH, and DELETE using individual requests, transactional
+`$batch` change sets, and the supported CreateMultiple/UpdateMultiple APIs:
+
+```powershell
+Connect-Dataverse https://<environment>.crm.dynamics.com -DeviceCode
+./tools/Measure-DataverseWritePerformance.ps1 -Count 100 -Confirm:$false
+```
+
+Run this only in a disposable development environment. It creates a uniquely
+named `new_PsdvBenchmark...` table, verifies row counts between phases, and
+removes the entire table in a `finally` block. Dataverse does not support
+DeleteMultiple for standard tables, so DELETE compares individual requests with
+`$batch` only.
 
 
 
