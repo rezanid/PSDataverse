@@ -130,7 +130,7 @@ build-only dependency. The transport guide converts the disposable-environment
 measurements into semantic and performance recommendations, and the migration guide
 provides runnable 0.x-to-2.x replacements and troubleshooting guidance.
 
-The `2.0.0-preview.1` package is built twice from clean Release directories. The
+The prerelease package is built twice from clean Release directories. The
 module file inventories and canonical NuGet package SHA-256 hashes must match before
 the artifact is retained. The package is then acquired from a temporary local
 PSResourceGet repository into an isolated module path and smoke-tested with

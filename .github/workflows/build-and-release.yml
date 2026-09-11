@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the verified package to PowerShell Gallery
+        description: Publish the verified release candidate to PowerShell Gallery
         required: true
         type: boolean
         default: false
@@ -12,12 +12,14 @@ on:
 permissions:
   contents: read
 
-env:
-  DOTNET_VERSION: 10.0.x
-  POWERSHELL_VERSION: 7.6.5
-
 jobs:
-  package:
+  verify-release-candidate:
+    uses: ./.github/workflows/verify-package.yml
+
+  publish:
+    name: Publish the verified artifact
+    if: ${{ inputs.publish && github.ref == 'refs/heads/main' }}
+    needs: verify-release-candidate
     runs-on: ubuntu-latest
     environment:
       name: PowerShell Gallery
@@ -26,46 +28,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Download validated package
+        uses: actions/download-artifact@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          name: PSDataverse-2-rc
+          path: output/packages
 
-      - name: Test .NET
-        run: dotnet test PSDataverse.sln --configuration Release --verbosity normal
-
-      - name: Install PowerShell 7.6
-        run: >-
-          dotnet tool install --tool-path ./output/pwsh76 PowerShell
-          --version ${{ env.POWERSHELL_VERSION }}
-
-      - name: Build and verify deterministic package
+      - name: Install pinned publishing dependency
         shell: pwsh
-        run: |
-          & ./output/pwsh76/pwsh -NoLogo -NoProfile -File `
-            ./tools/New-PSDataversePackage.ps1
-          if ($LASTEXITCODE -ne 0) {
-            throw "Package verification failed with exit code $LASTEXITCODE."
-          }
+        run: >-
+          ./tools/Install-BuildDependencies.ps1
+          -Name Microsoft.PowerShell.PSResourceGet
 
-      - name: Upload verified package
-        uses: actions/upload-artifact@v4
-        with:
-          name: PSDataverse-2-preview
-          path: |
-            output/packages/*.nupkg
-            output/packages/*.sha256
-          if-no-files-found: error
-
-      - name: Publish verified package
-        if: ${{ inputs.publish }}
+      - name: Publish the exact validated package
         shell: pwsh
         env:
           POWERSHELL_GALLERY_API_KEY: ${{ secrets.POWERSHELL_GALLERY_API_KEY }}
         run: |
           $package = @(Get-ChildItem ./output/packages -Filter '*.nupkg' -File)
-          if ($package.Count -ne 1) {
-            throw "Expected one verified package; found $($package.Count)."
+          $checksum = @(Get-ChildItem ./output/packages -Filter '*.sha256' -File)
+          if ($package.Count -ne 1 -or $checksum.Count -ne 1) {
+            throw 'The validated artifact must contain one package and one checksum.'
+          }
+          $expectedHash = ((Get-Content $checksum[0].FullName -Raw) -split '\s+')[0]
+          $actualHash = (Get-FileHash $package[0].FullName -Algorithm SHA256).Hash
+          if ($actualHash -ne $expectedHash) {
+            throw "Package checksum mismatch: expected $expectedHash; got $actualHash."
           }
           Import-Module `
             ./output/build-modules/Microsoft.PowerShell.PSResourceGet/1.2.0/Microsoft.PowerShell.PSResourceGet.psd1 `

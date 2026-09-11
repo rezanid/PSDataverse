@@ -65,8 +65,34 @@ foreach ($commandName in 'Connect-Dataverse', 'Test-DataverseConnection') {
     }
 }
 
-if (@(Get-ChildItem $moduleRoot -Recurse -File | Where-Object Name -Match 'PlatyPS').Count -ne 0) {
-    throw 'Microsoft.PowerShell.PlatyPS must remain a build-only dependency.'
+if (@(Get-ChildItem $moduleRoot -Recurse -File |
+        Where-Object Name -Match 'PlatyPS|PSResourceGet').Count -ne 0) {
+    throw 'Build-only PowerShell modules must not be packaged as runtime dependencies.'
+}
+
+$token = [Security.SecureString]::new()
+foreach ($character in 'not-a-real-token'.ToCharArray()) {
+    $token.AppendChar($character)
+}
+$token.MakeReadOnly()
+try {
+    $connection = Connect-Dataverse https://rc-smoke.crm.dynamics.com `
+        -AccessToken $token -ExpiresOn (Get-Date).AddMinutes(30) -Name rc-smoke
+    if ($connection.Name -ne 'rc-smoke' -or
+        $connection.AuthenticationKind -ne 'AccessToken' -or
+        !$connection.IsDefault) {
+        throw 'The cross-platform access-token connection contract is invalid.'
+    }
+    if ((Get-DataverseConnection rc-smoke).ServiceUrl.AbsoluteUri -ne
+        'https://rc-smoke.crm.dynamics.com/') {
+        throw 'The named connection did not retain its service URL.'
+    }
+    if ($connection.PSObject.Properties.Name -contains 'AccessToken') {
+        throw 'A connection must not expose its access token.'
+    }
+}
+finally {
+    Disconnect-Dataverse -All -Confirm:$false -InformationAction Ignore
 }
 
 [pscustomobject]@{

@@ -44,7 +44,7 @@ $resourceGetManifest = Join-Path $dependencyRoot `
     'Microsoft.PowerShell.PSResourceGet/1.2.0/Microsoft.PowerShell.PSResourceGet.psd1'
 if (!(Test-Path -LiteralPath $resourceGetManifest -PathType Leaf)) {
     & (Join-Path $PSScriptRoot 'Install-BuildDependencies.ps1') `
-        -Destination $dependencyRoot | Out-Null
+        -Destination $dependencyRoot -Name Microsoft.PowerShell.PSResourceGet | Out-Null
 }
 Import-Module $resourceGetManifest -Force
 Import-Module (Join-Path $PSScriptRoot '../build.psm1') -Force
