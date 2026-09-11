@@ -75,6 +75,30 @@ Start-PSDataverseBuild -Output ./output/PSDataverse
 The help generator uses the pinned build-only PlatyPS dependency under `output`.
 The published module contains only the generated MAML help, not PlatyPS itself.
 
+## Building a prerelease package
+
+The packaging command performs two clean Release builds, compares every module
+file, creates canonical PowerShell packages, compares their SHA-256 hashes, and
+acquires the result from a temporary local repository before smoke-testing the
+isolated copy:
+
+```powershell
+./tools/New-PSDataversePackage.ps1
+```
+
+The verified `.nupkg` and its `.sha256` sidecar are written to `output/packages`.
+To repeat only the repository acquisition and package smoke test:
+
+```powershell
+./tools/Test-PSDataversePackage.ps1 `
+    -PackagePath ./output/packages/PSDataverse.2.0.0-preview.1.nupkg
+```
+
+The scripts use pinned build dependencies and do not install PSDataverse into the
+machine-wide or current-user module locations. The manual release workflow uploads
+the verified artifact and publishes that same file only when its `publish` input is
+explicitly enabled.
+
 The opt-in live integration suite creates and removes a uniquely named disposable
 table. Import the built module, connect using any supported authentication flow, and
 pass that connection explicitly:

@@ -63,6 +63,26 @@ jobs:
             throw "PowerShell 7.6 module smoke test failed with exit code $LASTEXITCODE."
           }
 
+      - name: Verify deterministic prerelease package
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: |
+          & ./output/pwsh76/pwsh -NoLogo -NoProfile -File `
+            ./tools/New-PSDataversePackage.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Package verification failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Upload verified prerelease package
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSDataverse-2-preview
+          path: |
+            output/packages/*.nupkg
+            output/packages/*.sha256
+          if-no-files-found: error
+
       - name: Audit NuGet dependencies
         if: runner.os == 'Linux'
         shell: pwsh
