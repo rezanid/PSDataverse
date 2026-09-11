@@ -28,6 +28,9 @@ function Get-DataverseRequestConnectionParameters {
 }
 
 function Test-DataverseConnection {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding()]
     param(
         [PSDataverse.DataverseConnection]$Connection,
@@ -64,6 +67,9 @@ function Test-DataverseConnection {
 }
 
 function Get-DataverseRow {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(DefaultParameterSetName = 'List')]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
@@ -90,6 +96,9 @@ function Get-DataverseRow {
 }
 
 function New-DataverseRow {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
@@ -107,6 +116,9 @@ function New-DataverseRow {
 }
 
 function Set-DataverseRow {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
@@ -130,6 +142,9 @@ function Set-DataverseRow {
 }
 
 function Remove-DataverseRow {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
@@ -147,6 +162,9 @@ function Remove-DataverseRow {
 }
 
 function Get-DataverseTableMetadata {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(DefaultParameterSetName = 'LogicalName')]
     param(
         [Parameter(Mandatory, Position = 0, ValueFromPipeline, ParameterSetName = 'LogicalName')]
@@ -178,6 +196,9 @@ function Get-DataverseTableMetadata {
 }
 
 function New-DataverseTable {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z][A-Za-z0-9_]*$')][string]$SchemaName,
@@ -232,6 +253,9 @@ function New-DataverseTable {
 }
 
 function Remove-DataverseTable {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     param(
         [Parameter(Mandatory, Position = 0, ValueFromPipeline)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$LogicalName,
@@ -360,6 +384,9 @@ function Invoke-DataverseMultipleOperation {
 }
 
 function Invoke-DataverseCreateMultiple {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ResolveLogicalName')]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
@@ -379,6 +406,9 @@ function Invoke-DataverseCreateMultiple {
 }
 
 function Invoke-DataverseUpdateMultiple {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ResolveLogicalName')]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
@@ -398,6 +428,9 @@ function Invoke-DataverseUpdateMultiple {
 }
 
 function Invoke-DataverseUpsertMultiple {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ResolveLogicalName')]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
@@ -417,6 +450,9 @@ function Invoke-DataverseUpsertMultiple {
 }
 
 function Invoke-DataverseAction {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_.]*$')][string]$Name,
@@ -433,6 +469,9 @@ function Invoke-DataverseAction {
 }
 
 function Invoke-DataverseFunction {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_.]*$')][string]$Name,
@@ -462,6 +501,9 @@ function Invoke-DataverseFunction {
 }
 
 function Export-DataverseRows {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,
@@ -485,6 +527,9 @@ function Export-DataverseRows {
 }
 
 function Import-DataverseRows {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, Position = 0)][ValidatePattern('^[A-Za-z_][A-Za-z0-9_]*$')][string]$TableSetName,

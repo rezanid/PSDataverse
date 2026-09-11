@@ -19,7 +19,7 @@ function Start-PSDataverseBuild {
         throw "Refusing to use unsafe build output path '$outputPath'."
     }
 
-    $managedEntries = @('bin', 'PSFunctions', 'PSDataverse.psd1', 'PSDataverse.psm1')
+    $managedEntries = @('bin', 'en-US', 'PSFunctions', 'PSDataverse.psd1', 'PSDataverse.psm1')
     if (Test-Path $outputPath) {
         $existingEntries = @(Get-ChildItem -LiteralPath $outputPath -Force)
         $unexpectedEntries = @($existingEntries | Where-Object Name -NotIn $managedEntries)
@@ -60,6 +60,7 @@ function Start-PSDataverseBuild {
     Copy-Item (Join-Path $modulePath 'PSDataverse.psd1') $outputPath -Force
     Copy-Item (Join-Path $modulePath 'PSDataverse.psm1') $outputPath -Force
     Copy-Item (Join-Path $modulePath 'PSFunctions') $outputPath -Recurse -Force
+    Copy-Item (Join-Path $modulePath 'en-US') $outputPath -Recurse -Force
 
     Get-Item $outputPath
 }

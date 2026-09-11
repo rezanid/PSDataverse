@@ -47,6 +47,28 @@ if (Test-Path (Join-Path $moduleRoot 'bin/Scriban.dll')) {
     throw 'Scriban.dll must not be present in the PSDataverse package.'
 }
 
+$helpPath = Join-Path $moduleRoot 'en-US/PSDataverse.dll-Help.xml'
+if (-not (Test-Path $helpPath -PathType Leaf)) {
+    throw 'The packaged binary-command help file is missing.'
+}
+
+$functionHelpPath = Join-Path $moduleRoot 'PSFunctions/en-US/PSDataverse.PowerShell-Help.xml'
+if (-not (Test-Path $functionHelpPath -PathType Leaf)) {
+    throw 'The packaged PowerShell-function help file is missing.'
+}
+
+foreach ($commandName in 'Connect-Dataverse', 'Test-DataverseConnection') {
+    $help = Get-Help $commandName -Full
+    if ([string]::IsNullOrWhiteSpace([string]$help.Synopsis) -or
+        [string]::IsNullOrWhiteSpace([string]$help.Description.Text)) {
+        throw "Packaged command help did not load for $commandName."
+    }
+}
+
+if (@(Get-ChildItem $moduleRoot -Recurse -File | Where-Object Name -Match 'PlatyPS').Count -ne 0) {
+    throw 'Microsoft.PowerShell.PlatyPS must remain a build-only dependency.'
+}
+
 [pscustomobject]@{
     PowerShellVersion = $PSVersionTable.PSVersion.ToString()
     ModulePath = (Resolve-Path $ModulePath).Path

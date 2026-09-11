@@ -34,6 +34,9 @@ BeforeAll {
         'Test-DataverseBulkOperationSupport'
         'Test-DataverseConnection'
     )
+    $script:documentedCommands = @(
+        $script:expectedCommands | Where-Object { $_ -ne 'Send-DataverseOperation' }
+    )
     Import-Module $ModulePath -Force
 }
 
@@ -48,6 +51,28 @@ Describe 'PSDataverse packaged module contract' {
     It 'exports exactly the documented command surface' {
         $actual = @(Get-Command -Module PSDataverse | Sort-Object Name | Select-Object -ExpandProperty Name)
         $actual | Should -Be $expectedCommands
+    }
+
+    It 'packages external help for every command' {
+        $moduleRoot = Split-Path (Resolve-Path $ModulePath).Path -Parent
+        (Join-Path $moduleRoot 'en-US/PSDataverse.dll-Help.xml') | Should -Exist
+        (Join-Path $moduleRoot 'PSFunctions/en-US/PSDataverse.PowerShell-Help.xml') |
+            Should -Exist
+
+        foreach ($name in $documentedCommands) {
+            $help = Get-Help $name -Full
+            $help.Name | Should -Be $name
+            [string]$help.Synopsis | Should -Not -BeNullOrEmpty
+            [string]$help.Description.Text | Should -Not -BeNullOrEmpty
+            @($help.Examples.Example).Count | Should -BeGreaterThan 0
+            ($help | Out-String) | Should -Not -Match '{{[^}]+}}'
+        }
+    }
+
+    It 'does not package the help generator as a runtime dependency' {
+        $moduleRoot = Split-Path (Resolve-Path $ModulePath).Path -Parent
+        @(Get-ChildItem $moduleRoot -Recurse -File |
+            Where-Object Name -Match 'PlatyPS').Count | Should -Be 0
     }
 
     It 'exposes every supported authentication parameter set' {

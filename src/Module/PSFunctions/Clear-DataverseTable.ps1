@@ -1,4 +1,7 @@
 function Clear-DataverseTable {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess = $True)]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "Enter one or more table names separated by commas.")]

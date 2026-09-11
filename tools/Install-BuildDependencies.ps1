@@ -8,6 +8,7 @@ $destinationPath = [System.IO.Path]::GetFullPath($Destination)
 $dependencies = @(
     @{ Name = 'Pester'; Version = '6.2.0' }
     @{ Name = 'PSScriptAnalyzer'; Version = '1.25.0' }
+    @{ Name = 'Microsoft.PowerShell.PlatyPS'; Version = '1.0.1' }
 )
 
 foreach ($dependency in $dependencies) {

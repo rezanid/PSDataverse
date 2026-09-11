@@ -13,9 +13,11 @@ $ErrorActionPreference = 'Stop'
 $dependencyRoot = [System.IO.Path]::GetFullPath($DependencyPath)
 $pesterManifest = Join-Path $dependencyRoot 'Pester/6.2.0/Pester.psd1'
 $analyzerManifest = Join-Path $dependencyRoot 'PSScriptAnalyzer/1.25.0/PSScriptAnalyzer.psd1'
+$platyPSManifest = Join-Path $dependencyRoot 'Microsoft.PowerShell.PlatyPS/1.0.1/Microsoft.PowerShell.PlatyPS.psd1'
 
 if (!(Test-Path -LiteralPath $pesterManifest) -or
-    !(Test-Path -LiteralPath $analyzerManifest)) {
+    !(Test-Path -LiteralPath $analyzerManifest) -or
+    !(Test-Path -LiteralPath $platyPSManifest)) {
     & (Join-Path $PSScriptRoot 'Install-BuildDependencies.ps1') -Destination $dependencyRoot | Out-Null
 }
 
@@ -28,6 +30,9 @@ if ($issues.Count -ne 0) {
     $issues | Format-Table -AutoSize
     throw "$($issues.Count) PowerShell analyzer errors found."
 }
+
+& (Join-Path $PSScriptRoot 'Build-CommandHelp.ps1') `
+    -ModulePath $ModulePath -DependencyPath $dependencyRoot -Check | Out-Null
 
 $testPath = Join-Path $PSScriptRoot '../tests/PSDataverse.Module.Tests.ps1'
 $container = New-PesterContainer -Path $testPath -Data @{

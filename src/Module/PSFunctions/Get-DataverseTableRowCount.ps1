@@ -1,4 +1,7 @@
 function Get-DataverseTableRowCount {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
