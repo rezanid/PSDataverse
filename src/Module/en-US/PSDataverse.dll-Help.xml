@@ -1,0 +1,1847 @@
+<?xml version="1.0" encoding="utf-8"?>
+<helpItems xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" schema="maml" xmlns="http://msh">
+  <command:command>
+    <command:details>
+      <command:name>Connect-Dataverse</command:name>
+      <maml:description>
+        <maml:para>Authenticates to Dataverse and registers a reusable connection.</maml:para>
+      </maml:description>
+      <command:verb>Connect</command:verb>
+      <command:noun>Dataverse</command:noun>
+    </command:details>
+    <maml:description>
+      <maml:para>Connect-Dataverse creates a DataverseConnection that owns authentication, token refresh, and HTTP resources. Interactive authentication uses WAM by default on Windows and the system browser elsewhere. Device code, IWA, application secret, certificate, supplied token, token provider, on-premises, and connection-string flows are available through explicit parameter sets.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>ConnectionString</maml:name>
+          <maml:description>
+            <maml:para>A PSDataverse or XRM-style connection string. Duplicate keys are rejected.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>OnPremise</maml:name>
+          <maml:description>
+            <maml:para>Uses Windows credentials with an on-premises Dataverse deployment.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Url</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse environment URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>UseSystemBrowser</maml:name>
+          <maml:description>
+            <maml:para>Uses the system browser instead of WAM for interactive authentication.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ClientId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra application (client) ID. Interactive flows use the PSDataverse public-client ID by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ForceAuthentication</maml:name>
+          <maml:description>
+            <maml:para>Bypasses silent account selection and requests an interactive account choice.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Interactive</maml:name>
+          <maml:description>
+            <maml:para>Uses WAM on supported Windows systems or the system browser elsewhere.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>RedirectUri</maml:name>
+          <maml:description>
+            <maml:para>The public-client redirect URI used by interactive or device-code authentication.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Scopes</maml:name>
+          <maml:description>
+            <maml:para>OAuth scopes to request. The Dataverse resource `.default` scope is used when omitted.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String[]</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>TenantId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra tenant ID or verified tenant domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Url</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse environment URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>UseSystemBrowser</maml:name>
+          <maml:description>
+            <maml:para>Uses the system browser instead of WAM for interactive authentication.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>UseWebAccountManager</maml:name>
+          <maml:description>
+            <maml:para>Explicitly selects Windows Web Account Manager. The alias is UseWam.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ClientId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra application (client) ID. Interactive flows use the PSDataverse public-client ID by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>IntegratedWindowsAuthentication</maml:name>
+          <maml:description>
+            <maml:para>Uses Integrated Windows Authentication. This Windows-only flow is intended for compatible federated identities and does not support managed Entra-only users.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Scopes</maml:name>
+          <maml:description>
+            <maml:para>OAuth scopes to request. The Dataverse resource `.default` scope is used when omitted.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String[]</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>TenantId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra tenant ID or verified tenant domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Url</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse environment URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Username</maml:name>
+          <maml:description>
+            <maml:para>The user principal name supplied to Integrated Windows Authentication.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ClientId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra application (client) ID. Interactive flows use the PSDataverse public-client ID by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>DeviceCode</maml:name>
+          <maml:description>
+            <maml:para>Uses device-code authentication and displays instructions in the host.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>RedirectUri</maml:name>
+          <maml:description>
+            <maml:para>The public-client redirect URI used by interactive or device-code authentication.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Scopes</maml:name>
+          <maml:description>
+            <maml:para>OAuth scopes to request. The Dataverse resource `.default` scope is used when omitted.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String[]</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>TenantId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra tenant ID or verified tenant domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Url</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse environment URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ClientId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra application (client) ID. Interactive flows use the PSDataverse public-client ID by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ClientSecret</maml:name>
+          <maml:description>
+            <maml:para>The application secret stored as a SecureString.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.Security.SecureString</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Scopes</maml:name>
+          <maml:description>
+            <maml:para>OAuth scopes to request. The Dataverse resource `.default` scope is used when omitted.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String[]</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>TenantId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra tenant ID or verified tenant domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Url</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse environment URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ClientId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra application (client) ID. Interactive flows use the PSDataverse public-client ID by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ClientSecretProvider</maml:name>
+          <maml:description>
+            <maml:para>A script block that returns exactly one SecureString, PSCredential, or non-empty string containing the application secret.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.Management.Automation.ScriptBlock</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Scopes</maml:name>
+          <maml:description>
+            <maml:para>OAuth scopes to request. The Dataverse resource `.default` scope is used when omitted.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String[]</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>TenantId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra tenant ID or verified tenant domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Url</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse environment URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>CertificateStoreName</maml:name>
+          <maml:description>
+            <maml:para>The Windows certificate store containing the client certificate. The default is My.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Security.Cryptography.X509Certificates.StoreName</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>CertificateThumbprint</maml:name>
+          <maml:description>
+            <maml:para>The thumbprint of the certificate used for application authentication.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ClientId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra application (client) ID. Interactive flows use the PSDataverse public-client ID by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Scopes</maml:name>
+          <maml:description>
+            <maml:para>OAuth scopes to request. The Dataverse resource `.default` scope is used when omitted.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String[]</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>TenantId</maml:name>
+          <maml:description>
+            <maml:para>The Microsoft Entra tenant ID or verified tenant domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Url</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse environment URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>AccessToken</maml:name>
+          <maml:description>
+            <maml:para>A bearer access token stored as a SecureString. Supply ExpiresOn when the token lifetime differs from the default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.Security.SecureString</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ExpiresOn</maml:name>
+          <maml:description>
+            <maml:para>The UTC expiration time of a supplied access token.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.DateTimeOffset</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Url</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse environment URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ApiVersion</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registry name for the connection. The default is default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>NoDefault</maml:name>
+          <maml:description>
+            <maml:para>Registers the connection without making it the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>TokenProvider</maml:name>
+          <maml:description>
+            <maml:para>A script block accepting a CancellationToken and returning a token value with an expiration time.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.Management.Automation.ScriptBlock</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Url</maml:name>
+          <maml:description>
+            <maml:para>The Dataverse environment URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>AccessToken</maml:name>
+        <maml:description>
+          <maml:para>A bearer access token stored as a SecureString. Supply ExpiresOn when the token lifetime differs from the default.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.Security.SecureString</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>ApiVersion</maml:name>
+        <maml:description>
+          <maml:para>The Dataverse Web API version. The default is v9.2.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>CertificateStoreName</maml:name>
+        <maml:description>
+          <maml:para>The Windows certificate store containing the client certificate. The default is My.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Security.Cryptography.X509Certificates.StoreName</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>CertificateThumbprint</maml:name>
+        <maml:description>
+          <maml:para>The thumbprint of the certificate used for application authentication.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>ClientId</maml:name>
+        <maml:description>
+          <maml:para>The Microsoft Entra application (client) ID. Interactive flows use the PSDataverse public-client ID by default.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>ClientSecret</maml:name>
+        <maml:description>
+          <maml:para>The application secret stored as a SecureString.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.Security.SecureString</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>ClientSecretProvider</maml:name>
+        <maml:description>
+          <maml:para>A script block that returns exactly one SecureString, PSCredential, or non-empty string containing the application secret.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.Management.Automation.ScriptBlock</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+        <maml:name>ConnectionString</maml:name>
+        <maml:description>
+          <maml:para>A PSDataverse or XRM-style connection string. Duplicate keys are rejected.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>DeviceCode</maml:name>
+        <maml:description>
+          <maml:para>Uses device-code authentication and displays instructions in the host.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>ExpiresOn</maml:name>
+        <maml:description>
+          <maml:para>The UTC expiration time of a supplied access token.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.DateTimeOffset</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>ForceAuthentication</maml:name>
+        <maml:description>
+          <maml:para>Bypasses silent account selection and requests an interactive account choice.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>IntegratedWindowsAuthentication</maml:name>
+        <maml:description>
+          <maml:para>Uses Integrated Windows Authentication. This Windows-only flow is intended for compatible federated identities and does not support managed Entra-only users.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Interactive</maml:name>
+        <maml:description>
+          <maml:para>Uses WAM on supported Windows systems or the system browser elsewhere.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Name</maml:name>
+        <maml:description>
+          <maml:para>The registry name for the connection. The default is default.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>NoDefault</maml:name>
+        <maml:description>
+          <maml:para>Registers the connection without making it the default connection.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>OnPremise</maml:name>
+        <maml:description>
+          <maml:para>Uses Windows credentials with an on-premises Dataverse deployment.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>RedirectUri</maml:name>
+        <maml:description>
+          <maml:para>The public-client redirect URI used by interactive or device-code authentication.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Scopes</maml:name>
+        <maml:description>
+          <maml:para>OAuth scopes to request. The Dataverse resource `.default` scope is used when omitted.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String[]</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>TenantId</maml:name>
+        <maml:description>
+          <maml:para>The Microsoft Entra tenant ID or verified tenant domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>TokenProvider</maml:name>
+        <maml:description>
+          <maml:para>A script block accepting a CancellationToken and returning a token value with an expiration time.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.Management.Automation.ScriptBlock</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+        <maml:name>Url</maml:name>
+        <maml:description>
+          <maml:para>The Dataverse environment URL.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Username</maml:name>
+        <maml:description>
+          <maml:para>The user principal name supplied to Integrated Windows Authentication.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>UseSystemBrowser</maml:name>
+        <maml:description>
+          <maml:para>Uses the system browser instead of WAM for interactive authentication.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>UseWebAccountManager</maml:name>
+        <maml:description>
+          <maml:para>Explicitly selects Windows Web Account Manager. The alias is UseWam.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <dev:name>None</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This command does not accept pipeline input.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <dev:name>PSDataverse.DataverseConnection</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>A PSDataverse.DataverseConnection object. Tokens and secrets are not exposed as public properties.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>Prefer Interactive/WAM for managed user identities. Retained IWA support is Windows-only and is unsuitable for managed Entra-only identities or MFA requirements.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>--------- Example 1: Connect interactively ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+$connection = Connect-Dataverse https://contoso.crm.dynamics.com -Interactive
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Uses WAM on Windows or the system browser on other platforms.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 2: Create a named device-code connection ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+$dev = Connect-Dataverse $url -DeviceCode -Name dev -NoDefault
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Registers dev without replacing the current default connection.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 3: Use an application secret ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Connect-Dataverse $url -ClientId $appId -TenantId $tenantId -ClientSecret (Read-Host -AsSecureString)
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Authenticates a confidential application without placing the secret in command history.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version</maml:linkText>
+        <command:uri />
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>PSDataverse README</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse#readme</command:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Migration guide</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md</command:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command>
+    <command:details>
+      <command:name>Disconnect-Dataverse</command:name>
+      <maml:description>
+        <maml:para>Disposes one or all registered Dataverse connections.</maml:para>
+      </maml:description>
+      <command:verb>Disconnect</command:verb>
+      <command:noun>Dataverse</command:noun>
+    </command:details>
+    <maml:description>
+      <maml:para>Disconnect-Dataverse removes connections from the session registry and disposes their HTTP, authentication, token-lock, and capability-cache resources. With no name, it disconnects the current default connection.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Disconnect-Dataverse</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The registered connection name. Omit it to select the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>Runs the command in a mode that only reports what would happen without performing the actions.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Disconnect-Dataverse</maml:name>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>All</maml:name>
+          <maml:description>
+            <maml:para>Disconnects every registered Dataverse connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>Runs the command in a mode that only reports what would happen without performing the actions.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>All</maml:name>
+        <maml:description>
+          <maml:para>Disconnects every registered Dataverse connection.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+        <maml:name>Name</maml:name>
+        <maml:description>
+          <maml:para>The registered connection name. Omit it to select the default connection.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>Runs the command in a mode that only reports what would happen without performing the actions.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <dev:name>System.Object</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Objects with a Name property can bind that property from the pipeline.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <dev:name>System.Object</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>No output.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>Use -Connection or -ConnectionName to avoid relying on the session default when a script works with more than one environment.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>--------- Example 1: Disconnect the default connection ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Disconnect-Dataverse
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Disposes the current default connection.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 2: Disconnect every connection ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Disconnect-Dataverse -All -Confirm:$false
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Disposes and removes every registered connection.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version</maml:linkText>
+        <command:uri />
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>PSDataverse README</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse#readme</command:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Migration guide</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md</command:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command>
+    <command:details>
+      <command:name>Get-DataverseConnection</command:name>
+      <maml:description>
+        <maml:para>Gets registered Dataverse connections.</maml:para>
+      </maml:description>
+      <command:verb>Get</command:verb>
+      <command:noun>DataverseConnection</command:noun>
+    </command:details>
+    <maml:description>
+      <maml:para>Get-DataverseConnection reads the session-scoped connection registry. With no name it returns every connection; Name accepts PowerShell wildcards.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-DataverseConnection</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="true" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>A connection-name wildcard pattern.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="false" globbing="true" pipelineInput="false" position="0" aliases="none">
+        <maml:name>Name</maml:name>
+        <maml:description>
+          <maml:para>A connection-name wildcard pattern.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <dev:name>None</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This command does not accept pipeline input.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <dev:name>PSDataverse.DataverseConnection</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>PSDataverse.DataverseConnection objects.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>Connection objects do not expose bearer tokens or client secrets.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>--------- Example 1: List connections ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Get-DataverseConnection
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Lists all registered connections and their authentication kinds.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 2: Find development connections ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Get-DataverseConnection 'dev*'
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Returns connection names that begin with dev.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version</maml:linkText>
+        <command:uri />
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>PSDataverse README</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse#readme</command:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Migration guide</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md</command:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command>
+    <command:details>
+      <command:name>Invoke-DataverseRequest</command:name>
+      <maml:description>
+        <maml:para>Sends one or more low-level Dataverse Web API operations with bounded concurrency.</maml:para>
+      </maml:description>
+      <command:verb>Invoke</command:verb>
+      <command:noun>DataverseRequest</command:noun>
+    </command:details>
+    <maml:description>
+      <maml:para>Invoke-DataverseRequest is the low-level PSDataverse request engine. It accepts direct request parameters, operation dictionaries, or strongly typed operations. Pipelines use bounded concurrency, honor Dataverse DOP hints, support optional `$batch` envelopes and pagination, and emit results in completion order unless input order is requested.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Invoke-DataverseRequest</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="4" aliases="none">
+          <maml:name>AutoPaginate</maml:name>
+          <maml:description>
+            <maml:para>Follows every @odata.nextLink and emits each response page.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="1" aliases="none">
+          <maml:name>BatchSize</maml:name>
+          <maml:description>
+            <maml:para>The number of operations placed in each transactional `$batch` change set. Zero sends individual requests.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Int32</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Connection</maml:name>
+          <maml:description>
+            <maml:para>A DataverseConnection returned by Connect-Dataverse. Do not combine this parameter with ConnectionName.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">PSDataverse.DataverseConnection</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ConnectionName</maml:name>
+          <maml:description>
+            <maml:para>The registered connection name to use. Omit it to use the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>InputObject</maml:name>
+          <maml:description>
+            <maml:para>A pipeline object or dictionary describing an operation.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.Management.Automation.PSObject</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="2" aliases="none">
+          <maml:name>MaxDop</maml:name>
+          <maml:description>
+            <maml:para>The client-side concurrency ceiling. Zero uses the module default; Dataverse can lower it with its DOP hint.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Int32</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>OutputOrder</maml:name>
+          <maml:description>
+            <maml:para>Controls whether results are emitted in Completion order for throughput or buffered into Input order.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="3" aliases="none">
+          <maml:name>OutputTable</maml:name>
+          <maml:description>
+            <maml:para>Formats operation responses as a PowerShell table through the host.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Invoke-DataverseRequest</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="4" aliases="none">
+          <maml:name>AutoPaginate</maml:name>
+          <maml:description>
+            <maml:para>Follows every @odata.nextLink and emits each response page.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="1" aliases="none">
+          <maml:name>BatchSize</maml:name>
+          <maml:description>
+            <maml:para>The number of operations placed in each transactional `$batch` change set. Zero sends individual requests.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Int32</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Connection</maml:name>
+          <maml:description>
+            <maml:para>A DataverseConnection returned by Connect-Dataverse. Do not combine this parameter with ConnectionName.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">PSDataverse.DataverseConnection</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ConnectionName</maml:name>
+          <maml:description>
+            <maml:para>The registered connection name to use. Omit it to use the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>InputOperation</maml:name>
+          <maml:description>
+            <maml:para>A strongly typed PSDataverse operation supplied through the pipeline.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">PSDataverse.Dataverse.Model.Operation`1[System.String]</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="2" aliases="none">
+          <maml:name>MaxDop</maml:name>
+          <maml:description>
+            <maml:para>The client-side concurrency ceiling. Zero uses the module default; Dataverse can lower it with its DOP hint.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Int32</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>OutputOrder</maml:name>
+          <maml:description>
+            <maml:para>Controls whether results are emitted in Completion order for throughput or buffered into Input order.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="3" aliases="none">
+          <maml:name>OutputTable</maml:name>
+          <maml:description>
+            <maml:para>Formats operation responses as a PowerShell table through the host.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Invoke-DataverseRequest</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="4" aliases="none">
+          <maml:name>AutoPaginate</maml:name>
+          <maml:description>
+            <maml:para>Follows every @odata.nextLink and emits each response page.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="1" aliases="none">
+          <maml:name>BatchSize</maml:name>
+          <maml:description>
+            <maml:para>The number of operations placed in each transactional `$batch` change set. Zero sends individual requests.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Int32</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Body</maml:name>
+          <maml:description>
+            <maml:para>The request or row body. PowerShell objects and dictionaries are serialized as JSON.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Object</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Connection</maml:name>
+          <maml:description>
+            <maml:para>A DataverseConnection returned by Connect-Dataverse. Do not combine this parameter with ConnectionName.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">PSDataverse.DataverseConnection</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ConnectionName</maml:name>
+          <maml:description>
+            <maml:para>The registered connection name to use. Omit it to use the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ContentId</maml:name>
+          <maml:description>
+            <maml:para>A caller-defined identifier used to correlate the operation with its response or error.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Headers</maml:name>
+          <maml:description>
+            <maml:para>Additional HTTP request headers.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Collections.IDictionary</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="2" aliases="none">
+          <maml:name>MaxDop</maml:name>
+          <maml:description>
+            <maml:para>The client-side concurrency ceiling. Zero uses the module default; Dataverse can lower it with its DOP hint.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Int32</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Method</maml:name>
+          <maml:description>
+            <maml:para>The HTTP method. GET is inferred when no body is present and POST when a body is present.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>OutputOrder</maml:name>
+          <maml:description>
+            <maml:para>Controls whether results are emitted in Completion order for throughput or buffered into Input order.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="3" aliases="none">
+          <maml:name>OutputTable</maml:name>
+          <maml:description>
+            <maml:para>Formats operation responses as a PowerShell table through the host.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Uri</maml:name>
+          <maml:description>
+            <maml:para>A relative Dataverse Web API URI or an absolute next-link URI.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="4" aliases="none">
+        <maml:name>AutoPaginate</maml:name>
+        <maml:description>
+          <maml:para>Follows every @odata.nextLink and emits each response page.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="1" aliases="none">
+        <maml:name>BatchSize</maml:name>
+        <maml:description>
+          <maml:para>The number of operations placed in each transactional `$batch` change set. Zero sends individual requests.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Int32</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Body</maml:name>
+        <maml:description>
+          <maml:para>The request or row body. PowerShell objects and dictionaries are serialized as JSON.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Object</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Connection</maml:name>
+        <maml:description>
+          <maml:para>A DataverseConnection returned by Connect-Dataverse. Do not combine this parameter with ConnectionName.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">PSDataverse.DataverseConnection</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>ConnectionName</maml:name>
+        <maml:description>
+          <maml:para>The registered connection name to use. Omit it to use the default connection.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>ContentId</maml:name>
+        <maml:description>
+          <maml:para>A caller-defined identifier used to correlate the operation with its response or error.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Headers</maml:name>
+        <maml:description>
+          <maml:para>Additional HTTP request headers.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Collections.IDictionary</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+        <maml:name>InputObject</maml:name>
+        <maml:description>
+          <maml:para>A pipeline object or dictionary describing an operation.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.Management.Automation.PSObject</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+        <maml:name>InputOperation</maml:name>
+        <maml:description>
+          <maml:para>A strongly typed PSDataverse operation supplied through the pipeline.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">PSDataverse.Dataverse.Model.Operation`1[System.String]</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="2" aliases="none">
+        <maml:name>MaxDop</maml:name>
+        <maml:description>
+          <maml:para>The client-side concurrency ceiling. Zero uses the module default; Dataverse can lower it with its DOP hint.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Int32</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Method</maml:name>
+        <maml:description>
+          <maml:para>The HTTP method. GET is inferred when no body is present and POST when a body is present.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>OutputOrder</maml:name>
+        <maml:description>
+          <maml:para>Controls whether results are emitted in Completion order for throughput or buffered into Input order.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="3" aliases="none">
+        <maml:name>OutputTable</maml:name>
+        <maml:description>
+          <maml:para>Formats operation responses as a PowerShell table through the host.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+        <maml:name>Uri</maml:name>
+        <maml:description>
+          <maml:para>A relative Dataverse Web API URI or an absolute next-link URI.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <dev:name>System.Management.Automation.PSObject</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Operation dictionaries and strongly typed operations can be supplied through the pipeline.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <dev:name>System.Object</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>PSDataverse operation or batch response envelopes.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>Automatic retries are limited to replay-safe methods. POST, PATCH, DELETE, and write batches are sent once because a missing response does not prove the server rejected the write.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>--------- Example 1: Retrieve rows ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Invoke-DataverseRequest -Uri 'accounts?$select=name&amp;$top=5'
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Sends a GET request.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 2: Create a row ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Invoke-DataverseRequest -Uri accounts -Method POST -Body @{ name = 'Contoso' }
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Serializes the body as JSON and sends one POST.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 3: Send transactional batches concurrently ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+$operations | Invoke-DataverseRequest -BatchSize 20 -MaxDop 5
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Builds change sets of 20 operations and runs up to five envelopes concurrently.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 4: Preserve pipeline order ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+$operations | Invoke-DataverseRequest -MaxDop 20 -OutputOrder Input
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Buffers completed responses until earlier inputs can be emitted.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version</maml:linkText>
+        <command:uri />
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>PSDataverse README</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse#readme</command:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Migration guide</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md</command:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command>
+    <command:details>
+      <command:name>Set-DataverseDefaultConnection</command:name>
+      <maml:description>
+        <maml:para>Selects the default registered Dataverse connection.</maml:para>
+      </maml:description>
+      <command:verb>Set</command:verb>
+      <command:noun>DataverseDefaultConnection</command:noun>
+    </command:details>
+    <maml:description>
+      <maml:para>Set-DataverseDefaultConnection changes which registered connection is used when commands omit Connection and ConnectionName.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Set-DataverseDefaultConnection</maml:name>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The exact registered connection name to make default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>PassThru</maml:name>
+          <maml:description>
+            <maml:para>Returns the affected connection or updated row.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+        <maml:name>Name</maml:name>
+        <maml:description>
+          <maml:para>The exact registered connection name to make default.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>PassThru</maml:name>
+        <maml:description>
+          <maml:para>Returns the affected connection or updated row.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <dev:name>System.Object</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>Objects with a Name property can bind from the pipeline.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <dev:name>PSDataverse.DataverseConnection</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>A DataverseConnection when PassThru is specified; otherwise no output.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>Use -Connection or -ConnectionName to avoid relying on the session default when a script works with more than one environment.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>--------- Example 1: Switch the default environment ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Set-DataverseDefaultConnection production
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Makes the registered production connection the default.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 2: Return the selected connection ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Set-DataverseDefaultConnection dev -PassThru
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Changes the default and emits the connection object.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version</maml:linkText>
+        <command:uri />
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>PSDataverse README</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse#readme</command:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Migration guide</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md</command:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command>
+    <command:details>
+      <command:name>Test-DataverseBulkOperationSupport</command:name>
+      <maml:description>
+        <maml:para>Tests whether a Dataverse table supports a multiple-row message.</maml:para>
+      </maml:description>
+      <command:verb>Test</command:verb>
+      <command:noun>DataverseBulkOperationSupport</command:noun>
+    </command:details>
+    <maml:description>
+      <maml:para>Test-DataverseBulkOperationSupport performs one combined metadata query for CreateMultiple and UpdateMultiple and caches the result for the owning connection. UpsertMultiple is supported only when both messages are available. Concurrent cold callers share one lookup.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Test-DataverseBulkOperationSupport</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Connection</maml:name>
+          <maml:description>
+            <maml:para>A DataverseConnection returned by Connect-Dataverse. Do not combine this parameter with ConnectionName.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">PSDataverse.DataverseConnection</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ConnectionName</maml:name>
+          <maml:description>
+            <maml:para>The registered connection name to use. Omit it to use the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Detailed</maml:name>
+          <maml:description>
+            <maml:para>Returns a structured result instead of the default Boolean value.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>LogicalName</maml:name>
+          <maml:description>
+            <maml:para>The singular Dataverse table logical name, such as account.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="1" aliases="none">
+          <maml:name>Operation</maml:name>
+          <maml:description>
+            <maml:para>The bulk message to inspect: CreateMultiple, UpdateMultiple, or UpsertMultiple.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Refresh</maml:name>
+          <maml:description>
+            <maml:para>Discards the cached capability result and queries Dataverse again.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Test-DataverseBulkOperationSupport</maml:name>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Connection</maml:name>
+          <maml:description>
+            <maml:para>A DataverseConnection returned by Connect-Dataverse. Do not combine this parameter with ConnectionName.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">PSDataverse.DataverseConnection</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>ConnectionName</maml:name>
+          <maml:description>
+            <maml:para>The registered connection name to use. Omit it to use the default connection.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Detailed</maml:name>
+          <maml:description>
+            <maml:para>Returns a structured result instead of the default Boolean value.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="1" aliases="none">
+          <maml:name>Operation</maml:name>
+          <maml:description>
+            <maml:para>The bulk message to inspect: CreateMultiple, UpdateMultiple, or UpsertMultiple.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+          <maml:name>Refresh</maml:name>
+          <maml:description>
+            <maml:para>Discards the cached capability result and queries Dataverse again.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+          <maml:name>TableSetName</maml:name>
+          <maml:description>
+            <maml:para>The Web API entity-set name, such as accounts.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Connection</maml:name>
+        <maml:description>
+          <maml:para>A DataverseConnection returned by Connect-Dataverse. Do not combine this parameter with ConnectionName.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">PSDataverse.DataverseConnection</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>ConnectionName</maml:name>
+        <maml:description>
+          <maml:para>The registered connection name to use. Omit it to use the default connection.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Detailed</maml:name>
+        <maml:description>
+          <maml:para>Returns a structured result instead of the default Boolean value.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+        <maml:name>LogicalName</maml:name>
+        <maml:description>
+          <maml:para>The singular Dataverse table logical name, such as account.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="1" aliases="none">
+        <maml:name>Operation</maml:name>
+        <maml:description>
+          <maml:para>The bulk message to inspect: CreateMultiple, UpdateMultiple, or UpsertMultiple.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="Named" aliases="none">
+        <maml:name>Refresh</maml:name>
+        <maml:description>
+          <maml:para>Discards the cached capability result and queries Dataverse again.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="true">System.Management.Automation.SwitchParameter</command:parameterValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="0" aliases="none">
+        <maml:name>TableSetName</maml:name>
+        <maml:description>
+          <maml:para>The Web API entity-set name, such as accounts.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="true">System.String</command:parameterValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <dev:name>System.String</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>You can pipe logical table names.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <dev:name>System.Boolean</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>A Boolean by default, or a PSDataverse.DataverseBulkOperationSupport object with Detailed.</maml:para>
+        </maml:description>
+      </command:returnValue>
+      <command:returnValue>
+        <dev:type>
+          <dev:name>PSDataverse.DataverseBulkOperationSupport</dev:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>A Boolean by default, or a PSDataverse.DataverseBulkOperationSupport object with Detailed.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>The cache is connection-scoped and disposed with the connection. Bulk commands fail open when inspection itself is unavailable, but stop before sending rows for a definitive unsupported result.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>--------- Example 1: Test CreateMultiple support ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Test-DataverseBulkOperationSupport account -Operation CreateMultiple
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Returns a Boolean result.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 2: Inspect the cached capability matrix ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Test-DataverseBulkOperationSupport account -Operation UpsertMultiple -Detailed
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Returns support flags, cache source, and check time.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+      <command:example>
+        <maml:title>--------- Example 3: Refresh a result by entity-set name ---------</maml:title>
+        <maml:introduction>
+          <maml:para>```powershell
+Test-DataverseBulkOperationSupport -TableSetName accounts -Operation UpdateMultiple -Refresh -Detailed
+```</maml:para>
+          <maml:para>&#x80;</maml:para>
+          <maml:para>Invalidates aliases and queries Dataverse again.</maml:para>
+        </maml:introduction>
+        <dev:code />
+        <dev:remarks />
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version</maml:linkText>
+        <command:uri />
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>PSDataverse README</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse#readme</command:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Migration guide</maml:linkText>
+        <command:uri>https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md</command:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+</helpItems>

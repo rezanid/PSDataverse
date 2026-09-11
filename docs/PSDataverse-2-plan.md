@@ -81,7 +81,7 @@ The read-only and disposable-table write results are recorded in `docs/benchmark
 - [x] Add guarded live integration coverage for CRUD, pagination, `$batch`, CreateMultiple, UpdateMultiple, UpsertMultiple, throttling behavior, and cleanup.
 - [x] Improve multiple-operation failures so errors identify the failed chunk and its input rows.
 - [x] Detect and report whether a table supports each multiple-operation message before sending a large workload.
-- [ ] Complete command help, measured transport recommendations, and the 0.x-to-2.x migration guide.
+- [x] Complete command help, measured transport recommendations, and the 0.x-to-2.x migration guide.
 - [ ] Produce and verify deterministic prerelease packages, including installation from a local PowerShell repository.
 - [ ] Run the release-candidate package on Windows, Linux, and macOS with PowerShell 7.6.
 
@@ -122,6 +122,13 @@ stop before rows are sent with `DVERR-1021`; inspection failures remain fail-ope
 the optimization cannot break an otherwise valid workload. The public
 `Test-DataverseBulkOperationSupport` command supports explicit refresh and detailed
 cache diagnostics.
+
+Every exported command now has schema-validated Markdown help that generates the
+external help shipped in the package. Build validation rejects syntax, parameter,
+placeholder, index, or generated-MAML drift, while PlatyPS remains a pinned
+build-only dependency. The transport guide converts the disposable-environment
+measurements into semantic and performance recommendations, and the migration guide
+provides runnable 0.x-to-2.x replacements and troubleshooting guidance.
 
 ## Compatibility policy
 

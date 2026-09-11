@@ -1,161 +1,302 @@
 # Migrating from PSDataverse 0.x to PSDataverse 2
 
-This guide tracks breaking and behavior-changing work as PSDataverse 2 is developed. It is intentionally updated alongside the implementation; items marked “planned” are not available yet.
+PSDataverse 2 keeps the familiar Web API operation model and the
+`Send-DataverseOperation` name, while modernizing the runtime, authentication,
+connection management, concurrency, and high-level command surface. This guide is
+for scripts moving from the latest PSDataverse 0.x release to 2.x.
 
-## Milestone 0 changes
+## Before you upgrade
 
-### Runtime support
-
-PSDataverse 2 requires PowerShell 7.6 LTS or later and targets .NET 10. PowerShell 5.1 and PowerShell 7.4 are not supported by the PSDataverse 2 binary package.
-
-### Removed template command
-
-The internal `ConvertTo-CustomText` cmdlet and its Scriban/Humanizer dependencies were removed. The cmdlet was not exported by the module manifest, so ordinary PSDataverse scripts could not call it after a normal module import. If you loaded the assembly directly and used this cmdlet, invoke Scriban from a dedicated module or application before upgrading.
-
-### Removed experimental connection command
-
-The unexported `Connect-DataverseNew` experiment was removed. Continue using `Connect-Dataverse`. Its useful ideas will return as tested parameter sets on the primary command in the connection/authentication milestone.
-
-### Removed no-op parameters
-
-The unused `-Retry` parameters were removed from `Connect-Dataverse` and `Send-DataverseOperation`. Retry behavior remains automatic. A later release will expose meaningful resilience settings rather than accepting a switch that did nothing.
-
-### Exported command corrections
-
-The manifest now exports the commands implemented by the module:
-
-```text
-Clear-DataverseTable
-Connect-Dataverse
-Disconnect-Dataverse
-Export-DataverseOptionSet
-Get-DataverseAttributes
-Get-DataverseTableRowCount
-Send-DataverseOperation
-```
-
-Scripts do not need to dot-source helper files to access those commands. If a script depended on a helper remaining private, qualify or rename its own function to avoid a command-name collision.
-
-### Correctness changes
-
-- Calling `Connect-Dataverse` again now replaces and disposes the previous connection resources, so requests use the newly supplied environment URL.
-- Access tokens are no longer printed by `-Debug`.
-- Batch mode with no explicit `-MaxDop` now actually runs with the default concurrency of 20. Use `-MaxDop 1` if serial batch submission was intentional.
-- Ctrl+C cancellation now propagates through requests, pagination, batches, semaphore waits, and retries.
-- Tokens are refreshed only when they are within five minutes of expiry.
-- Successful response content is retained for all 2xx statuses, including 201.
-- Empty, malformed, and non-JSON server errors now produce descriptive batch/parse exceptions instead of secondary null-reference failures.
-- `Get-DataverseTableRowCount -TableName` now queries the requested table and obtains the count with one minimal request.
-- `Export-DataverseOptionSet` now uses each pipeline name when multiple names are supplied.
-- `ChangeSet.RemoveOperation(string)` now removes the exact matching content ID.
-
-## Milestone 2 connection and authentication changes
-
-`Connect-Dataverse` now returns a `DataverseConnection`. The connection owns its HTTP, authentication, and token-refresh resources but does not publicly expose its access token or client secret. The most recently connected environment remains the default, so concise existing calls to `Send-DataverseOperation` continue to work.
-
-Connections can be named and selected explicitly:
+PSDataverse 2 requires PowerShell 7.6 LTS or later and targets .NET 10. PowerShell
+5.1 and PowerShell 7.4 cannot load its binary package. Check the host first:
 
 ```powershell
-$development = Connect-Dataverse https://dev.crm.dynamics.com -Interactive -Name dev
-$production = Connect-Dataverse https://prod.crm.dynamics.com -DeviceCode -Name prod -NoDefault
-
-Get-DataverseConnection
-Set-DataverseDefaultConnection prod
-Send-DataverseOperation accounts -ConnectionName dev
-Send-DataverseOperation accounts -Connection $production
-Disconnect-Dataverse dev
-Disconnect-Dataverse -All
+$PSVersionTable.PSVersion
+$PSVersionTable.PSEdition
 ```
 
-The supported authentication forms are:
+Test important automation in a disposable environment, especially scripts that
+submit writes concurrently. PowerShell can keep the 0.x and 2.x module versions
+installed side by side while you validate the migration.
+
+## Fast migration checklist
+
+1. Move the host to PowerShell 7.6 LTS or later.
+2. Import PSDataverse 2 in a clean PowerShell session.
+3. Keep `Send-DataverseOperation`, or rename it to the preferred
+   `Invoke-DataverseRequest` command.
+4. Stop reading undocumented `Dataverse-*` global variables. Store the connection
+   returned by `Connect-Dataverse` instead.
+5. Select an explicit authentication parameter set for new scripts.
+6. Set `-MaxDop 1` wherever serial execution is required.
+7. Set `-OutputOrder Input` wherever pipeline result order matters.
+8. Review write retry assumptions: PSDataverse no longer automatically replays
+   ambiguous POST, PATCH, DELETE, or write-batch requests.
+9. Prefer the row, metadata, import/export, and multiple-operation commands where
+   they replace hand-built requests.
+10. Run `Get-Help <command> -Full` for packaged syntax and examples.
+
+## Commands and compatibility
+
+| 0.x usage | PSDataverse 2 guidance | Compatibility |
+|---|---|---|
+| `Connect-Dataverse` | Continue using it; prefer an explicit authentication switch | Retained |
+| `Send-DataverseOperation` | Prefer `Invoke-DataverseRequest` in new scripts | Retained as an alias for at least one major release |
+| `Disconnect-Dataverse` | Can disconnect one named connection or all connections | Retained |
+| `Clear-DataverseTable` | Continue using it | Retained |
+| `Get-DataverseAttributes` | Prefer `Get-DataverseTableMetadata -IncludeColumns` for new metadata work | Retained |
+| `Get-DataverseTableRowCount` | Continue using it; the requested table is now queried correctly | Retained and corrected |
+| `Export-DataverseOptionSet` | Continue using it | Retained and corrected for pipeline input |
+| `Connect-DataverseNew` | Use `Connect-Dataverse` | Removed; it was an unexported experiment |
+| `ConvertTo-CustomText` | Use a dedicated templating module or application | Removed; it was internal and unexported |
+
+PSDataverse 2 adds named connection commands, row CRUD, table metadata and
+provisioning, actions and functions, CSV/JSON import and export, and
+CreateMultiple/UpdateMultiple/UpsertMultiple commands. See the
+[command reference](docs/reference/README.md).
+
+## Authentication
+
+### Interactive and passwordless sign-in
+
+On Windows, interactive authentication uses Web Account Manager (WAM) by default.
+On other platforms it uses the system browser. Passkeys and other passwordless
+methods are offered by that operating-system or browser experience; they are not a
+separate OAuth flow.
 
 ```powershell
-# WAM on Windows; system browser on other platforms
-Connect-Dataverse $url -Interactive -TenantId $tenantId
+$connection = Connect-Dataverse $url -Interactive
+$connection = Connect-Dataverse $url -Interactive -UseWebAccountManager # -UseWam also works
+$connection = Connect-Dataverse $url -Interactive -UseSystemBrowser
+$connection = Connect-Dataverse $url -Interactive -ForceAuthentication
+```
 
-# Explicit WAM selection on Windows (WAM remains the default there)
-Connect-Dataverse $url -Interactive -UseWam -TenantId $tenantId
+### Device code and IWA
 
-# Force the system browser on Windows
-Connect-Dataverse $url -Interactive -UseSystemBrowser
+Device code is suitable for terminals without an interactive browser. An explicit
+device-code connection always starts the interaction; later refreshes use the
+cache when possible.
 
-# Bypass a cached identity and display the account chooser
-Connect-Dataverse $url -Interactive -ForceAuthentication
+```powershell
+$connection = Connect-Dataverse $url -DeviceCode
+```
 
-Connect-Dataverse $url -DeviceCode -TenantId $tenantId
+IWA remains available on Windows for federated, Active Directory-backed users:
 
-# Windows-only IWA (subject to tenant policy, federation, and MFA constraints)
-Connect-Dataverse $url -IntegratedWindowsAuthentication -TenantId $tenantId
+```powershell
+$connection = Connect-Dataverse $url `
+    -IntegratedWindowsAuthentication `
+    -TenantId $tenantId `
+    -UserPrincipalName 'user@contoso.com'
+```
 
-Connect-Dataverse $url -ClientId $appId -TenantId $tenantId `
-    -ClientSecret (Read-Host -AsSecureString)
+Microsoft has deprecated IWA, and it cannot authenticate managed Entra-only users
+or satisfy many MFA and Conditional Access policies. PSDataverse converts that
+common failure into guidance to use `-Interactive` or `-DeviceCode`.
 
-Connect-Dataverse $url -ClientId $appId -TenantId $tenantId `
+### Applications, supplied tokens, and token providers
+
+Client secrets are `SecureString` values. Certificates come from the operating
+system certificate store.
+
+```powershell
+$connection = Connect-Dataverse $url -ClientId $appId -TenantId $tenantId `
+    -ClientSecret (Read-Host 'Client secret' -AsSecureString)
+
+$connection = Connect-Dataverse $url -ClientId $appId -TenantId $tenantId `
     -CertificateThumbprint $thumbprint
 
-Connect-Dataverse $url -AccessToken $secureToken -ExpiresOn $expiry
+$connection = Connect-Dataverse $url -AccessToken $secureToken -ExpiresOn $expiresOn
 
-Connect-Dataverse $url -TokenProvider {
+$connection = Connect-Dataverse $url -TokenProvider {
     param($cancellationToken)
     [DataverseAccessToken]::new((Get-Token), (Get-Date).AddMinutes(50))
 }
 ```
 
-Secret stores remain optional. A provider can resolve a secret without PSDataverse depending on a particular vault module:
+A secret provider keeps vault integration outside PSDataverse:
 
 ```powershell
-Connect-Dataverse $url -ClientId $appId -TenantId $tenantId `
+$connection = Connect-Dataverse $url -ClientId $appId -TenantId $tenantId `
     -ClientSecretProvider { Get-Secret DataverseAppSecret }
 ```
 
-Legacy connection strings remain supported. Familiar XRM tooling names such as `Url`, `AuthType`, `ApplicationId`, `Secret`, `TenantId`, and `CertificateThumbprint` are accepted alongside the original PSDataverse spellings. Duplicate keys now fail with a targeted error rather than being interpreted ambiguously.
+### Existing connection strings
 
-`Disconnect-Dataverse` disconnects the default connection when no name is supplied. Use `-All` to dispose every connection. The old `Dataverse-*` global token/service-provider variables are no longer the source of truth; scripts that read those undocumented variables should migrate to `Get-DataverseConnection`.
-
-Passkeys are available through the operating system or browser interactive sign-in experience. There is intentionally no separate “passkey OAuth flow.”
-
-Explicit device-code connections now always perform the device-code interaction instead of silently selecting the first cached account. Token refreshes for the resulting connection still use the cache. Interactive connections retain silent single sign-on by default; use `-ForceAuthentication` when an account chooser is required. In connection strings, the equivalent option is `ForceAuthentication=true`.
-
-Device-code instructions are written to the PowerShell host and are visible under the default information preference. Earlier development builds wrote them as ordinary information records, which made a connection appear to hang unless `-InformationAction Continue` was supplied.
-
-## Import and multiple-row operations
-
-`Import-DataverseRows` retains `$batch` as its default transport. New scripts can
-choose explicitly between `-Mode Individual`, `-Mode Batch`, and `-Mode Bulk`.
-For imports, `Bulk` means Dataverse `CreateMultiple`, with `-ChunkSize` controlling
-rows per request and `-MaxDop` controlling concurrent requests.
-
-The dedicated `Invoke-DataverseCreateMultiple`,
-`Invoke-DataverseUpdateMultiple`, and `Invoke-DataverseUpsertMultiple` commands
-support the same chunking and concurrency controls. They resolve the logical table
-name from the table-set name unless `-TableLogicalName` is supplied explicitly.
-
-Traditional IWA is deprecated by Microsoft in favor of WAM and only supports federated, Active Directory-backed users. Managed Entra-only identities now receive a targeted error recommending `-Interactive` or `-DeviceCode` instead of the raw MSAL failure.
-
-## Milestone 3 request-engine changes
-
-Batch submission now uses a bounded channel rather than an ever-growing task list and polling loop. `-MaxDop` remains the client-side ceiling; when Dataverse returns `x-ms-dop-hint`, PSDataverse lowers the active concurrency for subsequent queued batches. Completion order remains the fast default. Use `-OutputOrder Input` when downstream pipeline processing must match the original batch order.
-
-Unbatched operation pipelines now use the same bounded scheduler, so `-MaxDop 1` is the explicit serial mode and omitted/zero `-MaxDop` uses the default ceiling of 20. The server's concurrency hint can lower that ceiling. A single request behaves as before.
-
-Automatic transport retries are now replay-safe by default. GET, HEAD, and OPTIONS requests retry transient failures and honor `Retry-After`. POST, PATCH, DELETE, and batches containing those methods are sent once because a missing response does not prove that Dataverse failed to apply the write. Scripts that previously relied on implicit write replay should perform an application-specific existence/version check before retrying.
-
-`Invoke-DataverseRequest` is now the preferred low-level command. `Send-DataverseOperation` is an exported alias to the same implementation and will remain available for at least one major release. Existing operation objects and hashtables continue to work, while new scripts can use direct parameters:
+Connection strings remain a migration path. PSDataverse accepts its original keys
+and familiar XRM tooling names including `Url`, `AuthType`, `ApplicationId`,
+`Secret`, `TenantId`, and `CertificateThumbprint`.
 
 ```powershell
-Invoke-DataverseRequest -Uri 'accounts?$select=name&$top=5'
+$connection = Connect-Dataverse `
+    'AuthType=ClientSecret;Url=https://contoso.crm.dynamics.com;ApplicationId=00000000-0000-0000-0000-000000000000;Secret=...;TenantId=organizations'
+```
+
+Duplicate keys now fail instead of being interpreted ambiguously. Prefer individual
+parameters in new scripts because PowerShell can validate the selected flow and
+keep secrets out of ordinary strings.
+
+## Connections are first-class objects
+
+`Connect-Dataverse` returns a `DataverseConnection`. The newest connection remains
+the default, preserving concise 0.x calls, but scripts can avoid global state:
+
+```powershell
+$development = Connect-Dataverse $developmentUrl -Interactive -Name dev
+$production = Connect-Dataverse $productionUrl -DeviceCode -Name prod -NoDefault
+
+Invoke-DataverseRequest WhoAmI -Connection $development
+Invoke-DataverseRequest WhoAmI -ConnectionName prod
+Set-DataverseDefaultConnection prod
+Get-DataverseConnection
+Disconnect-Dataverse prod
+Disconnect-Dataverse -All
+```
+
+Connections own and dispose their HTTP, authentication, token-cache, and refresh
+resources. Access tokens and client secrets are not public connection properties.
+Scripts that read the old undocumented `Dataverse-*` global variables must retain
+the returned object or use `Get-DataverseConnection`. Connecting again now replaces
+and disposes the previous default resources, so a new environment URL is honored.
+
+## Request migration
+
+The preferred low-level name is `Invoke-DataverseRequest`; the former name is an
+alias to exactly the same command.
+
+```powershell
+Send-DataverseOperation WhoAmI
+Invoke-DataverseRequest WhoAmI
 
 Invoke-DataverseRequest -Uri accounts -Method POST -Body @{
     name = 'Contoso'
 } -Headers @{ Prefer = 'return=representation' }
+
+$operations | Invoke-DataverseRequest -BatchSize 20 -MaxDop 5
 ```
 
-The first convenience layer is available on top of the same request engine:
+Existing operation objects and hashtables remain supported. Successful content is
+retained for every 2xx response, including HTTP 201. Empty, malformed, and non-JSON
+failures now preserve the descriptive request error. Ctrl+C propagates through
+requests, pagination, batches, concurrency waits, and retry delays.
 
-- `Test-DataverseConnection` performs `WhoAmI` and can return identity/timing details.
-- `Get/New/Set/Remove-DataverseRow` cover ordinary table-row CRUD.
-- `Get-DataverseTableMetadata` optionally returns column metadata.
-- `Invoke-DataverseAction` and `Invoke-DataverseFunction` cover bound and unbound operations.
-- `Export-DataverseRows` writes CSV or JSON, while `Import-DataverseRows` submits CSV or JSON rows in bounded batches.
+The removed `-Retry` switches on `Connect-Dataverse` and
+`Send-DataverseOperation` never changed behavior. Remove them from scripts.
 
-These commands require the Web API entity-set name (for example, `accounts`), not the singular logical table name (`account`). The metadata command is the exception and accepts the singular logical name.
+## Concurrency, ordering, and retries
+
+`-MaxDop` is the client-side concurrency ceiling. Dataverse's `x-ms-dop-hint` may
+lower active concurrency for queued work. Omitted or zero `-MaxDop` uses the default
+ceiling of 20; use `-MaxDop 1` for intentional serial execution.
+
+Batch mode in 0.x could accidentally run serially when `-MaxDop` was omitted. In
+2.x it uses the default ceiling. Add `-MaxDop 1` if that behavior was important.
+
+Results stream in completion order for throughput. Request input order only when a
+downstream pipeline depends on it:
+
+```powershell
+$operations | Invoke-DataverseRequest -MaxDop 20 -OutputOrder Input
+```
+
+Automatic transport retries are replay-safe by default. GET, HEAD, and OPTIONS
+retry transient failures and honor `Retry-After`. POST, PATCH, DELETE, and batches
+containing writes are sent once because a lost response does not prove the server
+failed to apply the change. Before retrying an ambiguous write, perform an
+application-specific existence, alternate-key, or version check.
+
+For measured starting points and semantic differences between individual,
+`$batch`, and multiple-operation requests, see
+[Choosing a Dataverse write transport](docs/guides/choosing-a-write-transport.md).
+
+## Prefer the convenience commands
+
+Many hand-built 0.x requests can become clearer PowerShell:
+
+```powershell
+Test-DataverseConnection -Detailed
+
+$row = New-DataverseRow accounts @{ name = 'Contoso' } -PassThru
+Get-DataverseRow accounts $row.Id
+Set-DataverseRow accounts $row.Id @{ telephone1 = '555-0100' }
+Remove-DataverseRow accounts $row.Id
+
+Get-DataverseTableMetadata account -IncludeColumns
+Invoke-DataverseAction -Name 'WhoAmI'
+Export-DataverseRows accounts ./accounts.json -Format Json
+```
+
+Row commands take the Web API entity-set name such as `accounts`. Metadata and
+multiple-operation capability checks take the singular logical name such as
+`account` unless their syntax asks for a table-set name.
+
+## Imports and high-throughput writes
+
+`Import-DataverseRows` makes its transport explicit. `$batch` remains the default
+for compatibility.
+
+```powershell
+Import-DataverseRows accounts ./accounts.csv -Mode Individual -MaxDop 20
+Import-DataverseRows accounts ./accounts.csv -Mode Batch -BatchSize 20 -MaxDop 5
+Import-DataverseRows new_projects ./projects.csv -Mode Bulk -ChunkSize 100 -MaxDop 4
+```
+
+Here `Bulk` means Dataverse `CreateMultiple`, not the asynchronous bulk-delete job.
+Dedicated commands expose `CreateMultiple`, `UpdateMultiple`, and `UpsertMultiple`.
+Not every table supports every multiple message, so capability is detected and
+cached per connection:
+
+```powershell
+Test-DataverseBulkOperationSupport account -Operation UpsertMultiple -Detailed
+Invoke-DataverseUpsertMultiple accounts $rows -ChunkSize 100 -MaxDop 4
+```
+
+When a multiple-operation chunk fails, error ID `DVERR-1020` identifies its
+original one-based row range without printing row contents. The target object keeps
+the input rows and successful sibling chunk numbers for correction or retry:
+
+```powershell
+$bulkErrors = @()
+Invoke-DataverseCreateMultiple new_projects $rows `
+    -ChunkSize 100 -MaxDop 4 `
+    -ErrorAction SilentlyContinue -ErrorVariable bulkErrors
+
+$failure = $bulkErrors[0].TargetObject
+$failure | Select-Object ActionName, ChunkNumber, StartRow, EndRow, ContentId
+$failure.InputRows | Export-Csv ./failed-rows.csv -NoTypeInformation
+$failure.SuccessfulChunkNumbers
+```
+
+A definitively unsupported operation fails before rows are submitted with error ID
+`DVERR-1021`. If metadata inspection is unavailable, PSDataverse preserves the
+request attempt rather than treating uncertainty as lack of support.
+
+## Correctness changes to check
+
+- `Get-DataverseTableRowCount -TableName` now queries the requested table with one
+  minimal request.
+- `Export-DataverseOptionSet` now uses each pipeline name when several are supplied.
+- `ChangeSet.RemoveOperation(string)` removes the exact matching content ID.
+- Access tokens are no longer printed by debug output.
+- Tokens refresh only within five minutes of expiry; concurrent requests share one
+  refresh.
+- Connection-specific service-protection hints and bulk capability results do not
+  leak between environments.
+
+## Troubleshooting
+
+Confirm that the intended package is imported in a clean session:
+
+```powershell
+Get-Module PSDataverse -All | Select-Object Name, Version, Path
+Get-Command Connect-Dataverse -Syntax
+Get-Help Connect-Dataverse -Full
+```
+
+Close every PowerShell session that imported a development build before replacing
+its files. PSDataverse does not work around locked assemblies.
+
+If IWA says the user is managed, use `Connect-Dataverse $url -Interactive` or
+`Connect-Dataverse $url -DeviceCode`. If concurrent results arrive out of order,
+add `-OutputOrder Input`; use `-MaxDop 1` when the operations themselves must be
+serialized.

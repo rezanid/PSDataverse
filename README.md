@@ -12,7 +12,8 @@ PSDataverse is a PowerShell module that brings Dataverse's Web API to PowerShell
 > [!IMPORTANT]
 > PSDataverse 2 modernization is in progress. See the [implementation plan](docs/PSDataverse-2-plan.md) and [0.x migration guide](MIGRATION.md). The current development build requires PowerShell 7.6 or later.
 
-The generated [command reference](docs/reference/README.md) lists the syntax, parameter sets, pipeline support, and aliases exported by the current package.
+The [command reference](docs/reference/README.md) is the source for the detailed help packaged with the module and lists its syntax, examples, pipeline support, and aliases.
+For write-heavy workloads, see [choosing a write transport](docs/guides/choosing-a-write-transport.md).
 
 # Features
 * Securely connect to Dataverse.
@@ -59,6 +60,20 @@ Start-PSDataverseBuild -Output ./output/PSDataverse
 ./tools/Test-PSDataverseModule.ps1 -ModulePath ./output/PSDataverse/PSDataverse.psd1
 dotnet test PSDataverse.sln
 ```
+
+When command metadata or reference documentation changes, regenerate the packaged
+help, rebuild, and validate it:
+
+```powershell
+./tools/Build-CommandHelp.ps1 `
+    -ModulePath ./output/PSDataverse/PSDataverse.psd1
+Start-PSDataverseBuild -Output ./output/PSDataverse
+./tools/Test-PSDataverseModule.ps1 `
+    -ModulePath ./output/PSDataverse/PSDataverse.psd1
+```
+
+The help generator uses the pinned build-only PlatyPS dependency under `output`.
+The published module contains only the generated MAML help, not PlatyPS itself.
 
 The opt-in live integration suite creates and removes a uniquely named disposable
 table. Import the built module, connect using any supported authentication flow, and

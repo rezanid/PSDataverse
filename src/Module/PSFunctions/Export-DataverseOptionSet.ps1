@@ -1,4 +1,7 @@
 function Export-DataverseOptionSet {
+    <#
+.EXTERNALHELP PSDataverse.PowerShell-Help.xml
+#>
     [CmdletBinding(SupportsShouldProcess = $True)]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "Enter one or more OptionSet names separated by commas.")]
