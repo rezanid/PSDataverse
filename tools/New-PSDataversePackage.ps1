@@ -46,6 +46,9 @@ $prerelease = [string]$manifest.PrivateData.PSData.Prerelease
 if ([string]::IsNullOrWhiteSpace($prerelease)) {
     throw 'The PSDataverse 2 package must have explicit prerelease metadata.'
 }
+if ($prerelease -notmatch '^[A-Za-z][0-9A-Za-z]*$') {
+    throw "Prerelease '$prerelease' is not supported by PowerShell Gallery. Use an ASCII letter followed only by ASCII letters or digits (for example, 'rc1'); periods and plus signs are not supported."
+}
 $packageVersion = "$($manifest.Version)-$prerelease"
 $packageFileName = "PSDataverse.$packageVersion.nupkg"
 

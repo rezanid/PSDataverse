@@ -46,7 +46,9 @@ Describe 'PSDataverse packaged module contract' {
         $manifest = Test-ModuleManifest -Path $ModulePath
         $manifest.PowerShellVersion | Should -Be ([version]'7.6')
         $manifest.Version | Should -Be ([version]'2.0.0')
-        $manifest.PrivateData.PSData.Prerelease | Should -Be 'rc.1'
+        $manifest.PrivateData.PSData.Prerelease | Should -Be 'rc1'
+        $manifest.PrivateData.PSData.Prerelease |
+            Should -Match '^[A-Za-z][0-9A-Za-z]*$'
         $manifest.PrivateData.PSData.Keys | Should -Not -Contain 'IsPrerelease'
         Split-Path (Get-Module PSDataverse).Path -Parent |
             Should -Be (Split-Path (Resolve-Path $ModulePath).Path -Parent)
@@ -65,9 +67,9 @@ Describe 'PSDataverse packaged module contract' {
         $metadata.LicenseUri | Should -Match '^https://'
         $metadata.IconUri | Should -Be `
             'https://raw.githubusercontent.com/rezanid/PSDataverse/main/media/PSDataverse-GalleryIcon.png'
-        $metadata.ReleaseNotes | Should -Match '2\.0\.0-rc\.1'
+        $metadata.ReleaseNotes | Should -Match '2\.0\.0-rc1'
         $metadata.ReleaseNotes | Should -Match '/MIGRATION\.md'
-        $metadata.ReleaseNotes | Should -Match '/releases/tag/v2\.0\.0-rc\.1'
+        $metadata.ReleaseNotes | Should -Match '/releases/tag/v2\.0\.0-rc1'
         foreach ($tag in @(
             'PSEdition_Core', 'Windows', 'Linux', 'macOS', 'Dataverse',
             'PowerPlatform', 'Dynamics365', 'WebAPI', 'OAuth')) {
@@ -78,7 +80,7 @@ Describe 'PSDataverse packaged module contract' {
     It 'keeps public release assets synchronized with the package version' {
         $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
         $iconPath = Join-Path $repositoryRoot 'media/PSDataverse-GalleryIcon.png'
-        $notesPath = Join-Path $repositoryRoot 'docs/releases/2.0.0-rc.1.md'
+        $notesPath = Join-Path $repositoryRoot 'docs/releases/2.0.0-rc1.md'
         $readmePath = Join-Path $repositoryRoot 'README.md'
 
         $iconPath | Should -Exist
@@ -94,12 +96,12 @@ Describe 'PSDataverse packaged module contract' {
 
         $notesPath | Should -Exist
         (Get-Content -LiteralPath $notesPath -Raw) |
-            Should -Match 'PSDataverse 2\.0\.0-rc\.1'
+            Should -Match 'PSDataverse 2\.0\.0-rc1'
         $readme = Get-Content -LiteralPath $readmePath -Raw
         $readme | Should -Match `
-            'Install-PSResource -Name PSDataverse -Version 2\.0\.0-rc\.1 -Prerelease'
+            'Install-PSResource -Name PSDataverse -Version 2\.0\.0-rc1 -Prerelease'
         $readme | Should -Match `
-            'Install-Module -Name PSDataverse -RequiredVersion 2\.0\.0-rc\.1 -AllowPrerelease'
+            'Install-Module -Name PSDataverse -RequiredVersion 2\.0\.0-rc1 -AllowPrerelease'
     }
 
     It 'exports exactly the documented command surface' {
