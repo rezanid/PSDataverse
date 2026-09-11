@@ -274,9 +274,37 @@ function Invoke-DataverseMultipleOperation {
         [string]$ConnectionName
     )
     $connectionParameters = Get-DataverseRequestConnectionParameters $Connection $ConnectionName
-    if (!$TableLogicalName) {
-        $metadata = Get-DataverseTableMetadata -TableSetName $TableSetName @connectionParameters
-        $TableLogicalName = $metadata.LogicalName
+
+    $capabilityErrors = @()
+    $support = if ($TableLogicalName) {
+        Test-DataverseBulkOperationSupport -LogicalName $TableLogicalName -Operation $ActionName `
+            -Detailed @connectionParameters -ErrorAction SilentlyContinue -ErrorVariable capabilityErrors
+    } else {
+        Test-DataverseBulkOperationSupport -TableSetName $TableSetName -Operation $ActionName `
+            -Detailed @connectionParameters -ErrorAction SilentlyContinue -ErrorVariable capabilityErrors
+    }
+    if ($capabilityErrors.Count -or $null -eq $support) {
+        $capabilityDetail = if ($capabilityErrors.Count) {
+            $capabilityErrors[0].Exception.Message
+        } else {
+            'No capability result was returned.'
+        }
+        Write-Verbose "Could not inspect $ActionName support for '$TableSetName'; continuing with the requested operation. $capabilityDetail"
+        if (!$TableLogicalName) {
+            $metadata = Get-DataverseTableMetadata -TableSetName $TableSetName @connectionParameters
+            $TableLogicalName = $metadata.LogicalName
+        }
+    } else {
+        if (!$TableLogicalName) { $TableLogicalName = $support.TableLogicalName }
+        if (!$support.Supported) {
+            $message = "Table '$TableLogicalName' does not support $ActionName. Use `$batch when this table requires multiple writes."
+            $errorRecord = [Management.Automation.ErrorRecord]::new(
+                [InvalidOperationException]::new($message),
+                'DVERR-1021',
+                [Management.Automation.ErrorCategory]::InvalidOperation,
+                $support)
+            $PSCmdlet.ThrowTerminatingError($errorRecord)
+        }
     }
     $chunkCount = [math]::Ceiling($Rows.Count / [double]$ChunkSize)
     $successfulChunkNumbers = [Collections.Generic.List[int]]::new()

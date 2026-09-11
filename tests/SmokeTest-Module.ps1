@@ -31,6 +31,7 @@ $expected = @(
     'Send-DataverseOperation'
     'Set-DataverseDefaultConnection'
     'Set-DataverseRow'
+    'Test-DataverseBulkOperationSupport'
     'Test-DataverseConnection'
 )
 

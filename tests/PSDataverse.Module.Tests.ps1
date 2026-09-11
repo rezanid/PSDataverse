@@ -31,6 +31,7 @@ BeforeAll {
         'Send-DataverseOperation'
         'Set-DataverseDefaultConnection'
         'Set-DataverseRow'
+        'Test-DataverseBulkOperationSupport'
         'Test-DataverseConnection'
     )
     Import-Module $ModulePath -Force
@@ -188,6 +189,50 @@ Describe 'PSDataverse packaged module contract' {
         $context.ContentId | Should -Be 'UpdateMultiple_2'
         $context.InputRows | Should -Be $inputRows
         $context.SuccessfulChunkNumbers | Should -Be @(1, 3)
+    }
+
+    It 'exposes bulk capability inspection parameter sets' {
+        $command = Get-Command Test-DataverseBulkOperationSupport
+        @($command.ParameterSets.Name | Sort-Object) | Should -Be @('LogicalName', 'TableSetName')
+        foreach ($set in $command.ParameterSets) {
+            $set.Parameters.Name | Should -Contain 'Operation'
+            $set.Parameters.Name | Should -Contain 'Detailed'
+            $set.Parameters.Name | Should -Contain 'Refresh'
+        }
+    }
+
+    It 'blocks a definitively unsupported multiple operation before sending rows' {
+        InModuleScope PSDataverse {
+            Mock Test-DataverseBulkOperationSupport {
+                [pscustomobject]@{
+                    TableLogicalName = 'unsupported_table'
+                    Operation = 'CreateMultiple'
+                    Supported = $false
+                }
+            }
+            Mock Invoke-DataverseRequest { throw 'A write request must not be sent.' }
+
+            {
+                Invoke-DataverseMultipleOperation CreateMultiple unsupported_tables unsupported_table `
+                    @(@{ unsupported_tableid = [guid]::NewGuid() }) 100 1
+            } | Should -Throw -ErrorId 'DVERR-1021,Invoke-DataverseMultipleOperation'
+            Should -Invoke Invoke-DataverseRequest -Times 0 -Exactly
+        }
+    }
+
+    It 'preserves existing behavior when capability inspection is unavailable' {
+        InModuleScope PSDataverse {
+            Mock Test-DataverseBulkOperationSupport { return }
+            Mock Invoke-DataverseRequest {
+                [pscustomobject]@{ ContentId = 'CreateMultiple_1'; Content = $null }
+            }
+
+            $result = Invoke-DataverseMultipleOperation CreateMultiple new_examples new_example `
+                @(@{ new_exampleid = [guid]::NewGuid() }) 100 1
+
+            Should -Invoke Invoke-DataverseRequest -Times 1 -Exactly
+            $result.ContentId | Should -Be 'CreateMultiple_1'
+        }
     }
 
     It 'tests a missing connection without throwing' {

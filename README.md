@@ -179,6 +179,7 @@ Common tasks now have PowerShell-native wrappers:
 
 ```powershell
 Test-DataverseConnection -Detailed
+Test-DataverseBulkOperationSupport account -Operation UpsertMultiple -Detailed
 Get-DataverseRow accounts -Select name,accountid -Top 10
 New-DataverseRow accounts @{ name = 'Contoso' }
 Set-DataverseRow accounts $accountId @{ telephone1 = '+33 1 23 45 67 89' }
@@ -201,7 +202,26 @@ Dataverse's homogeneous multiple-row APIs while preserving
 `Invoke-DataverseRequest` as the low-level escape hatch. They split rows into
 `-ChunkSize` groups and run those requests concurrently up to `-MaxDop`. The table
 logical name is normally resolved from the table-set name; supply
-`-TableLogicalName` explicitly to avoid that metadata lookup.
+`-TableLogicalName` explicitly to avoid entity-name resolution.
+
+Bulk commands verify table support before preparing or sending chunks. The first
+operation for a table and connection performs one combined capability query for
+`CreateMultiple` and `UpdateMultiple`; subsequent operations use the connection's
+in-memory cache. Concurrent first-time callers share the same lookup. `UpsertMultiple`
+support is derived from both messages being available. Inspect or refresh the result
+explicitly when needed:
+
+```powershell
+Test-DataverseBulkOperationSupport account -Operation CreateMultiple
+Test-DataverseBulkOperationSupport account -Operation UpsertMultiple -Detailed
+Test-DataverseBulkOperationSupport account -Operation UpdateMultiple -Refresh
+```
+
+A definitive unsupported result stops before any rows are sent with error ID
+`DVERR-1021` and recommends `$batch`. If metadata inspection itself is unavailable,
+the bulk command preserves existing behavior and attempts the requested operation;
+use `-Verbose` to see that diagnostic. Capability results live only for the owning
+connection, so environments never share them.
 
 `Import-DataverseRows` makes the transport choice explicit:
 

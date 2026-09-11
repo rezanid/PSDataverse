@@ -18,6 +18,7 @@ foreach ($command in @(
     'Remove-DataverseRow',
     'Remove-DataverseTable',
     'Set-DataverseRow'
+    'Test-DataverseBulkOperationSupport'
 )) {
     if (!(Get-Command $command -ErrorAction Ignore)) {
         throw "Required command '$command' is not loaded. Import the built PSDataverse module first."
@@ -116,6 +117,20 @@ try {
             $metadata.LogicalName -eq $script:liveState.LogicalName
         ) "Metadata returned logical name '$($metadata.LogicalName)' instead of '$($script:liveState.LogicalName)'."
         Assert-LiveCondition (![string]::IsNullOrWhiteSpace($script:liveState.TableSetName)) 'EntitySetName was not returned.'
+    }
+
+    Invoke-LivePhase 'BulkOperationCapabilities' {
+        $cold = Test-DataverseBulkOperationSupport -LogicalName $script:liveState.LogicalName `
+            -Operation CreateMultiple -Detailed -Refresh @connectionParameters
+        $warm = Test-DataverseBulkOperationSupport -LogicalName $script:liveState.LogicalName `
+            -Operation UpsertMultiple -Detailed @connectionParameters
+
+        Assert-LiveCondition $cold.Supported 'Disposable custom table did not report CreateMultiple support.'
+        Assert-LiveCondition $warm.Supported 'Disposable custom table did not report UpsertMultiple support.'
+        Assert-LiveCondition (!$cold.FromCache) 'Refreshed capability result unexpectedly came from cache.'
+        Assert-LiveCondition $warm.FromCache 'Second capability result did not come from the connection cache.'
+        Assert-LiveCondition ($cold.CreateMultiple -and $cold.UpdateMultiple) `
+            'Combined capability query did not report both create and update support.'
     }
 
     Invoke-LivePhase 'ConvenienceCrud' {

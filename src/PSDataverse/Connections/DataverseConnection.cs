@@ -41,6 +41,7 @@ public sealed class DataverseConnection : IDisposable
     internal AuthenticationParameters AuthenticationParameters { get; set; }
     internal IAccount AuthenticationAccount { get; set; }
     internal bool IsOnPremises => AuthenticationKind == DataverseAuthenticationKind.OnPremises;
+    internal BulkOperationCapabilityCache BulkOperationCapabilities { get; } = new();
 
     internal void SetAccessToken(DataverseAccessToken value)
     {
@@ -111,6 +112,7 @@ public sealed class DataverseConnection : IDisposable
             return;
         }
         (Services as IDisposable)?.Dispose();
+        BulkOperationCapabilities.Dispose();
         tokenLock.Dispose();
         accessToken = null;
         disposed = true;

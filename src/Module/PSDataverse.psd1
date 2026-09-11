@@ -86,7 +86,8 @@ CmdletsToExport = @(
     'Disconnect-Dataverse',
     'Get-DataverseConnection',
     'Invoke-DataverseRequest',
-    'Set-DataverseDefaultConnection'
+    'Set-DataverseDefaultConnection',
+    'Test-DataverseBulkOperationSupport'
 )
 
 # Variables to export from this module
