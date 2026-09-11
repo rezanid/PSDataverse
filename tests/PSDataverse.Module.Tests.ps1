@@ -161,6 +161,35 @@ Describe 'PSDataverse packaged module contract' {
         }
     }
 
+    It 'creates structured multiple-operation errors without printing input rows' {
+        $inputRows = @(
+            [pscustomobject]@{ Name = 'sensitive-row-3' }
+            [pscustomobject]@{ Name = 'sensitive-row-4' }
+        )
+        $context = [PSDataverse.MultipleOperationFailureContext]@{
+            ActionName = 'UpdateMultiple'
+            TableSetName = 'new_examples'
+            TableLogicalName = 'new_example'
+            ChunkNumber = 2
+            ChunkCount = 3
+            StartIndex = 2
+            EndIndex = 3
+            StartRow = 3
+            EndRow = 4
+            ContentId = 'UpdateMultiple_2'
+            InputRows = $inputRows
+            SuccessfulChunkNumbers = [Collections.Generic.List[int]]@(1, 3)
+        }
+
+        $message = $context.CreateErrorMessage('Generic SQL error')
+        $message | Should -Match 'chunk 2 of 3'
+        $message | Should -Match 'input rows 3-4'
+        $message | Should -Not -Match 'sensitive-row'
+        $context.ContentId | Should -Be 'UpdateMultiple_2'
+        $context.InputRows | Should -Be $inputRows
+        $context.SuccessfulChunkNumbers | Should -Be @(1, 3)
+    }
+
     It 'tests a missing connection without throwing' {
         Disconnect-Dataverse -All -Confirm:$false -InformationAction Ignore
         Test-DataverseConnection | Should -BeFalse

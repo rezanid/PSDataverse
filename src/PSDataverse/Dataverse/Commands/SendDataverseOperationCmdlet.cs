@@ -289,6 +289,9 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
                     Headers = dictionary.TryGetValue(nameof(Headers), out var headers) && headers != null ?
                         (headers as IDictionary).Cast<DictionaryEntry>().ToDictionary(e => e.Key.ToString(), e => e.Value.ToString())
                         : null,
+                    FailureContext = dictionary.TryGetValue(nameof(Operation.FailureContext), out var failureContext)
+                        ? failureContext as MultipleOperationFailureContext
+                        : null,
                     Value = dictionary.TryGetValue("Value", out var value) && value != null ? ConvertToJson(value) : null
                 };
                 return true;
@@ -421,11 +424,28 @@ public class InvokeDataverseRequestCmdlet : DataverseCmdlet, IOperationReporter
         {
             throw result.Error;
         }
-        WriteError(new ErrorRecord(
-            result.Error,
-            Globals.ErrorIdOperationException,
-            ErrorCategory.WriteError,
-            this));
+        WriteError(CreateOperationErrorRecord(result.Error, this));
+    }
+
+    internal static ErrorRecord CreateOperationErrorRecord(Exception error, object defaultTarget)
+    {
+        var exception = error;
+        var errorId = Globals.ErrorIdOperationException;
+        var target = defaultTarget;
+        if (error is OperationException<string> operationException &&
+            operationException.Operation?.FailureContext is { } context)
+        {
+            if (!context.FailedContentIds.Contains(context.ContentId))
+            {
+                context.FailedContentIds.Add(context.ContentId);
+            }
+            exception = new InvalidOperationException(
+                context.CreateErrorMessage(error.Message),
+                error);
+            errorId = Globals.ErrorIdMultipleOperationException;
+            target = context;
+        }
+        return new ErrorRecord(exception, errorId, ErrorCategory.WriteError, target);
     }
 
     private void AcceptBatchResult(ScheduledResult<Batch<string>> result)

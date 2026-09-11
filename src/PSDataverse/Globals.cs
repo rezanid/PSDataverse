@@ -19,5 +19,6 @@ public static class Globals
     public const string ErrorIdConnectionExpired = "DVERR-1002";
     public const string ErrorIdMissingOperation = "DVERR-1003";
     public const string ErrorIdOperationException = "DVERR-1010";
+    public const string ErrorIdMultipleOperationException = "DVERR-1020";
     public const string ErrorIdConnectionNotFound = "DVERR-1004";
 }
