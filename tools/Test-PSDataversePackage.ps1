@@ -10,12 +10,20 @@ param(
 
     [string]$DependencyPath = (Join-Path $PSScriptRoot '../output/build-modules'),
 
-    [string]$PowerShellPath = (Get-Process -Id $PID).Path,
+    [string]$PowerShellPath,
 
     [switch]$RepositoryWorker
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($PowerShellPath)) {
+    $PowerShellPath = @(Get-Command pwsh -CommandType Application `
+        -ErrorAction Stop)[0].Source
+}
+$PowerShellPath = [IO.Path]::GetFullPath($PowerShellPath)
+if (!(Test-Path -LiteralPath $PowerShellPath -PathType Leaf)) {
+    throw "PowerShell executable '$PowerShellPath' was not found."
+}
 $packageFile = [IO.Path]::GetFullPath($PackagePath)
 $installRoot = [IO.Path]::GetFullPath($InstallPath)
 $repositoryRoot = [IO.Path]::GetFullPath($RepositoryPath)

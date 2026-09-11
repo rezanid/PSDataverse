@@ -6,12 +6,22 @@ param(
 
     [string]$DependencyPath = (Join-Path $PSScriptRoot '../output/build-modules'),
 
+    [string]$PowerShellPath,
+
     [switch]$SkipModuleTests,
 
     [switch]$SkipInstallTest
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($PowerShellPath)) {
+    $PowerShellPath = @(Get-Command pwsh -CommandType Application `
+        -ErrorAction Stop)[0].Source
+}
+$PowerShellPath = [IO.Path]::GetFullPath($PowerShellPath)
+if (!(Test-Path -LiteralPath $PowerShellPath -PathType Leaf)) {
+    throw "PowerShell executable '$PowerShellPath' was not found."
+}
 $outputRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../output'))
 $packageRoot = [IO.Path]::GetFullPath($OutputPath)
 $buildRoot = [IO.Path]::GetFullPath($BuildPath)
@@ -221,7 +231,8 @@ $hashLine = "$($candidateHashes[0].ToLowerInvariant())  $packageFileName`n"
 $installResult = $null
 if (!$SkipInstallTest) {
     $installResult = & (Join-Path $PSScriptRoot 'Test-PSDataversePackage.ps1') `
-        -PackagePath $finalPackagePath -DependencyPath $dependencyRoot
+        -PackagePath $finalPackagePath -DependencyPath $dependencyRoot `
+        -PowerShellPath $PowerShellPath
 }
 
 [pscustomobject]@{
