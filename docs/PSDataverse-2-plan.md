@@ -79,7 +79,7 @@ The read-only and disposable-table write results are recorded in `docs/benchmark
 - [x] Target .NET 10 and require PowerShell 7.6 LTS across the project, manifest, documentation, and CI.
 - [x] Review and resolve compiler warnings and obsolete APIs, documenting intentional compatibility exceptions such as the retained MSAL IWA call.
 - [x] Add guarded live integration coverage for CRUD, pagination, `$batch`, CreateMultiple, UpdateMultiple, UpsertMultiple, throttling behavior, and cleanup.
-- [ ] Improve multiple-operation failures so errors identify the failed chunk and its input rows.
+- [x] Improve multiple-operation failures so errors identify the failed chunk and its input rows.
 - [ ] Detect and report whether a table supports each multiple-operation message before sending a large workload.
 - [ ] Complete command help, measured transport recommendations, and the 0.x-to-2.x migration guide.
 - [ ] Produce and verify deterministic prerelease packages, including installation from a local PowerShell repository.
@@ -105,6 +105,14 @@ UpsertMultiple, and forced multi-page reads, and removes the generated table in 
 `finally` block. Service-protection headers are captured without intentionally
 overloading the tenant; HTTP 429 `Retry-After` handling is covered deterministically
 by the transport test suite.
+
+CreateMultiple, UpdateMultiple, and UpsertMultiple failures now use `DVERR-1020` and
+carry a client-only `MultipleOperationFailureContext`. The context identifies the
+failed chunk, its one-based source row range, retained input objects, failed content
+IDs, and successful sibling chunks without exposing row contents in the displayed
+error message. Unit, packaged-module, and guarded live tests verify the mapping; the
+live negative test deliberately fails the second CreateMultiple chunk and confirms
+that callers receive exactly one structured error while the first chunk succeeds.
 
 ## Compatibility policy
 

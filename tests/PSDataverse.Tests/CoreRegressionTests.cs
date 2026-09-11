@@ -65,6 +65,42 @@ public class CoreRegressionTests
     }
 
     [Fact]
+    public void MultipleOperationFailureProducesOneStructuredErrorRecord()
+    {
+        var context = new MultipleOperationFailureContext
+        {
+            ActionName = "CreateMultiple",
+            TableSetName = "new_examples",
+            TableLogicalName = "new_example",
+            ChunkNumber = 2,
+            ChunkCount = 3,
+            StartIndex = 2,
+            EndIndex = 3,
+            StartRow = 3,
+            EndRow = 4,
+            ContentId = "CreateMultiple_2",
+            InputRows = [new { Name = "sensitive-row-3" }, new { Name = "sensitive-row-4" }],
+            SuccessfulChunkNumbers = [1]
+        };
+        var operation = new Operation<string>
+        {
+            ContentId = context.ContentId,
+            FailureContext = context
+        };
+        var source = new OperationException<string>("Generic SQL error") { Operation = operation };
+
+        var result = InvokeDataverseRequestCmdlet.CreateOperationErrorRecord(source, new object());
+
+        result.FullyQualifiedErrorId.Should().Be(Globals.ErrorIdMultipleOperationException);
+        result.TargetObject.Should().BeSameAs(context);
+        result.Exception.Message.Should().Contain("chunk 2 of 3");
+        result.Exception.Message.Should().Contain("input rows 3-4");
+        result.Exception.Message.Should().NotContain("sensitive-row");
+        result.Exception.InnerException.Should().BeSameAs(source);
+        context.FailedContentIds.Should().Equal("CreateMultiple_2");
+    }
+
+    [Fact]
     public async Task BatchProcessorReportsEmptyServerErrorWithoutNullReference()
     {
         var handler = new TestHttpMessageHandler()

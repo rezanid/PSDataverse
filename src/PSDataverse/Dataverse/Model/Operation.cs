@@ -26,6 +26,9 @@ public class Operation
     public string Method { get; set; }
     public string Uri { get; set; }
     public int RunCount { get; set; }
+    [Newtonsoft.Json.JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
+    public MultipleOperationFailureContext FailureContext { get; set; }
     public override string ToString() => $"ContentID: {ContentId}, Method: {Method}, Url: {Uri}";
 }
 

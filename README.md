@@ -221,6 +221,21 @@ Import-DataverseRows new_projects ./projects.csv -Mode Bulk -ChunkSize 50 -MaxDo
 Use `UpsertMultiple` when rows may already exist, normally with primary IDs or
 alternate keys that identify them.
 
+When a multiple-operation chunk fails, error ID `DVERR-1020` identifies its original
+one-based row range without printing row contents. The structured target keeps the
+rows and successful sibling chunks available for logging, correction, or retry:
+
+```powershell
+$bulkErrors = @()
+Invoke-DataverseCreateMultiple new_projects $rows `
+    -ChunkSize 100 -MaxDop 4 -ErrorAction SilentlyContinue -ErrorVariable bulkErrors
+
+$failure = $bulkErrors[0].TargetObject
+$failure | Select-Object ActionName, ChunkNumber, StartRow, EndRow, ContentId
+$failure.InputRows | Export-Csv ./failed-rows.csv -NoTypeInformation
+$failure.SuccessfulChunkNumbers
+```
+
 ### Performance testing
 
 The read benchmark only characterizes GET requests. A separate destructive

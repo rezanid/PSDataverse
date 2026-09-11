@@ -199,6 +199,39 @@ try {
         Assert-LiveCondition ($inserted.($script:liveState.PrimaryName) -eq 'upsert-created-0') 'UpsertMultiple did not create the new row.'
     }
 
+    Invoke-LivePhase 'MultipleOperationFailureContext' {
+        $validIds = @([guid]::NewGuid(), [guid]::NewGuid())
+        $rows = @(
+            @{ $script:liveState.PrimaryId = $validIds[0]; $script:liveState.PrimaryName = 'failure-test-valid-0' }
+            @{ $script:liveState.PrimaryId = $validIds[1]; $script:liveState.PrimaryName = 'failure-test-valid-1' }
+            @{ $script:liveState.PrimaryId = 'not-a-guid'; $script:liveState.PrimaryName = 'failure-test-invalid-guid' }
+            @{ $script:liveState.PrimaryId = [guid]::NewGuid(); $script:liveState.PrimaryName = 'failure-test-rolled-back' }
+        )
+        $bulkErrors = @()
+        $null = Invoke-DataverseCreateMultiple -TableSetName $script:liveState.TableSetName `
+            -TableLogicalName $script:liveState.LogicalName -Rows $rows `
+            -ChunkSize 2 -MaxDop 1 @connectionParameters -Confirm:$false `
+            -ErrorAction SilentlyContinue -ErrorVariable bulkErrors
+
+        Assert-LiveCondition ($bulkErrors.Count -eq 1) `
+            "Expected one enriched CreateMultiple error, but captured $($bulkErrors.Count): $($bulkErrors.FullyQualifiedErrorId -join ', ')."
+        $failure = $bulkErrors[0].TargetObject
+        Assert-LiveCondition ($bulkErrors[0].FullyQualifiedErrorId -match '^DVERR-1020') 'Bulk failure did not use DVERR-1020.'
+        Assert-LiveCondition ($failure.PSObject.TypeNames[0] -eq 'PSDataverse.MultipleOperationFailureContext') `
+            'Bulk failure did not provide the structured failure context.'
+        Assert-LiveCondition ($failure.ChunkNumber -eq 2) 'Bulk failure did not identify chunk 2.'
+        Assert-LiveCondition ($failure.StartRow -eq 3 -and $failure.EndRow -eq 4) `
+            'Bulk failure did not identify input rows 3-4.'
+        Assert-LiveCondition (@($failure.InputRows).Count -eq 2) 'Bulk failure did not retain the two failed input rows.'
+        Assert-LiveCondition (@($failure.SuccessfulChunkNumbers) -contains 1) `
+            'Bulk failure did not report chunk 1 as successful.'
+
+        $validIds | ForEach-Object {
+            Remove-DataverseRow $script:liveState.TableSetName $_ @connectionParameters -Confirm:$false | Out-Null
+        }
+        Assert-LiveTableCount 9
+    }
+
     Invoke-LivePhase 'ForcedPagination' {
         $request = @{
             Uri = "$($script:liveState.TableSetName)?`$select=$($script:liveState.PrimaryId),$($script:liveState.PrimaryName)&`$orderby=$($script:liveState.PrimaryName)"

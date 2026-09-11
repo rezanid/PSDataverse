@@ -278,21 +278,57 @@ function Invoke-DataverseMultipleOperation {
         $metadata = Get-DataverseTableMetadata -TableSetName $TableSetName @connectionParameters
         $TableLogicalName = $metadata.LogicalName
     }
+    $chunkCount = [math]::Ceiling($Rows.Count / [double]$ChunkSize)
+    $successfulChunkNumbers = [Collections.Generic.List[int]]::new()
+    $failedContentIds = [Collections.Generic.List[string]]::new()
+    $chunkByContentId = @{}
     $chunkNumber = 0
     $operations = for ($offset = 0; $offset -lt $Rows.Count; $offset += $ChunkSize) {
         $last = [math]::Min($offset + $ChunkSize - 1, $Rows.Count - 1)
         $chunkNumber++
+        $contentId = "${ActionName}_$chunkNumber"
+        $inputRows = @($Rows[$offset..$last])
         $targets = @($Rows[$offset..$last] |
             ConvertTo-DataverseMultipleTarget -TableLogicalName $TableLogicalName)
+        $failureContext = [PSDataverse.MultipleOperationFailureContext]@{
+            ActionName = $ActionName
+            TableSetName = $TableSetName
+            TableLogicalName = $TableLogicalName
+            ChunkNumber = $chunkNumber
+            ChunkCount = $chunkCount
+            StartIndex = $offset
+            EndIndex = $last
+            StartRow = $offset + 1
+            EndRow = $last + 1
+            ContentId = $contentId
+            InputRows = $inputRows
+            SuccessfulChunkNumbers = $successfulChunkNumbers
+            FailedContentIds = $failedContentIds
+        }
+        $chunkByContentId[$contentId] = $failureContext
         @{
-            ContentId = "${ActionName}_$chunkNumber"
+            ContentId = $contentId
             Method = 'POST'
             Uri = "$TableSetName/Microsoft.Dynamics.CRM.$ActionName"
             Value = @{ Targets = $targets }
+            FailureContext = $failureContext
         }
     }
-    $operations | Invoke-DataverseRequest -MaxDop $MaxDop @connectionParameters |
+
+    $requestErrors = @()
+    $operations | Invoke-DataverseRequest -MaxDop $MaxDop @connectionParameters `
+        -ErrorAction SilentlyContinue -ErrorVariable requestErrors |
+        ForEach-Object {
+            $context = $chunkByContentId[$_.ContentId]
+            if ($null -ne $context -and !$successfulChunkNumbers.Contains($context.ChunkNumber)) {
+                $successfulChunkNumbers.Add($context.ChunkNumber)
+            }
+            $_
+        } |
         ConvertFrom-DataverseResponseContent
+    foreach ($requestError in $requestErrors) {
+        $PSCmdlet.WriteError($requestError)
+    }
 }
 
 function Invoke-DataverseCreateMultiple {
