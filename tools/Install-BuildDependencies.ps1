@@ -9,6 +9,7 @@ $dependencies = @(
     @{ Name = 'Pester'; Version = '6.2.0' }
     @{ Name = 'PSScriptAnalyzer'; Version = '1.25.0' }
     @{ Name = 'Microsoft.PowerShell.PlatyPS'; Version = '1.0.1' }
+    @{ Name = 'Microsoft.PowerShell.PSResourceGet'; Version = '1.2.0' }
 )
 
 foreach ($dependency in $dependencies) {

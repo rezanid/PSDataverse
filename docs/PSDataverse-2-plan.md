@@ -82,7 +82,7 @@ The read-only and disposable-table write results are recorded in `docs/benchmark
 - [x] Improve multiple-operation failures so errors identify the failed chunk and its input rows.
 - [x] Detect and report whether a table supports each multiple-operation message before sending a large workload.
 - [x] Complete command help, measured transport recommendations, and the 0.x-to-2.x migration guide.
-- [ ] Produce and verify deterministic prerelease packages, including installation from a local PowerShell repository.
+- [x] Produce and verify deterministic prerelease packages, including installation from a local PowerShell repository.
 - [ ] Run the release-candidate package on Windows, Linux, and macOS with PowerShell 7.6.
 
 Milestone 4 is complete when the .NET 10 package passes unit, packaged-module,
@@ -129,6 +129,13 @@ placeholder, index, or generated-MAML drift, while PlatyPS remains a pinned
 build-only dependency. The transport guide converts the disposable-environment
 measurements into semantic and performance recommendations, and the migration guide
 provides runnable 0.x-to-2.x replacements and troubleshooting guidance.
+
+The `2.0.0-preview.1` package is built twice from clean Release directories. The
+module file inventories and canonical NuGet package SHA-256 hashes must match before
+the artifact is retained. The package is then acquired from a temporary local
+PSResourceGet repository into an isolated module path and smoke-tested with
+PowerShell 7.6. The manual release workflow uploads this verified artifact and can
+publish only that same file through an explicit workflow input.
 
 ## Compatibility policy
 

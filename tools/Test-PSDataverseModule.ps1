@@ -24,8 +24,14 @@ if (!(Test-Path -LiteralPath $pesterManifest) -or
 Import-Module $pesterManifest -Force
 Import-Module $analyzerManifest -Force
 
-$sourcePath = Join-Path $PSScriptRoot '../src/Module'
-$issues = @(Invoke-ScriptAnalyzer -Path $sourcePath -Recurse -Severity Error)
+$analysisPaths = @(
+    (Join-Path $PSScriptRoot '../src/Module')
+    $PSScriptRoot
+    (Join-Path $PSScriptRoot '../build.psm1')
+)
+$issues = @($analysisPaths | ForEach-Object {
+    Invoke-ScriptAnalyzer -Path $_ -Recurse -Severity Error
+})
 if ($issues.Count -ne 0) {
     $issues | Format-Table -AutoSize
     throw "$($issues.Count) PowerShell analyzer errors found."

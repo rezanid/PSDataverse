@@ -52,7 +52,8 @@ function Start-PSDataverseBuild {
     New-Item -Path $outputPath -ItemType Directory -Force | Out-Null
     New-Item -Path $binPath -ItemType Directory -Force | Out-Null
 
-    dotnet build $projectPath --configuration $Configuration --output $binPath
+    dotnet build $projectPath --configuration $Configuration --output $binPath `
+        --property:ContinuousIntegrationBuild=true --property:Deterministic=true
     if ($LASTEXITCODE -ne 0) {
         throw "PSDataverse build failed with exit code $LASTEXITCODE."
     }

@@ -1,58 +1,74 @@
-name: Build -> Test -> Publish
+name: Build, verify, and publish
 
 on:
-  #pull_request:
-  #  branches: [ "main", "release/*" ]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified package to PowerShell Gallery
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
 
 env:
-  DOTNET_VERSION: '8.0.x'
-  BINARY_MODULE_PATH: '.'
-  MODULE_NAME: 'PSDataverse'
+  DOTNET_VERSION: 10.0.x
+  POWERSHELL_VERSION: 7.6.5
 
 jobs:
-  build:
-    
+  package:
     runs-on: ubuntu-latest
-    environment: 
+    environment:
       name: PowerShell Gallery
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    
-    - name: Setup .NET ${{ env.DOTNET_VERSION }}
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Restore dependencies
-      run: |
-        pushd '${{ env.BINARY_MODULE_PATH}}'
-        dotnet restore
-        popd
-      
-    - name: Test (.NET)
-      run: dotnet test --no-restore --configuration Release --verbosity normal
-        
-    - name: Build package
-      shell: pwsh
-      run: |
-        Import-Module ./build.psm1 -Force
-        Start-PSDataverseBuild -Output ./output/${{ env.MODULE_NAME }}
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Smoke-test package
-      shell: pwsh
-      run: |
-        ./tests/SmokeTest-Module.ps1 -ModulePath ./output/${{ env.MODULE_NAME }}/PSDataverse.psd1
-        
-    - name: Publish
-      shell: pwsh
-      run: |
-        pushd '${{ env.BINARY_MODULE_PATH}}'
-        Publish-Module -Path ./output/${{ env.MODULE_NAME }} -NuGetApiKey "${{ secrets.POWERSHELL_GALLERY_API_KEY }}"
-        popd
-        
-        
-    
-        
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Test .NET
+        run: dotnet test PSDataverse.sln --configuration Release --verbosity normal
+
+      - name: Install PowerShell 7.6
+        run: >-
+          dotnet tool install --tool-path ./output/pwsh76 PowerShell
+          --version ${{ env.POWERSHELL_VERSION }}
+
+      - name: Build and verify deterministic package
+        shell: pwsh
+        run: |
+          & ./output/pwsh76/pwsh -NoLogo -NoProfile -File `
+            ./tools/New-PSDataversePackage.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Package verification failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Upload verified package
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSDataverse-2-preview
+          path: |
+            output/packages/*.nupkg
+            output/packages/*.sha256
+          if-no-files-found: error
+
+      - name: Publish verified package
+        if: ${{ inputs.publish }}
+        shell: pwsh
+        env:
+          POWERSHELL_GALLERY_API_KEY: ${{ secrets.POWERSHELL_GALLERY_API_KEY }}
+        run: |
+          $package = @(Get-ChildItem ./output/packages -Filter '*.nupkg' -File)
+          if ($package.Count -ne 1) {
+            throw "Expected one verified package; found $($package.Count)."
+          }
+          Import-Module `
+            ./output/build-modules/Microsoft.PowerShell.PSResourceGet/1.2.0/Microsoft.PowerShell.PSResourceGet.psd1 `
+            -Force
+          Publish-PSResource -NupkgPath $package[0].FullName `
+            -Repository PSGallery -ApiKey $env:POWERSHELL_GALLERY_API_KEY

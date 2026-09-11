@@ -10,7 +10,7 @@
 RootModule = 'PSDataverse.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.0.16'
+ModuleVersion = '2.0.0'
 
 # Supported PSEditions
 CompatiblePSEditions = @("Core")
@@ -102,7 +102,7 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @('PSEdition_Core', 'PSEdition_Desktop', 'Windows', 'Linux', 'macOS', 'Dataverse')
+        Tags = @('PSEdition_Core', 'Windows', 'Linux', 'macOS', 'Dataverse')
 
         # A URL to the license for this module.
         LicenseUri = 'https://github.com/rezanid/PSDataverse/blob/main/LICENSE'
@@ -114,10 +114,10 @@ PrivateData = @{
         IconUri = 'https://github.com/rezanid/PSDataverse/raw/268e36c93ddfbcb6bcc2255beed9b03499210dfb/media/PSDataverse-Logo.png'
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+        ReleaseNotes = 'PSDataverse 2 preview. See https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md.'
 
         # Prerelease string of this module
-        # Prerelease = ''
+        Prerelease = 'preview.1'
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         RequireLicenseAcceptance = $false
@@ -125,7 +125,6 @@ PrivateData = @{
         # External dependent modules of this module
         # ExternalModuleDependencies = @()
 
-        IsPrerelease = 'True'
     } # End of PSData hashtable
 
 } # End of PrivateData hashtable
