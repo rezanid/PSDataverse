@@ -80,7 +80,7 @@ The read-only and disposable-table write results are recorded in `docs/benchmark
 - [x] Review and resolve compiler warnings and obsolete APIs, documenting intentional compatibility exceptions such as the retained MSAL IWA call.
 - [x] Add guarded live integration coverage for CRUD, pagination, `$batch`, CreateMultiple, UpdateMultiple, UpsertMultiple, throttling behavior, and cleanup.
 - [x] Improve multiple-operation failures so errors identify the failed chunk and its input rows.
-- [ ] Detect and report whether a table supports each multiple-operation message before sending a large workload.
+- [x] Detect and report whether a table supports each multiple-operation message before sending a large workload.
 - [ ] Complete command help, measured transport recommendations, and the 0.x-to-2.x migration guide.
 - [ ] Produce and verify deterministic prerelease packages, including installation from a local PowerShell repository.
 - [ ] Run the release-candidate package on Windows, Linux, and macOS with PowerShell 7.6.
@@ -113,6 +113,15 @@ IDs, and successful sibling chunks without exposing row contents in the displaye
 error message. Unit, packaged-module, and guarded live tests verify the mapping; the
 live negative test deliberately fails the second CreateMultiple chunk and confirms
 that callers receive exactly one structured error while the first chunk succeeds.
+
+Bulk capability detection now performs one combined `sdkmessagefilters` query for
+CreateMultiple and UpdateMultiple and derives UpsertMultiple support from both. A
+connection-owned, concurrency-safe cache coalesces simultaneous cold lookups and
+makes the steady-state check an in-memory lookup. Definitively unsupported workloads
+stop before rows are sent with `DVERR-1021`; inspection failures remain fail-open so
+the optimization cannot break an otherwise valid workload. The public
+`Test-DataverseBulkOperationSupport` command supports explicit refresh and detailed
+cache diagnostics.
 
 ## Compatibility policy
 

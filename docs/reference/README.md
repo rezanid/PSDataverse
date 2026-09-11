@@ -26,4 +26,5 @@ Generated from the packaged module command metadata.
 - [Send-DataverseOperation](Send-DataverseOperation.md)
 - [Set-DataverseDefaultConnection](Set-DataverseDefaultConnection.md)
 - [Set-DataverseRow](Set-DataverseRow.md)
+- [Test-DataverseBulkOperationSupport](Test-DataverseBulkOperationSupport.md)
 - [Test-DataverseConnection](Test-DataverseConnection.md)

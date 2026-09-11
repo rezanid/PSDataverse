@@ -20,5 +20,7 @@ public static class Globals
     public const string ErrorIdMissingOperation = "DVERR-1003";
     public const string ErrorIdOperationException = "DVERR-1010";
     public const string ErrorIdMultipleOperationException = "DVERR-1020";
+    public const string ErrorIdBulkOperationNotSupported = "DVERR-1021";
+    public const string ErrorIdBulkCapabilityInspection = "DVERR-1022";
     public const string ErrorIdConnectionNotFound = "DVERR-1004";
 }
