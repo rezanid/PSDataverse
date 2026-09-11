@@ -114,10 +114,10 @@ PrivateData = @{
         IconUri = 'https://github.com/rezanid/PSDataverse/raw/268e36c93ddfbcb6bcc2255beed9b03499210dfb/media/PSDataverse-Logo.png'
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'PSDataverse 2 preview. See https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md.'
+        ReleaseNotes = 'PSDataverse 2 release candidate. See https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md.'
 
         # Prerelease string of this module
-        Prerelease = 'preview.1'
+        Prerelease = 'rc.1'
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         RequireLicenseAcceptance = $false

@@ -91,13 +91,15 @@ To repeat only the repository acquisition and package smoke test:
 
 ```powershell
 ./tools/Test-PSDataversePackage.ps1 `
-    -PackagePath ./output/packages/PSDataverse.2.0.0-preview.1.nupkg
+    -PackagePath ./output/packages/PSDataverse.2.0.0-rc.1.nupkg
 ```
 
 The scripts use pinned build dependencies and do not install PSDataverse into the
-machine-wide or current-user module locations. The manual release workflow uploads
-the verified artifact and publishes that same file only when its `publish` input is
-explicitly enabled.
+machine-wide or current-user module locations. Pull requests and manual releases use
+the same reusable verification workflow: it builds one package and installs that
+exact artifact on Windows, Linux, and macOS with PowerShell 7.6. The release workflow
+can publish the validated file only when its `publish` input is explicitly enabled.
+Publishing is additionally restricted to runs started from the `main` branch.
 
 The opt-in live integration suite creates and removes a uniquely named disposable
 table. Import the built module, connect using any supported authentication flow, and

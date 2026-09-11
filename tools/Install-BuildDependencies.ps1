@@ -1,6 +1,13 @@
 [CmdletBinding()]
 param(
-    [string]$Destination = (Join-Path $PSScriptRoot '../output/build-modules')
+    [string]$Destination = (Join-Path $PSScriptRoot '../output/build-modules'),
+
+    [ValidateSet(
+        'Pester',
+        'PSScriptAnalyzer',
+        'Microsoft.PowerShell.PlatyPS',
+        'Microsoft.PowerShell.PSResourceGet')]
+    [string[]]$Name
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,6 +18,9 @@ $dependencies = @(
     @{ Name = 'Microsoft.PowerShell.PlatyPS'; Version = '1.0.1' }
     @{ Name = 'Microsoft.PowerShell.PSResourceGet'; Version = '1.2.0' }
 )
+if ($Name) {
+    $dependencies = @($dependencies | Where-Object Name -In $Name)
+}
 
 foreach ($dependency in $dependencies) {
     $modulePath = Join-Path $destinationPath $dependency.Name

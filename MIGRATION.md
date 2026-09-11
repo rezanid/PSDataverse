@@ -19,10 +19,10 @@ Test important automation in a disposable environment, especially scripts that
 submit writes concurrently. PowerShell can keep the 0.x and 2.x module versions
 installed side by side while you validate the migration.
 
-The first PSDataverse 2 development package is version `2.0.0-preview.1`. Because it
-is a prerelease, include `-Prerelease` when discovering or acquiring it from a
-PowerShell repository. Use `Import-Module PSDataverse -RequiredVersion 2.0.0` to
-make test scripts select the 2.x base version explicitly.
+The PSDataverse 2 release-candidate package is version `2.0.0-rc.1`. Because it is a
+prerelease, include `-Prerelease` when discovering or acquiring it from a PowerShell
+repository. Use `Import-Module PSDataverse -RequiredVersion 2.0.0` to make test
+scripts select the 2.x base version explicitly.
 
 ## Fast migration checklist
 

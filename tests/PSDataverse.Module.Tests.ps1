@@ -46,7 +46,7 @@ Describe 'PSDataverse packaged module contract' {
         $manifest = Test-ModuleManifest -Path $ModulePath
         $manifest.PowerShellVersion | Should -Be ([version]'7.6')
         $manifest.Version | Should -Be ([version]'2.0.0')
-        $manifest.PrivateData.PSData.Prerelease | Should -Be 'preview.1'
+        $manifest.PrivateData.PSData.Prerelease | Should -Be 'rc.1'
         $manifest.PrivateData.PSData.Keys | Should -Not -Contain 'IsPrerelease'
         Split-Path (Get-Module PSDataverse).Path -Parent |
             Should -Be (Split-Path (Resolve-Path $ModulePath).Path -Parent)

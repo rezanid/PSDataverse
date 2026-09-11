@@ -1,0 +1,119 @@
+name: Verify release candidate package
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 10.0.x
+  POWERSHELL_VERSION: 7.6.5
+  ARTIFACT_NAME: PSDataverse-2-rc
+
+jobs:
+  produce-package:
+    name: Build one deterministic package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Test .NET
+        run: dotnet test PSDataverse.sln --configuration Release --verbosity normal
+
+      - name: Install PowerShell 7.6
+        run: >-
+          dotnet tool install --tool-path ./output/pwsh76 PowerShell
+          --version ${{ env.POWERSHELL_VERSION }}
+
+      - name: Build and verify deterministic package
+        shell: pwsh
+        run: |
+          & ./output/pwsh76/pwsh -NoLogo -NoProfile -File `
+            ./tools/New-PSDataversePackage.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Package verification failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Audit NuGet dependencies
+        shell: pwsh
+        run: |
+          $audit = dotnet list PSDataverse.sln package `
+            --vulnerable --include-transitive
+          if ($LASTEXITCODE -ne 0) {
+            throw "The NuGet vulnerability audit failed to run: $audit"
+          }
+          if ($audit -match 'has the following vulnerable packages') {
+            throw "The NuGet vulnerability audit found vulnerable packages: $audit"
+          }
+
+      - name: Upload verified package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: |
+            output/packages/*.nupkg
+            output/packages/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  validate-package:
+    name: Install and test on ${{ matrix.os }}
+    needs: produce-package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install PowerShell 7.6
+        run: >-
+          dotnet tool install --tool-path ./output/pwsh76 PowerShell
+          --version ${{ env.POWERSHELL_VERSION }}
+
+      - name: Download exact producer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: output/packages
+
+      - name: Verify checksum and installed package
+        shell: pwsh
+        run: |
+          $package = @(Get-ChildItem ./output/packages -Filter '*.nupkg' -File)
+          $checksum = @(Get-ChildItem ./output/packages -Filter '*.sha256' -File)
+          if ($package.Count -ne 1 -or $checksum.Count -ne 1) {
+            throw 'The producer artifact must contain one package and one checksum.'
+          }
+          $expectedHash = ((Get-Content $checksum[0].FullName -Raw) -split '\s+')[0]
+          $actualHash = (Get-FileHash $package[0].FullName -Algorithm SHA256).Hash
+          if ($actualHash -ne $expectedHash) {
+            throw "Package checksum mismatch: expected $expectedHash; got $actualHash."
+          }
+          $executable = if ($IsWindows) {
+            './output/pwsh76/pwsh.exe'
+          } else {
+            './output/pwsh76/pwsh'
+          }
+          & $executable -NoLogo -NoProfile -File `
+            ./tools/Test-PSDataversePackage.ps1 `
+            -PackagePath $package[0].FullName
+          if ($LASTEXITCODE -ne 0) {
+            throw "Installed-package validation failed with exit code $LASTEXITCODE."
+          }
