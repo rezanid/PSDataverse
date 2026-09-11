@@ -22,13 +22,13 @@ GUID = '081185a0-92be-4624-85e8-4903acb07e03'
 Author = 'Reza Niroomand'
 
 # Company or vendor of this moduled
-CompanyName = 'Novovio'
+CompanyName = 'Reza Niroomand'
 
 # Copyright statement for this module
-Copyright = 'Copyright (c) Novovio.'
+Copyright = 'Copyright (c) 2022-2026 Reza Niroomand.'
 
 # Description of the functionality provided by this module
-Description = 'Bring Dataverse''s Web API to PowerShell.'
+Description = 'High-performance PowerShell access to Microsoft Dataverse Web API with secure authentication, parallel requests, batching, bulk operations, and pipeline-friendly commands.'
 
 # Minimum version of the PowerShell engine required by this module
 PowerShellVersion = '7.6'
@@ -102,7 +102,17 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @('PSEdition_Core', 'Windows', 'Linux', 'macOS', 'Dataverse')
+        Tags = @(
+            'PSEdition_Core',
+            'Windows',
+            'Linux',
+            'macOS',
+            'Dataverse',
+            'PowerPlatform',
+            'Dynamics365',
+            'WebAPI',
+            'OAuth'
+        )
 
         # A URL to the license for this module.
         LicenseUri = 'https://github.com/rezanid/PSDataverse/blob/main/LICENSE'
@@ -111,10 +121,10 @@ PrivateData = @{
         ProjectUri = 'https://github.com/rezanid/PSDataverse'
 
         # A URL to an icon representing this module.
-        IconUri = 'https://github.com/rezanid/PSDataverse/raw/268e36c93ddfbcb6bcc2255beed9b03499210dfb/media/PSDataverse-Logo.png'
+        IconUri = 'https://raw.githubusercontent.com/rezanid/PSDataverse/main/media/PSDataverse-GalleryIcon.png'
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'PSDataverse 2 release candidate. See https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md.'
+        ReleaseNotes = 'PSDataverse 2.0.0-rc.1 modernizes the module with PowerShell 7.6 and .NET 10, secure WAM/browser/device/IWA/application authentication, named connections, a bounded high-performance request engine, concurrent batch and multiple-operation APIs, convenient CRUD/metadata/import/export commands, structured errors, complete help, and cross-platform package verification. Migration guide: https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md. Full notes: https://github.com/rezanid/PSDataverse/releases/tag/v2.0.0-rc.1'
 
         # Prerelease string of this module
         Prerelease = 'rc.1'

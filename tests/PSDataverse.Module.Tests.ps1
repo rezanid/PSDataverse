@@ -52,6 +52,56 @@ Describe 'PSDataverse packaged module contract' {
             Should -Be (Split-Path (Resolve-Path $ModulePath).Path -Parent)
     }
 
+    It 'publishes complete PSDataverse 2 release-candidate metadata' {
+        $manifest = Test-ModuleManifest -Path $ModulePath
+        $metadata = $manifest.PrivateData.PSData
+
+        $manifest.Author | Should -Be 'Reza Niroomand'
+        $manifest.CompanyName | Should -Be 'Reza Niroomand'
+        $manifest.Copyright | Should -Match 'Reza Niroomand'
+        $manifest.Description | Should -Match 'High-performance'
+        $manifest.Description | Should -Match 'Microsoft Dataverse'
+        $metadata.ProjectUri | Should -Be 'https://github.com/rezanid/PSDataverse'
+        $metadata.LicenseUri | Should -Match '^https://'
+        $metadata.IconUri | Should -Be `
+            'https://raw.githubusercontent.com/rezanid/PSDataverse/main/media/PSDataverse-GalleryIcon.png'
+        $metadata.ReleaseNotes | Should -Match '2\.0\.0-rc\.1'
+        $metadata.ReleaseNotes | Should -Match '/MIGRATION\.md'
+        $metadata.ReleaseNotes | Should -Match '/releases/tag/v2\.0\.0-rc\.1'
+        foreach ($tag in @(
+            'PSEdition_Core', 'Windows', 'Linux', 'macOS', 'Dataverse',
+            'PowerPlatform', 'Dynamics365', 'WebAPI', 'OAuth')) {
+            $metadata.Tags | Should -Contain $tag
+        }
+    }
+
+    It 'keeps public release assets synchronized with the package version' {
+        $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+        $iconPath = Join-Path $repositoryRoot 'media/PSDataverse-GalleryIcon.png'
+        $notesPath = Join-Path $repositoryRoot 'docs/releases/2.0.0-rc.1.md'
+        $readmePath = Join-Path $repositoryRoot 'README.md'
+
+        $iconPath | Should -Exist
+        $icon = [IO.File]::ReadAllBytes($iconPath)
+        [BitConverter]::ToString($icon[0..7]) |
+            Should -Be '89-50-4E-47-0D-0A-1A-0A'
+        $width = ($icon[16] -shl 24) -bor ($icon[17] -shl 16) -bor `
+            ($icon[18] -shl 8) -bor $icon[19]
+        $height = ($icon[20] -shl 24) -bor ($icon[21] -shl 16) -bor `
+            ($icon[22] -shl 8) -bor $icon[23]
+        $width | Should -Be 85
+        $height | Should -Be 85
+
+        $notesPath | Should -Exist
+        (Get-Content -LiteralPath $notesPath -Raw) |
+            Should -Match 'PSDataverse 2\.0\.0-rc\.1'
+        $readme = Get-Content -LiteralPath $readmePath -Raw
+        $readme | Should -Match `
+            'Install-PSResource -Name PSDataverse -Version 2\.0\.0-rc\.1 -Prerelease'
+        $readme | Should -Match `
+            'Install-Module -Name PSDataverse -RequiredVersion 2\.0\.0-rc\.1 -AllowPrerelease'
+    }
+
     It 'exports exactly the documented command surface' {
         $actual = @(Get-Command -Module PSDataverse | Sort-Object Name | Select-Object -ExpandProperty Name)
         $actual | Should -Be $expectedCommands
