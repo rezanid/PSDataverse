@@ -36,8 +36,10 @@ jobs:
       - name: Build and verify deterministic package
         shell: pwsh
         run: |
-          & ./output/pwsh76/pwsh -NoLogo -NoProfile -File `
-            ./tools/New-PSDataversePackage.ps1
+          $executable = (Resolve-Path ./output/pwsh76/pwsh).Path
+          & $executable -NoLogo -NoProfile -File `
+            ./tools/New-PSDataversePackage.ps1 `
+            -PowerShellPath $executable
           if ($LASTEXITCODE -ne 0) {
             throw "Package verification failed with exit code $LASTEXITCODE."
           }
@@ -107,13 +109,14 @@ jobs:
             throw "Package checksum mismatch: expected $expectedHash; got $actualHash."
           }
           $executable = if ($IsWindows) {
-            './output/pwsh76/pwsh.exe'
+            (Resolve-Path ./output/pwsh76/pwsh.exe).Path
           } else {
-            './output/pwsh76/pwsh'
+            (Resolve-Path ./output/pwsh76/pwsh).Path
           }
           & $executable -NoLogo -NoProfile -File `
             ./tools/Test-PSDataversePackage.ps1 `
-            -PackagePath $package[0].FullName
+            -PackagePath $package[0].FullName `
+            -PowerShellPath $executable
           if ($LASTEXITCODE -ne 0) {
             throw "Installed-package validation failed with exit code $LASTEXITCODE."
           }
