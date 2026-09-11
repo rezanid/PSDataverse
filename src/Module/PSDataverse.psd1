@@ -124,10 +124,10 @@ PrivateData = @{
         IconUri = 'https://raw.githubusercontent.com/rezanid/PSDataverse/main/media/PSDataverse-GalleryIcon.png'
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'PSDataverse 2.0.0-rc.1 modernizes the module with PowerShell 7.6 and .NET 10, secure WAM/browser/device/IWA/application authentication, named connections, a bounded high-performance request engine, concurrent batch and multiple-operation APIs, convenient CRUD/metadata/import/export commands, structured errors, complete help, and cross-platform package verification. Migration guide: https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md. Full notes: https://github.com/rezanid/PSDataverse/releases/tag/v2.0.0-rc.1'
+        ReleaseNotes = 'PSDataverse 2.0.0-rc1 modernizes the module with PowerShell 7.6 and .NET 10, secure WAM/browser/device/IWA/application authentication, named connections, a bounded high-performance request engine, concurrent batch and multiple-operation APIs, convenient CRUD/metadata/import/export commands, structured errors, complete help, and cross-platform package verification. Migration guide: https://github.com/rezanid/PSDataverse/blob/main/MIGRATION.md. Full notes: https://github.com/rezanid/PSDataverse/releases/tag/v2.0.0-rc1'
 
         # Prerelease string of this module
-        Prerelease = 'rc.1'
+        Prerelease = 'rc1'
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         RequireLicenseAcceptance = $false

@@ -10,11 +10,11 @@
 High-performance, pipeline-friendly PowerShell access to Microsoft Dataverse.
 
 > [!IMPORTANT]
-> PSDataverse `2.0.0-rc.1` is a public release candidate requiring PowerShell
+> PSDataverse `2.0.0-rc1` is a public release candidate requiring PowerShell
 > 7.6 or later. It contains intentional breaking changes from 0.x; review the
 > [migration guide](MIGRATION.md) before upgrading production automation.
 
-See [what is new in PSDataverse 2.0.0-rc.1](docs/releases/2.0.0-rc.1.md), the
+See [what is new in PSDataverse 2.0.0-rc1](docs/releases/2.0.0-rc1.md), the
 [complete command reference](docs/reference/README.md), and the
 [measured write-transport guide](docs/guides/choosing-a-write-transport.md).
 
@@ -55,13 +55,13 @@ Install the PSDataverse 2 release candidate from
 PSResourceGet:
 
 ```powershell
-Install-PSResource -Name PSDataverse -Version 2.0.0-rc.1 -Prerelease
+Install-PSResource -Name PSDataverse -Version 2.0.0-rc1 -Prerelease
 ```
 
 Or use PowerShellGet:
 
 ```powershell
-Install-Module -Name PSDataverse -RequiredVersion 2.0.0-rc.1 -AllowPrerelease
+Install-Module -Name PSDataverse -RequiredVersion 2.0.0-rc1 -AllowPrerelease
 ```
 
 The following command continues to install the latest stable 0.x release until
@@ -131,7 +131,7 @@ To repeat only the repository acquisition and package smoke test:
 
 ```powershell
 ./tools/Test-PSDataversePackage.ps1 `
-    -PackagePath ./output/packages/PSDataverse.2.0.0-rc.1.nupkg
+    -PackagePath ./output/packages/PSDataverse.2.0.0-rc1.nupkg
 ```
 
 The scripts use pinned build dependencies and do not install PSDataverse into the
