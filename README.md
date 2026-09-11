@@ -1,4 +1,24 @@
-# Table of Contents
+# PSDataverse
+
+![PSDataverse logo](media/PSDataverse-Logo.png)
+
+[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSDataverse?include_prereleases&label=PowerShell%20Gallery)](https://www.powershellgallery.com/packages/PSDataverse)
+[![Downloads](https://img.shields.io/powershellgallery/dt/PSDataverse)](https://www.powershellgallery.com/packages/PSDataverse)
+[![Build and test](https://github.com/rezanid/PSDataverse/actions/workflows/build-and-test.yml/badge.svg?branch=main)](https://github.com/rezanid/PSDataverse/actions/workflows/build-and-test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+High-performance, pipeline-friendly PowerShell access to Microsoft Dataverse.
+
+> [!IMPORTANT]
+> PSDataverse `2.0.0-rc.1` is a public release candidate requiring PowerShell
+> 7.6 or later. It contains intentional breaking changes from 0.x; review the
+> [migration guide](MIGRATION.md) before upgrading production automation.
+
+See [what is new in PSDataverse 2.0.0-rc.1](docs/releases/2.0.0-rc.1.md), the
+[complete command reference](docs/reference/README.md), and the
+[measured write-transport guide](docs/guides/choosing-a-write-transport.md).
+
+## Table of Contents
 * [What is PSDataverse](#what-is-psdataverse)
 * [Features](#features)
 * [How to install](#how-to-install)
@@ -7,26 +27,46 @@
   * [Sending operations to Dataverse](#sending-operations-to-dataverse)
 
 # What is PSDataverse?
-PSDataverse is a PowerShell module that brings Dataverse's Web API to PowerShell 7+ with features like piping, batching and more. It is designed with ease-of-use and performance in mind and follows the patterns of native PowerShell cmdlets to play nicely with other modules.
-
-> [!IMPORTANT]
-> PSDataverse 2 modernization is in progress. See the [implementation plan](docs/PSDataverse-2-plan.md) and [0.x migration guide](MIGRATION.md). The current development build requires PowerShell 7.6 or later.
+PSDataverse brings Microsoft Dataverse's Web API to PowerShell with secure
+authentication, first-class connection objects, controlled concurrency, batching,
+bulk operations, and commands designed for composition in PowerShell pipelines.
 
 The [command reference](docs/reference/README.md) is the source for the detailed help packaged with the module and lists its syntax, examples, pipeline support, and aliases.
 For write-heavy workloads, see [choosing a write transport](docs/guides/choosing-a-write-transport.md).
 
 # Features
-* Securely connect to Dataverse.
-* Supports batching.
-* Supports parallelism.
-* Automatically reconnects when authentication token is about to expire.
-* Enhanced pipeline support (accepts different data types as input and emits responses to the pipeline).
-* Automatic wait-and-retry for transient errors by default.
-* Respects throttling data sent by Dataverse.
-* Does not hide the response sent back by Dataverse.
+* Authenticate with WAM, system browser, device code, IWA, client secrets,
+  certificates, access tokens, token providers, or compatible connection strings.
+* Keep named Dataverse connections and choose an explicit default connection.
+* Run individual requests through a bounded, cancellation-aware parallel scheduler.
+* Send concurrent `$batch` envelopes or CreateMultiple, UpdateMultiple, and
+  UpsertMultiple workloads with explicit chunking and degree of parallelism.
+* Use pipeline-friendly CRUD, metadata, action/function, import, and export commands.
+* Honor Dataverse concurrency hints and transient retry guidance while avoiding
+  unsafe automatic replay of ambiguous writes.
+* Diagnose failed batch and multiple-operation rows without hiding Dataverse's
+  original response.
+* Run the same verified package on Windows, Linux, and macOS.
 
 # How to install
-You can install the [PSDataverse module directly from PowerShell Gallery](https://www.powershellgallery.com/packages/PSDataverse) using the following command
+
+Install the PSDataverse 2 release candidate from
+[PowerShell Gallery](https://www.powershellgallery.com/packages/PSDataverse) with
+PSResourceGet:
+
+```powershell
+Install-PSResource -Name PSDataverse -Version 2.0.0-rc.1 -Prerelease
+```
+
+Or use PowerShellGet:
+
+```powershell
+Install-Module -Name PSDataverse -RequiredVersion 2.0.0-rc.1 -AllowPrerelease
+```
+
+The following command continues to install the latest stable 0.x release until
+PSDataverse 2 reaches general availability:
+
 ```powershell
 Install-Module -Name PSDataverse
 ```

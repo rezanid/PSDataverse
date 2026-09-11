@@ -83,7 +83,7 @@ The read-only and disposable-table write results are recorded in `docs/benchmark
 - [x] Detect and report whether a table supports each multiple-operation message before sending a large workload.
 - [x] Complete command help, measured transport recommendations, and the 0.x-to-2.x migration guide.
 - [x] Produce and verify deterministic prerelease packages, including installation from a local PowerShell repository.
-- [ ] Run the release-candidate package on Windows, Linux, and macOS with PowerShell 7.6.
+- [x] Run the release-candidate package on Windows, Linux, and macOS with PowerShell 7.6.
 
 Milestone 4 is complete when the .NET 10 package passes unit, packaged-module,
 integration, vulnerability, deterministic-build, and cross-platform PowerShell 7.6
@@ -136,6 +136,10 @@ the artifact is retained. The package is then acquired from a temporary local
 PSResourceGet repository into an isolated module path and smoke-tested with
 PowerShell 7.6. The manual release workflow uploads this verified artifact and can
 publish only that same file through an explicit workflow input.
+
+The release-candidate workflow passed on Windows, Linux, and macOS in both pull
+request verification and the post-merge `main` run on September 11, 2026. This
+completed Milestone 4.
 
 ## Compatibility policy
 

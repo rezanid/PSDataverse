@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the verified release candidate to PowerShell Gallery
+        description: Publish to PowerShell Gallery and create a tagged GitHub prerelease
         required: true
         type: boolean
         default: false
@@ -16,8 +16,8 @@ jobs:
   verify-release-candidate:
     uses: ./.github/workflows/verify-package.yml
 
-  publish:
-    name: Publish the verified artifact
+  publish-gallery:
+    name: Publish the verified artifact to PowerShell Gallery
     if: ${{ inputs.publish && github.ref == 'refs/heads/main' }}
     needs: verify-release-candidate
     runs-on: ubuntu-latest
@@ -45,6 +45,9 @@ jobs:
         env:
           POWERSHELL_GALLERY_API_KEY: ${{ secrets.POWERSHELL_GALLERY_API_KEY }}
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:POWERSHELL_GALLERY_API_KEY)) {
+            throw 'POWERSHELL_GALLERY_API_KEY is not configured in the PowerShell Gallery environment.'
+          }
           $package = @(Get-ChildItem ./output/packages -Filter '*.nupkg' -File)
           $checksum = @(Get-ChildItem ./output/packages -Filter '*.sha256' -File)
           if ($package.Count -ne 1 -or $checksum.Count -ne 1) {
@@ -60,3 +63,78 @@ jobs:
             -Force
           Publish-PSResource -NupkgPath $package[0].FullName `
             -Repository PSGallery -ApiKey $env:POWERSHELL_GALLERY_API_KEY
+
+  publish-github-release:
+    name: Create the GitHub prerelease
+    if: ${{ inputs.publish && github.ref == 'refs/heads/main' }}
+    needs: publish-gallery
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download validated package
+        uses: actions/download-artifact@v4
+        with:
+          name: PSDataverse-2-rc
+          path: output/packages
+
+      - name: Read release identity
+        id: release
+        shell: pwsh
+        run: |
+          $package = @(Get-ChildItem ./output/packages -Filter '*.nupkg' -File)
+          $checksum = @(Get-ChildItem ./output/packages -Filter '*.sha256' -File)
+          if ($package.Count -ne 1 -or $checksum.Count -ne 1) {
+            throw 'The validated artifact must contain one package and one checksum.'
+          }
+          $expectedHash = ((Get-Content $checksum[0].FullName -Raw) -split '\s+')[0]
+          $actualHash = (Get-FileHash $package[0].FullName -Algorithm SHA256).Hash
+          if ($actualHash -ne $expectedHash) {
+            throw "Package checksum mismatch: expected $expectedHash; got $actualHash."
+          }
+
+          $archive = [IO.Compression.ZipFile]::OpenRead($package[0].FullName)
+          try {
+            $nuspecEntry = @($archive.Entries | Where-Object FullName -Like '*.nuspec')
+            if ($nuspecEntry.Count -ne 1) {
+              throw "Expected one nuspec; found $($nuspecEntry.Count)."
+            }
+            $reader = [IO.StreamReader]::new($nuspecEntry[0].Open())
+            try { [xml]$nuspec = $reader.ReadToEnd() } finally { $reader.Dispose() }
+          }
+          finally {
+            $archive.Dispose()
+          }
+
+          $name = [string]$nuspec.package.metadata.id
+          $version = [string]$nuspec.package.metadata.version
+          if ($name -ne 'PSDataverse' -or $version -notmatch '-') {
+            throw "Expected a PSDataverse prerelease package; found '$name' '$version'."
+          }
+          $notesPath = "docs/releases/$version.md"
+          if (!(Test-Path -LiteralPath $notesPath -PathType Leaf)) {
+            throw "Release notes '$notesPath' were not found."
+          }
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+          "package=$($package[0].FullName)" >> $env:GITHUB_OUTPUT
+          "checksum=$($checksum[0].FullName)" >> $env:GITHUB_OUTPUT
+          "notes=$notesPath" >> $env:GITHUB_OUTPUT
+
+      - name: Create tagged GitHub prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create '${{ steps.release.outputs.tag }}' `
+            '${{ steps.release.outputs.package }}' `
+            '${{ steps.release.outputs.checksum }}' `
+            --title 'PSDataverse ${{ steps.release.outputs.version }}' `
+            --notes-file '${{ steps.release.outputs.notes }}' `
+            --target '${{ github.sha }}' `
+            --prerelease
