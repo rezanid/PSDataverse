@@ -58,6 +58,20 @@ function Start-PSDataverseBuild {
         throw "PSDataverse build failed with exit code $LASTEXITCODE."
     }
 
+    # PowerShell hosts the module without consuming its .deps.json native search paths.
+    # These architecture-specific names can coexist beside NativeInterop.dll.
+    foreach ($runtime in @(
+        @{ Rid = 'win-x64'; Library = 'msalruntime.dll' }
+        @{ Rid = 'win-x86'; Library = 'msalruntime_x86.dll' }
+        @{ Rid = 'win-arm64'; Library = 'msalruntime_arm64.dll' }
+    )) {
+        $nativePath = Join-Path $binPath "runtimes/$($runtime.Rid)/native/$($runtime.Library)"
+        if (!(Test-Path -LiteralPath $nativePath -PathType Leaf)) {
+            throw "Required WAM native library is missing: '$nativePath'."
+        }
+        Copy-Item -LiteralPath $nativePath -Destination $binPath -Force
+    }
+
     Copy-Item (Join-Path $modulePath 'PSDataverse.psd1') $outputPath -Force
     Copy-Item (Join-Path $modulePath 'PSDataverse.psm1') $outputPath -Force
     Copy-Item (Join-Path $modulePath 'PSFunctions') $outputPath -Recurse -Force

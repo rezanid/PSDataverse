@@ -43,6 +43,23 @@ if ($difference.Count -ne 0) {
 }
 
 $moduleRoot = Split-Path $ModulePath -Parent
+foreach ($library in 'msalruntime.dll', 'msalruntime_x86.dll', 'msalruntime_arm64.dll') {
+    if (!(Test-Path -LiteralPath (Join-Path $moduleRoot "bin/$library") -PathType Leaf)) {
+        throw "WAM native library must be packaged beside NativeInterop.dll: $library"
+    }
+}
+if ($IsWindows) {
+    $library = switch ([Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()) {
+        'X64' { 'msalruntime.dll' }
+        'X86' { 'msalruntime_x86.dll' }
+        'Arm64' { 'msalruntime_arm64.dll' }
+        default { throw 'Unsupported Windows process architecture for WAM.' }
+    }
+    # Use the same assembly-relative lookup as NativeInterop's P/Invoke calls.
+    $interop = [Reflection.Assembly]::LoadFrom((Join-Path $moduleRoot 'bin/Microsoft.Identity.Client.NativeInterop.dll'))
+    $handle = [Runtime.InteropServices.NativeLibrary]::Load($library, $interop, $null)
+    [Runtime.InteropServices.NativeLibrary]::Free($handle)
+}
 if (Test-Path (Join-Path $moduleRoot 'bin/Scriban.dll')) {
     throw 'Scriban.dll must not be present in the PSDataverse package.'
 }
