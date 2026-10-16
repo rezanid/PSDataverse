@@ -26,10 +26,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download validated package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: PSDataverse-2-rc
           path: output/packages
@@ -74,10 +74,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download validated package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: PSDataverse-2-rc
           path: output/packages
